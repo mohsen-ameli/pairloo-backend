@@ -22,5 +22,5 @@ adb reverse --remove-all
 3. Start the app
 
 ```bash
-npx expo start
+npm run dev
 ```
