@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { isEmail, isLowercase } from "validator";
+import { isEmail } from "validator";
 
 const userSchema = new mongoose.Schema(
   {
@@ -47,11 +47,11 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate: [isEmail, "Please enter a valid email"],
     },
-    // password: {
-    //   type: String,
-    //   required: [true, "Please enter a password"],
-    //   minlength: [6, "Minimum password length is 6 characters"],
-    // },
+    picture: {
+      type: String,
+      required: false,
+      unique: false,
+    },
   },
   { timestamps: true }
 );

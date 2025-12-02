@@ -5,6 +5,8 @@ import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import dotenv from "dotenv";
 import csurf from "csurf";
+import User from "./models/user.model";
+import authMiddleware from "./middleware/auth.middleware";
 
 dotenv.config();
 
@@ -36,11 +38,20 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-app.get("/test", (req: Request, res: Response) => {
-  const cookies = req.cookies;
-  console.log(cookies);
-  res.json(cookies);
-});
+app.get(
+  "/api/get-user",
+  authMiddleware,
+  async (req: Request, res: Response) => {
+    const userId = req.user!.sub;
+    console.log(userId);
+    try {
+      const user = await User.findById(userId);
+      return res.json(user);
+    } catch (error) {
+      return res.status(400).json({ message: "Error retrieving user" });
+    }
+  }
+);
 
 // Routes
 app.use("/api/auth", authRoutes);

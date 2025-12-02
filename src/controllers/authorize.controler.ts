@@ -6,6 +6,7 @@ import {
   GOOGLE_CLIENT_ID,
 } from "../utils/constants";
 
+// This function handles the authorization request and redirects to Google's OAuth 2.0 authorization endpoint
 export async function authorizeGet(req: Request, res: Response) {
   if (!GOOGLE_CLIENT_ID) {
     return Response.json(
@@ -19,16 +20,15 @@ export async function authorizeGet(req: Request, res: Response) {
   const internalClient = url.searchParams.get("client_id");
   const redirectUri = url.searchParams.get("redirect_uri");
 
-  // let platform;
+  let platform;
 
-  // if (redirectUri === APP_SCHEME) {
-  //   platform = "mobile";
-  // } else if (redirectUri === BASE_URL) {
-  //   platform = "web";
-  // } else {
-  //   return Response.json({ error: "Invalid redirect_uri" }, { status: 400 });
-  // }
-  const platform = "mobile";
+  if (redirectUri === APP_SCHEME) {
+    platform = "mobile";
+  } else if (redirectUri === BASE_URL) {
+    platform = "web";
+  } else {
+    return Response.json({ error: "Invalid redirect_uri" }, { status: 400 });
+  }
 
   // use state to drive redirect back to platform
   let state = platform + "|" + url.searchParams.get("state");
@@ -55,28 +55,3 @@ export async function authorizeGet(req: Request, res: Response) {
 
   return res.redirect(GOOGLE_AUTH_URL + "?" + params.toString());
 }
-
-export async function callbackGet(req: Request, res: Response) {
-  const incomingParams = new URLSearchParams(req.url.split("?")[1]);
-  const combinedPlatformAndState = incomingParams.get("state");
-  if (!combinedPlatformAndState) {
-    return Response.json({ error: "Invalid state" }, { status: 400 });
-  }
-
-  // strip platform to return state as it was set on the client
-  const platform = combinedPlatformAndState.split("|")[0];
-  const state = combinedPlatformAndState.split("|")[1];
-
-  const outgoingParams = new URLSearchParams({
-    code: incomingParams.get("code")?.toString() || "",
-    state,
-  });
-
-  console.log(outgoingParams);
-
-  return res.redirect("matchmaker://");
-
-  // return res.redirect("matcher://index" + "?" + outgoingParams.toString());
-}
-
-export async function tokenPost(req: Request, res: Response) {}
