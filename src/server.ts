@@ -1,28 +1,35 @@
+import { IS_PRODUCTION } from "./utils/constants";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
 import csurf from "csurf";
 import User from "./models/user.model";
+import { Server } from "socket.io";
+import http from "http";
 import authMiddleware from "./middleware/auth.middleware";
-
-dotenv.config();
 
 const app = express();
 
 const corsOptions = {
-  origin: "http://localhost:3000",
+  origin: IS_PRODUCTION ? false : "http://localhost:3000",
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
+
+const server = http.createServer(app);
+
+const io = new Server(server, {
+  cors: corsOptions,
+  serveClient: false,
+});
 
 app.use(cookieParser());
 app.use(cors(corsOptions));
 app.use(express.json());
 // app.use(express.urlencoded({ extended: true }));
-if (process.env.NODE_ENV === "production") {
+if (IS_PRODUCTION) {
   app.use(csurf({ cookie: true }));
 }
 
@@ -30,7 +37,7 @@ if (process.env.NODE_ENV === "production") {
 app.get("/", (req: Request, res: Response) => {
   res.cookie("test", false, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: IS_PRODUCTION,
     sameSite: "lax",
   });
   res.json({
@@ -43,7 +50,6 @@ app.get(
   authMiddleware,
   async (req: Request, res: Response) => {
     const userId = req.user!.sub;
-    console.log(userId);
     try {
       const user = await User.findById(userId);
       return res.json(user);
@@ -52,6 +58,16 @@ app.get(
     }
   }
 );
+
+io.on("connection", (socket) => {
+  console.log(socket.id, " connected");
+  socket.emit("message", {
+    text: "hi",
+    num: 123,
+    arr: [1, 2, 3],
+    jjj: { a: "b" },
+  });
+});
 
 // Routes
 app.use("/api/auth", authRoutes);
@@ -63,7 +79,7 @@ mongoose
   )
   .then(() => {
     console.log("Successfully connected to MongoDB.");
-    app.listen(process.env.PORT, () => {
+    server.listen(process.env.PORT, () => {
       console.log(`Server is running on port ${process.env.PORT}.`);
     });
   })
