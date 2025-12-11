@@ -13,7 +13,7 @@ emulator -avd "$AVD_NAME" >/dev/null 2>/dev/null &
 EMULATOR_PID=$!
 adb wait-for-device
 echo "Setting up port forwarding..."
-adb forward tcp:8000 tcp:8000
+adb reverse tcp:8000 tcp:8000
 echo "Emulator is ready."
 
 wait $EMULATOR_PID
