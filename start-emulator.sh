@@ -8,7 +8,7 @@ if [ -z "$AVD_NAME" ]; then
 fi
 
 echo "Starting emulator: $AVD_NAME"
-emulator -avd "$AVD_NAME" >/dev/null 2>/dev/null &
+emulator -avd "$AVD_NAME" -no-snapshot-load >/dev/null 2>/dev/null & 
 
 EMULATOR_PID=$!
 adb wait-for-device
