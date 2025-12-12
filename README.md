@@ -14,6 +14,7 @@ and get a working MongoDB client.
    If you're not on a Mac, you can only emulate android by installing Android Studio.
    If you're on a Mac, set up an iOS emulator. Follow the instructions on Expo or React Native
    on how to setup an iOS emulator.
+   Use "Android 35 Vanilla Icecream" for Android emulation.
 
 3. Install dependencies
 
