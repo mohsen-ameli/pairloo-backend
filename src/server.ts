@@ -2,6 +2,7 @@ import { IS_PRODUCTION } from "./utils/constants";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
+import postsRoutes from "./routes/posts.routes";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
@@ -9,6 +10,7 @@ import User from "./models/user.model";
 import { Server } from "socket.io";
 import http from "http";
 import authMiddleware from "./middleware/auth.middleware";
+import { getClosestProduct } from "./utils/getClosestProduct";
 
 const app = express();
 
@@ -35,11 +37,19 @@ if (IS_PRODUCTION) {
 
 // Simple route for testing
 app.get("/", (req: Request, res: Response) => {
-  res.cookie("test", false, {
-    httpOnly: true,
-    secure: IS_PRODUCTION,
-    sameSite: "lax",
-  });
+  const wantedProduct = {
+    category: "Electronics",
+    name: "iPhone 14 Pro",
+    units: "1",
+    price: "800.00",
+    region: "Conakry, Guinea",
+  };
+  getClosestProduct(wantedProduct);
+  // res.cookie("test", false, {
+  //   httpOnly: true,
+  //   secure: IS_PRODUCTION,
+  //   sameSite: "lax",
+  // });
   res.json({
     message: "Welcome to the Node.js JWT Authentication application.",
   });
@@ -71,6 +81,7 @@ io.on("connection", (socket) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/posts", authMiddleware, postsRoutes);
 
 // Connect to MongoDB and start the server
 mongoose
