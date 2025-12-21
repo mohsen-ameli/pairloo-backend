@@ -1,4 +1,3 @@
-// Get a single product by ID
 import mongoose from "mongoose";
 
 export const getProductById = async (req: Request, res: Response) => {
