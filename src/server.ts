@@ -2,6 +2,7 @@ import { IS_PRODUCTION } from "./utils/constants";
 import express, { Request, Response } from "express";
 import cors from "cors";
 import authRoutes from "./routes/auth.routes";
+import productRoutes from "./routes/product.routes";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
@@ -71,6 +72,7 @@ io.on("connection", (socket) => {
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/products", productRoutes);
 
 // Connect to MongoDB and start the server
 mongoose
