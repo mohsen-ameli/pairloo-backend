@@ -1,6 +1,6 @@
 import * as jose from "jose";
 import {
-  JWT_EXPIRATION_TIME,
+  ACCESS_TOKEN_EXPIRY,
   JWT_SECRET,
   REFRESH_TOKEN_EXPIRY,
 } from "../utils/constants";
@@ -12,7 +12,7 @@ export default async function createJWT(id: string) {
   // Create access token (short-lived)
   const accessToken = await new jose.SignJWT()
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime(JWT_EXPIRATION_TIME)
+    .setExpirationTime(ACCESS_TOKEN_EXPIRY)
     .setSubject(id)
     .setIssuedAt(issuedAt)
     .sign(new TextEncoder().encode(JWT_SECRET));

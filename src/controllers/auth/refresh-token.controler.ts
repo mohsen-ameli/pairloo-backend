@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import * as jose from "jose";
-import { JWT_EXPIRATION_TIME, JWT_SECRET } from "../utils/constants";
-import User from "../models/user.model";
+import User from "../../models/user.model";
+import createJWT from "../../utils/create-jwt";
+import { JWT_SECRET } from "../../utils/constants";
 
 // Get a new access token using a valid refresh token
 export async function refreshTokenPost(req: Request, res: Response) {
@@ -29,17 +30,7 @@ export async function refreshTokenPost(req: Request, res: Response) {
     return res.status(404).json({ error: "User not found" });
   }
 
-  // Create new access token
-  const { exp, ...userInfoWithoutExp } = {
-    ...payload.payload,
-    id: user._id.toString(),
-  };
-  const accessToken = await new jose.SignJWT(userInfoWithoutExp)
-    .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime(JWT_EXPIRATION_TIME)
-    .setSubject(user._id.toString())
-    .setIssuedAt()
-    .sign(new TextEncoder().encode(JWT_SECRET));
+  const { accessToken } = await createJWT(user._id.toString());
 
   return res.json({ accessToken });
 }

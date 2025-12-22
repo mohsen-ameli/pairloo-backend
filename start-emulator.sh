@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# kill any running emulators
+adb devices | grep emulator | cut -f1 | while read line; do adb -s $line emu kill; done
+
 AVD_NAME=$(emulator -list-avds | head -n 1)
 
 if [ -z "$AVD_NAME" ]; then

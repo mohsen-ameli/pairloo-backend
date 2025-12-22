@@ -1,6 +1,78 @@
 import { Request, Response } from "express";
-import User from "../models/user.model";
-import createJWT from "../utils/create-jwt";
+import User from "../../models/user.model";
+import createJWT from "../../utils/create-jwt";
+
+export async function signupPost(req: Request, res: Response) {
+  const userData = {
+    username: req.body.username.toLowerCase(),
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    phoneNumber: req.body.phoneNumber,
+    country: req.body.country,
+    city: req.body.city,
+    email: req.body.email.toLowerCase(),
+  };
+  try {
+    const user = new User(userData);
+    const err = user.validateSync();
+    const errors = await handleSignupErrors(err, userData);
+    if (errors) return res.status(400).json({ errors });
+    await user.save();
+
+    const { accessToken, refreshToken } = await createJWT(user._id.toString());
+
+    res.status(201).json({
+      id: user._id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      country: user.country,
+      city: user.city,
+      email: user.email,
+      accessToken,
+      refreshToken,
+    });
+  } catch (err: any) {
+    res.status(500).json({ errors: { general: err.message } });
+  }
+}
+
+export async function loginPost(req: Request, res: Response) {
+  const { email } = req.body;
+  try {
+    const user = await User.findOne({ email: email.toLowerCase() });
+    if (!user) {
+      return res.status(400).json({
+        errors: {
+          general:
+            "Invalid email. Please check your email address again and try again.",
+        },
+      });
+    }
+
+    const { accessToken, refreshToken } = await createJWT(user._id.toString());
+
+    res.status(200).json({
+      id: user._id,
+      username: user.username,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phoneNumber: user.phoneNumber,
+      country: user.country,
+      city: user.city,
+      email: user.email,
+      accessToken,
+      refreshToken,
+    });
+  } catch (err: any) {
+    res.status(500).json({
+      errors: {
+        general: "Failed to connect to database. Please try again later.",
+      },
+    });
+  }
+}
 
 async function handleSignupErrors(err: any, user: typeof User.prototype) {
   const errors = {
@@ -41,67 +113,4 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
     }
   }
   return null;
-}
-
-export async function signupPost(req: Request, res: Response) {
-  const userData = {
-    username: req.body.username.toLowerCase(),
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    phoneNumber: req.body.phoneNumber,
-    country: req.body.country,
-    city: req.body.city,
-    email: req.body.email.toLowerCase(),
-  };
-  try {
-    const user = new User(userData);
-    const err = user.validateSync();
-    const errors = await handleSignupErrors(err, userData);
-    if (errors) return res.status(400).json({ errors });
-    await user.save();
-
-    const { accessToken, refreshToken } = await createJWT(user._id.toString());
-
-    res.status(201).json({
-      id: user._id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      country: user.country,
-      city: user.city,
-      email: user.email,
-      accessToken,
-      refreshToken,
-    });
-  } catch (err: any) {
-    res.status(500).json({ errors: { general: err.message } });
-  }
-}
-
-export async function loginPost(req: Request, res: Response) {
-  const {email} = req.body;
-  try {
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(400).json({ errors: { general: "Invalid email. Please check your email address again and try again." } });
-    }
-
-    const { accessToken, refreshToken } = await createJWT(user._id.toString());
-
-    res.status(200).json({
-      id: user._id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      country: user.country,
-      city: user.city,
-      email: user.email,
-      accessToken,
-      refreshToken,
-    });
-  } catch (err: any) {
-    res.status(500).json({ errors: { general: "Failed to connect to database. Please try again later." } });
-  }
 }

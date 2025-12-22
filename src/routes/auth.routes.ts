@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { loginPost, signupPost } from "../controllers/auth.controler";
-import { authorizeGet } from "../controllers/authorize.controler";
-import { callbackGet } from "../controllers/callback.controller";
-import { tokenPost } from "../controllers/token.controler";
-import { refreshTokenPost } from "../controllers/refresh-token.controler";
+import { loginPost, signupPost } from "../controllers/auth/auth.controler";
+import { authorizeGet } from "../controllers/auth/authorize.controler";
+import { callbackGet } from "../controllers/auth/callback.controller";
+import { tokenPost } from "../controllers/auth/token.controler";
+import { refreshTokenPost } from "../controllers/auth/refresh-token.controler";
 
 const router = Router();
 

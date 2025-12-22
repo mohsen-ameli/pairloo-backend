@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { APP_SCHEME, BASE_URL } from "../utils/constants";
+import { APP_SCHEME, BASE_URL } from "../../utils/constants";
 
 // This function is called once the user has authenticated with Google
 // It handles the callback and redirects back to the app with the authorization code
@@ -9,13 +9,7 @@ export async function callbackGet(req: Request, res: Response) {
   try {
     const incomingParams = new URLSearchParams(req.url.split("?")[1]);
     const state = incomingParams.get("state");
-    
-    console.log("Callback received with params:", {
-      state: state ? state.substring(0, 20) + "..." : null,
-      code: incomingParams.get("code") ? "present" : "missing",
-      error: incomingParams.get("error") || "none",
-    });
-    
+
     if (!state) {
       return res.status(400).json({ error: "Invalid state" });
     }
@@ -23,18 +17,18 @@ export async function callbackGet(req: Request, res: Response) {
     // Check for errors from Google
     const error = incomingParams.get("error");
     if (error) {
-      console.error("Google OAuth error:", error, incomingParams.get("error_description"));
-      return res.status(400).json({ 
+      console.error(
+        "Google OAuth error:",
+        error,
+        incomingParams.get("error_description")
+      );
+      return res.status(400).json({
         error: "Google authentication failed",
-        details: incomingParams.get("error_description")
+        details: incomingParams.get("error_description"),
       });
     }
 
     const code = incomingParams.get("code")?.toString() || "";
-
-    console.log("Callback processing:", {
-      hasCode: !!code,
-    });
 
     // For web platform, return the code and state to the frontend
     // The frontend will handle exchanging this for tokens
