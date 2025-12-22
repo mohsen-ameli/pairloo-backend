@@ -22,5 +22,5 @@ export async function productPost(req: Request, res: Response) {
 
   await product.save();
 
-  res.status(201).json({ message: "Product created successfully" });
+  res.status(201).json({ message: "Product created successfully", product });
 }

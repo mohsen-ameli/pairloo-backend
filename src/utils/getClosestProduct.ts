@@ -21,6 +21,9 @@ export async function getClosestProduct(
   }[] = [];
 
   const products = await Product.find();
+  const productPrices = products.map((p) => parseFloat(p.price));
+  const maxPrice = Math.max(...productPrices);
+  const minPrice = Math.min(...productPrices);
 
   for (const productInDB of products) {
     const categorySim = cosineSimilarity(
@@ -32,12 +35,14 @@ export async function getClosestProduct(
       productInDB.region_embedding
     );
     // Price similarity
-    const price1 = parseFloat(product.price);
-    const price2 = parseFloat(productInDB.price);
-    const priceSim = Math.exp(-Math.abs(price1 - price2) / 10);
+    const wantedPrice = parseFloat(product.price);
+    const productPrice = parseFloat(productInDB.price);
+    const priceDiff = Math.abs(wantedPrice - productPrice);
+    const normalizedPriceDiff = priceDiff / (maxPrice - minPrice);
+    const priceSim = 1 - normalizedPriceDiff;
 
-    // Weighted combination
-    const score = 0.4 * categorySim + 0.3 * regionSim + 0.3 * priceSim;
+    // Multiplicative combination: if any similarity is low, score is low
+    const score = categorySim * regionSim * priceSim;
     results.push({ score, productInDB });
   }
 

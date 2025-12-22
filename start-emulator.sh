@@ -7,8 +7,15 @@ if [ -z "$AVD_NAME" ]; then
   exit 1
 fi
 
+# if -c is passed, do cold boot
+if [ "$1" == "-c" ]; then
+  BOOT_OPTION="-no-snapshot-load"
+else
+  BOOT_OPTION=""
+fi
+
 echo "Starting emulator: $AVD_NAME"
-emulator -avd "$AVD_NAME" -no-snapshot-load >/dev/null 2>/dev/null &
+emulator -avd "$AVD_NAME" $BOOT_OPTION >/dev/null 2>/dev/null &
 
 EMULATOR_PID=$!
 adb wait-for-device
