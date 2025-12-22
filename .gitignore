@@ -1,5 +1,6 @@
 # Custom
 sample.json
+*.csv
 
 # Node.js dependencies
 node_modules/

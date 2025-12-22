@@ -56,6 +56,12 @@ npm run dev
 chmod u+x start-emulator.sh
 ```
 
+Run the emulator. If you want to do a cold boot, if things are not working well from a loaded state, do
+
+```
+./start-emulator.sh -c
+```
+
 (Note: if you use different ports other than 3000 and 8000 for frontend and backend respectively, then idk what to tell you.)
 
 # Notes:
