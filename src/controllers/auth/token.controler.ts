@@ -97,6 +97,15 @@ export async function tokenPost(req: Request, res: Response) {
 
   // For native platforms, return both tokens in the response body
   return res.json({
+    id: user._id,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phoneNumber: user.phoneNumber,
+    country: user.country,
+    city: user.city,
+    email: user.email,
+    picture: user.picture,
     accessToken,
     refreshToken,
   });

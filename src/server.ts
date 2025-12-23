@@ -1,6 +1,13 @@
-import { FRONTEND_URL, IS_PRODUCTION } from "./utils/constants";
+import {
+  EMAIL_HOST,
+  EMAIL_PASS,
+  EMAIL_USER,
+  FRONTEND_URL,
+  IS_PRODUCTION,
+} from "./utils/constants";
 import express, { Request, Response } from "express";
 import cors from "cors";
+import nodemailer from "nodemailer";
 import authRoutes from "./routes/auth.routes";
 import postsRoutes from "./routes/posts.routes";
 import mongoose from "mongoose";
@@ -32,6 +39,15 @@ app.use(express.json());
 if (IS_PRODUCTION) {
   app.use(csurf({ cookie: true }));
 }
+
+export const transporter = nodemailer.createTransport({
+  host: EMAIL_HOST,
+  port: 587,
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
+  },
+});
 
 // Simple route for testing
 app.get("/", (req: Request, res: Response) => {

@@ -38,42 +38,6 @@ export async function signupPost(req: Request, res: Response) {
   }
 }
 
-export async function loginPost(req: Request, res: Response) {
-  const { email } = req.body;
-  try {
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(400).json({
-        errors: {
-          general:
-            "Invalid email. Please check your email address again and try again.",
-        },
-      });
-    }
-
-    const { accessToken, refreshToken } = await createJWT(user._id.toString());
-
-    res.status(200).json({
-      id: user._id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      country: user.country,
-      city: user.city,
-      email: user.email,
-      accessToken,
-      refreshToken,
-    });
-  } catch (err: any) {
-    res.status(500).json({
-      errors: {
-        general: "Failed to connect to database. Please try again later.",
-      },
-    });
-  }
-}
-
 async function handleSignupErrors(err: any, user: typeof User.prototype) {
   const errors = {
     username: "",

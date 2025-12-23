@@ -31,6 +31,9 @@ export const BASE_URL = process.env.PUBLIC_BASE_URL;
 export const FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL;
 export const APP_SCHEME = process.env.PUBLIC_SCHEME;
 export const JWT_SECRET = process.env.JWT_SECRET!;
+export const EMAIL_HOST = process.env.EMAIL_HOST!;
+export const EMAIL_USER = process.env.EMAIL_USER!;
+export const EMAIL_PASS = process.env.EMAIL_PASS!;
 
 // Cookie Settings
 export const COOKIE_OPTIONS = {
