@@ -12,9 +12,9 @@ export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 // Authentication Constants
 export const COOKIE_NAME = "auth_token";
 export const REFRESH_COOKIE_NAME = "refresh_token";
-export const COOKIE_MAX_AGE = 20; // 20 seconds
-export const JWT_EXPIRATION_TIME = "5000s"; // 20 seconds
-export const REFRESH_TOKEN_EXPIRY = "30d"; // 30 days
+export const COOKIE_MAX_AGE = 5000; // seconds
+export const ACCESS_TOKEN_EXPIRY = "5000s"; // seconds
+export const REFRESH_TOKEN_EXPIRY = "30d"; // days
 export const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 
 // Refresh Token Constants
@@ -28,8 +28,12 @@ export const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 
 // Environment Constants
 export const BASE_URL = process.env.PUBLIC_BASE_URL;
+export const FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL;
 export const APP_SCHEME = process.env.PUBLIC_SCHEME;
 export const JWT_SECRET = process.env.JWT_SECRET!;
+export const EMAIL_HOST = process.env.EMAIL_HOST!;
+export const EMAIL_USER = process.env.EMAIL_USER!;
+export const EMAIL_PASS = process.env.EMAIL_PASS!;
 
 // Cookie Settings
 export const COOKIE_OPTIONS = {

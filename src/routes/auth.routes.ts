@@ -1,14 +1,17 @@
 import { Router } from "express";
-import { loginPost, signupPost } from "../controllers/auth.controler";
-import { authorizeGet } from "../controllers/authorize.controler";
-import { callbackGet } from "../controllers/callback.controller";
-import { tokenPost } from "../controllers/token.controler";
-import { refreshTokenPost } from "../controllers/refresh-token.controler";
+import { signupPost } from "../controllers/auth/auth.controler";
+import { authorizeGet } from "../controllers/auth/authorize.controler";
+import { callbackGet } from "../controllers/auth/callback.controller";
+import { tokenPost } from "../controllers/auth/token.controler";
+import { refreshTokenPost } from "../controllers/auth/refresh-token.controler";
+import { requestEmailVerification } from "../controllers/auth/request-email-verification.controler";
+import { verifyEmailCode } from "../controllers/auth/verify-email-code.controler";
 
 const router = Router();
 
 router.post("/signup", signupPost);
-router.post("/login", loginPost);
+router.post("/request-email-verification", requestEmailVerification);
+router.post("/verify-email-code", verifyEmailCode);
 router.get("/authorize", authorizeGet);
 router.get("/callback", callbackGet);
 router.post("/token", tokenPost);

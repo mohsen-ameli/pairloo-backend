@@ -3,10 +3,10 @@ import {
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URI,
-} from "../utils/constants";
+} from "../../utils/constants";
 import { Request, Response } from "express";
-import User from "../models/user.model";
-import createJWT from "../utils/create-jwt";
+import User from "../../models/user.model";
+import createJWT from "../../utils/create-jwt";
 
 // Exchanges authorization code for JWT tokens and user info
 export async function tokenPost(req: Request, res: Response) {
@@ -97,6 +97,15 @@ export async function tokenPost(req: Request, res: Response) {
 
   // For native platforms, return both tokens in the response body
   return res.json({
+    id: user._id,
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    phoneNumber: user.phoneNumber,
+    country: user.country,
+    city: user.city,
+    email: user.email,
+    picture: user.picture,
     accessToken,
     refreshToken,
   });

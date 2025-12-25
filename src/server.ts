@@ -1,12 +1,18 @@
-import { IS_PRODUCTION } from "./utils/constants";
+import {
+  EMAIL_HOST,
+  EMAIL_PASS,
+  EMAIL_USER,
+  FRONTEND_URL,
+  IS_PRODUCTION,
+} from "./utils/constants";
 import express, { Request, Response } from "express";
 import cors from "cors";
+import nodemailer from "nodemailer";
 import authRoutes from "./routes/auth.routes";
 import postsRoutes from "./routes/posts.routes";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
-import User from "./models/user.model";
 import { Server } from "socket.io";
 import http from "http";
 import authMiddleware from "./middleware/auth.middleware";
@@ -15,7 +21,7 @@ import { getClosestProduct } from "./utils/getClosestProduct";
 const app = express();
 
 const corsOptions = {
-  origin: IS_PRODUCTION ? false : "http://localhost:3000",
+  origin: IS_PRODUCTION ? false : FRONTEND_URL,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
 };
@@ -30,10 +36,18 @@ const io = new Server(server, {
 app.use(cookieParser());
 app.use(cors(corsOptions));
 app.use(express.json());
-// app.use(express.urlencoded({ extended: true }));
 if (IS_PRODUCTION) {
   app.use(csurf({ cookie: true }));
 }
+
+export const transporter = nodemailer.createTransport({
+  host: EMAIL_HOST,
+  port: 587,
+  auth: {
+    user: EMAIL_USER,
+    pass: EMAIL_PASS,
+  },
+});
 
 // Simple route for testing
 app.get("/", (req: Request, res: Response) => {
@@ -55,20 +69,6 @@ app.get("/", (req: Request, res: Response) => {
   });
 });
 
-app.get(
-  "/api/get-user",
-  authMiddleware,
-  async (req: Request, res: Response) => {
-    const userId = req.user!.sub;
-    try {
-      const user = await User.findById(userId);
-      return res.json(user);
-    } catch (error) {
-      return res.status(400).json({ message: "Error retrieving user" });
-    }
-  }
-);
-
 io.on("connection", (socket) => {
   console.log(socket.id, " connected");
   socket.emit("message", {
@@ -89,7 +89,6 @@ mongoose
     `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
   )
   .then(() => {
-    console.log("Successfully connected to MongoDB.");
     server.listen(process.env.PORT, () => {
       console.log(`Server is running on port ${process.env.PORT}.`);
     });
