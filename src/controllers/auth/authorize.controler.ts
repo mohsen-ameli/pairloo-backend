@@ -30,23 +30,14 @@ export async function authorizeGet(req: Request, res: Response) {
 
     if (redirectUri === APP_SCHEME) {
       platform = "mobile";
-    } else if (
-      redirectUri === BASE_URL ||
-      redirectUri.startsWith("http://localhost") ||
-      redirectUri.startsWith("http://127.0.0.1")
-    ) {
+    } else if (redirectUri === BASE_URL) {
       platform = "web";
     } else {
       return res.status(400).json({ error: "Invalid redirect_uri" });
     }
 
     // use state to drive redirect back to platform
-    let state = url.searchParams.get("state");
-
-    // additional enforcement
-    if (!state) {
-      return res.status(400).json({ error: "Invalid state" });
-    }
+    let state = platform + "|" + url.searchParams.get("state");
 
     if (internalClient === "google") {
       idpClientId = GOOGLE_CLIENT_ID;
@@ -54,16 +45,16 @@ export async function authorizeGet(req: Request, res: Response) {
       return res.status(400).json({ error: "Invalid client" });
     }
 
-    // For mobile apps, redirect directly to the app with the code
-    // For web apps, use the backend callback endpoint
-    const callbackUri =
-      platform === "mobile" ? redirectUri : BASE_URL + "/api/auth/callback";
+    // additional enforcement
+    if (!state) {
+      return res.status(400).json({ error: "Invalid state" });
+    }
 
     const params = new URLSearchParams({
       client_id: idpClientId,
-      redirect_uri: callbackUri,
+      redirect_uri: BASE_URL + "/api/auth/callback",
       response_type: "code",
-      scope: url.searchParams.get("scope") || "openid profile email",
+      scope: url.searchParams.get("scope") || "identity",
       state,
       prompt: "select_account",
     });
