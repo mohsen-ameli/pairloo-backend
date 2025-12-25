@@ -8,7 +8,9 @@ import { APP_SCHEME, BASE_URL } from "../../utils/constants";
 export async function callbackGet(req: Request, res: Response) {
   try {
     const incomingParams = new URLSearchParams(req.url.split("?")[1]);
-    const state = incomingParams.get("state");
+    const combinedPlatformAndState = incomingParams.get("state")!;
+    const platform = combinedPlatformAndState.split("|")[0];
+    const state = combinedPlatformAndState.split("|")[1];
 
     if (!state) {
       return res.status(400).json({ error: "Invalid state" });
@@ -28,30 +30,16 @@ export async function callbackGet(req: Request, res: Response) {
       });
     }
 
-    const code = incomingParams.get("code")?.toString() || "";
+    const outgoingParams = new URLSearchParams({
+      code: incomingParams.get("code")?.toString() || "",
+      state,
+    });
 
-    // For web platform, return the code and state to the frontend
-    // The frontend will handle exchanging this for tokens
-    res.setHeader("Content-Type", "text/html");
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Authentication Successful</title>
-      </head>
-      <body>
-        <p>Authentication successful! Redirecting...</p>
-        <script>
-          // Send message to parent window or redirect
-          const params = new URLSearchParams({
-            code: '${code}',
-            state: '${state}'
-          });
-          window.location.href = '${BASE_URL}?' + params.toString();
-        </script>
-      </body>
-      </html>
-    `);
+    return res.redirect(
+      (platform == "web" ? BASE_URL : APP_SCHEME) +
+        "?" +
+        outgoingParams.toString()
+    );
   } catch (error) {
     console.error("Callback error:", error);
     return res.status(500).json({ error: "Callback processing failed" });
