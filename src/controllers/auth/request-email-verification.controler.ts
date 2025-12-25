@@ -16,34 +16,31 @@ export async function requestEmailVerification(req: Request, res: Response) {
       });
     }
 
-    const verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
-
-    const mailOptions = {
-      from: EMAIL_USER,
-      to: user.email,
-      subject: "Verification Code",
-      text: `Your verification code is: ${verificationCode}`,
-    };
-
-    await transporter.sendMail(mailOptions);
-
-    if (await Verification.findOne({ email: user.email })) {
-      return res.status(400).json({
-        error: "Verification code already sent to this email.",
-      });
-    }
+    let verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
 
     try {
       const verification = new Verification({
         email: user.email,
         code: verificationCode,
+        createdAt: Date.now(),
       });
       await verification.save();
     } catch (err) {
-      return res.status(400).json({
-        error: "Verification code already sent to this email.",
+      // user is requesting a resend, before the previous code expired
+      const existingVerification = await Verification.findOne({
+        email: user.email,
       });
+      verificationCode = existingVerification!.code;
     }
+
+    const mailOptions = {
+      from: EMAIL_USER,
+      to: user.email,
+      subject: "Verification Code",
+      text: `Your verification code is: ${verificationCode}.\nPlease use this code within 5 minutes or it will expire and you will need to retrieve a new code.\n\nDo not share this code with anyone.`,
+    };
+
+    await transporter.sendMail(mailOptions);
 
     return res.status(200).json({
       message: "Verification code sent to email.",
