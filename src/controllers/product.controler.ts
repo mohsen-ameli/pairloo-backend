@@ -16,20 +16,8 @@ export async function productPost(req: Request, res: Response) {
     price,
     userId,
   });
-
-  // Pass a plain object to getClosestProducts
-  const closestProducts = await getClosestProducts({
-    type,
-    category,
-    region,
-    name,
-    quantity,
-    price,
-    userId,
-  });
-
+  const closestProducts = await getClosestProducts(product);
   product.set("closestProducts", closestProducts);
-
   await product.save();
 
   res.status(201).json({ message: "Product created successfully", product });
