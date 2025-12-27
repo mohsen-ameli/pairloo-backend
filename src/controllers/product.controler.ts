@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import Product from "../models/product.model";
-import { getClosestProduct } from "../utils/getClosestProduct";
+import mongoose from "mongoose";
+import { getClosestProducts } from "../utils/getClosestProducts";
 
 export async function productPost(req: Request, res: Response) {
   const { type, category, region, name, quantity, price } = req.body;
-  const userId = req.user!.sub;
+  const userId = new mongoose.Types.ObjectId(req.user!.sub);
 
   const product = new Product({
     type,
@@ -16,9 +17,18 @@ export async function productPost(req: Request, res: Response) {
     userId,
   });
 
-  const closestProducts = await getClosestProduct(product);
-  // @ts-ignore
-  product.closestProducts = closestProducts.map((p) => p._id);
+  // Pass a plain object to getClosestProducts
+  const closestProducts = await getClosestProducts({
+    type,
+    category,
+    region,
+    name,
+    quantity,
+    price,
+    userId,
+  });
+
+  product.set("closestProducts", closestProducts);
 
   await product.save();
 
