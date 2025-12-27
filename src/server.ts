@@ -91,7 +91,7 @@ io.on("connection", (socket) => {
 });
 
 // Routes
-app.use("/api/auth", authRoutes);
+app.use("/api/auth", authMiddleware, authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
 
 // Connect to MongoDB and start the server
