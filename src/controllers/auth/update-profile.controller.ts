@@ -6,7 +6,7 @@ export async function updateProfile(req: Request, res: Response) {
     const userId = req.user?.sub;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const allowedFields = ["firstName", "lastName", "phoneNumber", "country", "city"];
+    const allowedFields = ["firstName", "lastName", "country", "city"];
     const updates: Record<string, any> = {};
     for (const field of allowedFields) {
       if (field in req.body) updates[field] = req.body[field];
