@@ -10,6 +10,7 @@ import cors from "cors";
 import nodemailer from "nodemailer";
 import authRoutes from "./routes/auth.routes";
 import postsRoutes from "./routes/posts.routes";
+import settingsRoutes from "./routes/settings.routes";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
@@ -91,8 +92,9 @@ io.on("connection", (socket) => {
 });
 
 // Routes
-app.use("/api/auth", authMiddleware, authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
+app.use("/api/settings", authMiddleware, settingsRoutes);
 
 // Connect to MongoDB and start the server
 mongoose
