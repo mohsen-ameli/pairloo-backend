@@ -8,10 +8,19 @@ const productSchema = new mongoose.Schema(
       required: true,
     },
     closestProducts: {
-      type: [mongoose.Schema.Types.ObjectId],
-      ref: "product",
+      type: [
+        {
+          score: { type: Number, required: true },
+          item: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "product",
+            required: true,
+          },
+        },
+      ],
       required: false,
     },
+
     type: {
       type: String,
       enum: ["need", "provide"],
