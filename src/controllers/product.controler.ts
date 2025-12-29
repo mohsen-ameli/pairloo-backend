@@ -1,11 +1,10 @@
 import { Request, Response } from "express";
 import Product from "../models/product.model";
-import mongoose from "mongoose";
-import { getClosestProducts } from "../utils/getClosestProducts";
+import { getClosestProduct } from "../utils/getClosestProduct";
 
 export async function productPost(req: Request, res: Response) {
   const { type, category, region, name, quantity, price } = req.body;
-  const userId = new mongoose.Types.ObjectId(req.user!.sub);
+  const userId = req.user!.sub;
 
   const product = new Product({
     type,
@@ -16,8 +15,11 @@ export async function productPost(req: Request, res: Response) {
     price,
     userId,
   });
-  const closestProducts = await getClosestProducts(product);
-  product.set("closestProducts", closestProducts);
+
+  const closestProducts = await getClosestProduct(product);
+  // @ts-ignore
+  product.closestProducts = closestProducts.map((p) => p._id);
+
   await product.save();
 
   res.status(201).json({ message: "Product created successfully", product });

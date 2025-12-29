@@ -1,20 +1,15 @@
 import { getEmbedding, cosineSimilarity } from "./embedding";
 import Product, { ProductType } from "../models/product.model";
-import mongoose from "mongoose";
 
-export async function getClosestProducts(product: Partial<ProductType>, K = 5) {
-  if (
-    !product.category ||
-    !product.name ||
-    !product.region ||
-    !product.price ||
-    !product.type
-  ) {
-    throw new Error(
-      "Product must have category, name, region, price, and type"
-    );
-  }
-
+export async function getClosestProduct(
+  product: {
+    category: string;
+    name: string;
+    region: string;
+    price: string;
+  },
+  K = 5
+) {
   const wantedCategoryEmbedding = await getEmbedding(
     `${product.category} ${product.name}`
   );
@@ -22,13 +17,10 @@ export async function getClosestProducts(product: Partial<ProductType>, K = 5) {
 
   const results: {
     score: number;
-    item: mongoose.Types.ObjectId;
+    productInDB: ProductType;
   }[] = [];
 
-  const products = await Product.find({
-    type: product.type === "need" ? "provide" : "need",
-    // userId: { $ne: product.userId },
-  });
+  const products = await Product.find();
   const productPrices = products.map((p) => parseFloat(p.price));
   const maxPrice = Math.max(...productPrices);
   const minPrice = Math.min(...productPrices);
@@ -51,16 +43,16 @@ export async function getClosestProducts(product: Partial<ProductType>, K = 5) {
 
     // Multiplicative combination: if any similarity is low, score is low
     const score = categorySim * regionSim * priceSim;
-    results.push({ score, item: productInDB._id });
+    results.push({ score, productInDB });
   }
 
   results.sort((a, b) => b.score - a.score);
-  // console.log(`Top ${K} matches:`);
-  // for (const { score, item } of results.slice(0, K)) {
-  //   console.log(
-  //     `Score: ${score.toFixed(4)}, Name: ${item.name}, Category: ${item.category}, Price: ${item.price}, Region: ${item.region}`,
-  //   );
-  // }
+  console.log(`Top ${K} matches:`);
+  for (const { score, productInDB } of results.slice(0, K)) {
+    console.log(
+      `Score: ${score.toFixed(4)}, Name: ${productInDB.name}, Category: ${productInDB.category}, Price: ${productInDB.price}, Region: ${productInDB.region}`
+    );
+  }
 
-  return results.slice(0, K);
+  return results.slice(0, K).map((r) => r.productInDB);
 }
