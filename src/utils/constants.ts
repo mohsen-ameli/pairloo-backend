@@ -20,6 +20,8 @@ export const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
 // Refresh Token Constants
 export const REFRESH_BEFORE_EXPIRY_SEC = 60; // Refresh token 1 minute before expiry
 
+export const DB_URI = process.env.DB_URI!;
+
 // Google OAuth Constants
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!;
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;

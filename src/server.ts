@@ -1,4 +1,5 @@
 import {
+  DB_URI,
   EMAIL_HOST,
   EMAIL_PASS,
   EMAIL_USER,
@@ -98,9 +99,7 @@ app.use("/api/settings", authMiddleware, settingsRoutes);
 
 // Connect to MongoDB and start the server
 mongoose
-  .connect(
-    `mongodb://${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`
-  )
+  .connect(DB_URI)
   .then(() => {
     server.listen(process.env.PORT, () => {
       console.log(`Server is running on port ${process.env.PORT}.`);
