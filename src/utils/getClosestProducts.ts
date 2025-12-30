@@ -27,7 +27,7 @@ export async function getClosestProducts(product: Partial<ProductType>, K = 5) {
 
   const products = await Product.find({
     type: product.type === "need" ? "provide" : "need",
-    // userId: { $ne: product.userId },
+    userId: { $ne: product.userId },
   });
   const productPrices = products.map((p) => parseFloat(p.price));
   const maxPrice = Math.max(...productPrices);
