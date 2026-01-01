@@ -1,16 +1,11 @@
 import { Router } from "express";
-import { productPost } from "../controllers/product.controler";
-import { allPostsGet } from "../controllers/posts.controler";
-import {
-  specificPostGet,
-  specificPostDelete,
-} from "../controllers/posts.controler";
+import { postListGet } from "../controllers/posts.controler";
+import { postGet, postDelete } from "../controllers/posts.controler";
 
 const router = Router();
 
-router.post("/products", productPost);
-router.get("/all-posts", allPostsGet);
-router.get("/:id", specificPostGet);
-router.delete("/:id", specificPostDelete);
+router.get("/my-posts", postListGet);
+router.get("/:id", postGet);
+router.delete("/:id", postDelete);
 
 export default router;

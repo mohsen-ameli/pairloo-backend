@@ -18,8 +18,9 @@ import csurf from "csurf";
 import { Server } from "socket.io";
 import http from "http";
 import authMiddleware from "./middleware/auth.middleware";
-import { getClosestProducts } from "./utils/getClosestProducts";
-import { csvToMongo } from "./utils/csvToMongo";
+// import { csvToMongo } from "./utils/csvToMongo";
+import { createPostSocket } from "./sockets/create-post.socket";
+import { GoogleGenAI } from "@google/genai";
 
 const app = express();
 
@@ -35,6 +36,8 @@ const io = new Server(server, {
   cors: corsOptions,
   serveClient: false,
 });
+
+export const ai = new GoogleGenAI({});
 
 app.use(cookieParser());
 app.use(cors(corsOptions));
@@ -53,34 +56,21 @@ export const transporter = nodemailer.createTransport({
 });
 
 // Simple route for testing
-app.get("/", (req: Request, res: Response) => {
-  const wantedProduct = {
-    category: "Electronics",
-    name: "iPhone 14 Pro",
-    quantity: "1",
-    price: "800.00",
-    region: "Conakry, Guinea",
-  };
-  getClosestProducts(wantedProduct);
-  // res.cookie("test", false, {
-  //   httpOnly: true,
-  //   secure: IS_PRODUCTION,
-  //   sameSite: "lax",
-  // });
+app.get("/", async (req: Request, res: Response) => {
   res.json({
     message: "Welcome to the Node.js JWT Authentication application.",
   });
 });
-app.get("/pop-mongo", async (req: Request, res: Response) => {
-  console.log("Populating MongoDB from CSV...");
-  const start = Date.now();
-  await csvToMongo();
-  const end = Date.now();
-  res.json({
-    message: "MongoDB populated from CSV.",
-    timeTakenSeconds: (end - start) / 1000,
-  });
-});
+// app.get("/pop-mongo", async (req: Request, res: Response) => {
+//   console.log("Populating MongoDB from CSV...");
+//   const start = Date.now();
+//   await csvToMongo();
+//   const end = Date.now();
+//   res.json({
+//     message: "MongoDB populated from CSV.",
+//     timeTakenSeconds: (end - start) / 1000,
+//   });
+// });
 
 io.on("connection", (socket) => {
   console.log(socket.id, " connected");
@@ -91,6 +81,9 @@ io.on("connection", (socket) => {
     jjj: { a: "b" },
   });
 });
+
+// Sockets
+createPostSocket(io);
 
 // Routes
 app.use("/api/auth", authRoutes);
