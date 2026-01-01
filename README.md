@@ -48,6 +48,9 @@ go to "https://myaccount.google.com/apppasswords"
 and make a new app. Name doesn't matter. Copy the app password into EMAIL_PASS in .env
 set EMAIL_HOST to "smtp.gmail.com" and EMAIL_USER to your email address
 
+To connect to gemini, go to https://aistudio.google.com/ and create an account.
+Then make an API key and put the value in GEMINI_API_KEY
+
 4. Start the backend server
 
 ```bash

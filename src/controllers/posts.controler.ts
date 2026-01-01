@@ -1,39 +1,47 @@
 import { Request, Response } from "express";
-import Product from "../models/product.model";
+import Post from "../models/post.model";
 
-export async function allPostsGet(req: Request, res: Response) {
+export async function postListGet(req: Request, res: Response) {
   const userId = req.user!.sub;
 
-  const products = await Product.find({ userId });
-  products.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  const posts = await Post.find({ userId });
+  posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-  res.status(200).json(products);
+  res.status(200).json(posts);
 }
 
-export async function specificPostGet(req: Request, res: Response) {
+export async function postGet(req: Request, res: Response) {
   const postId = req.params.id;
 
-  const product = await Product.findById(postId);
-  if (!product) {
+  const post = await Post.findById(postId);
+  if (!post) {
     return res.status(404).json({ message: "Post not found" });
   }
 
-  res.status(200).json(product);
+  res.status(200).json({
+    _id: post._id,
+    userId: post.userId,
+    content: post.content,
+    summary: post.summary,
+    image: post.image,
+    closePost: post.closestPosts,
+    createdAt: post.createdAt,
+  });
 }
 
-export async function specificPostDelete(req: Request, res: Response) {
+export async function postDelete(req: Request, res: Response) {
   const postId = req.params.id;
   const userId = req.user!.sub;
 
-  const product = await Product.findById(postId);
-  if (!product) {
+  const post = await Post.findById(postId);
+  if (!post) {
     return res.status(404).json({ message: "Post not found" });
   }
 
-  if (product.userId.toString() !== userId) {
+  if (post.userId.toString() !== userId) {
     return res.status(403).json({ message: "Unauthorized" });
   }
 
-  await product.deleteOne();
+  await post.deleteOne();
   res.status(200).json({ message: "Post deleted successfully" });
 }
