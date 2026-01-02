@@ -21,6 +21,7 @@ import authMiddleware from "./middleware/auth.middleware";
 // import { csvToMongo } from "./utils/csvToMongo";
 import { createPostSocket } from "./sockets/create-post.socket";
 import { GoogleGenAI } from "@google/genai";
+import { authSocketMiddleware } from "./middleware/auth-socket.middle";
 
 const app = express();
 
@@ -72,23 +73,16 @@ app.get("/", async (req: Request, res: Response) => {
 //   });
 // });
 
-io.on("connection", (socket) => {
-  console.log(socket.id, " connected");
-  socket.emit("message", {
-    text: "hi",
-    num: 123,
-    arr: [1, 2, 3],
-    jjj: { a: "b" },
-  });
-});
-
-// Sockets
-createPostSocket(io);
-
-// Routes
+// Express - Routes & handlers
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
 app.use("/api/settings", authMiddleware, settingsRoutes);
+
+// Sockets - Routes
+const createPostIo = io.of("/create-post").use(authSocketMiddleware);
+
+// Sockets - Handlers
+createPostSocket(createPostIo);
 
 // Connect to MongoDB and start the server
 mongoose
