@@ -1,27 +1,14 @@
-import { Server, Socket } from "socket.io";
+import { DefaultEventsMap, Namespace, Socket } from "socket.io";
 import { callForQuestion, callForEmbedding } from "../utils/AIQA";
-import { JWT_SECRET, MAX_POST_QUESTIONS } from "../utils/constants";
-import { JwtPayload } from "../types/user.types";
-import jwt from "jsonwebtoken";
+import { MAX_POST_QUESTIONS } from "../utils/constants";
 import Post from "../models/post.model";
 import { getClosestPosts } from "../utils/getClosestPosts";
 
-export function createPostSocket(io: Server) {
-  io.of("/create-post").on("connection", (socket: Socket) => {
-    const accessToken: string = socket.handshake.auth.token;
-    if (!accessToken) {
-      socket.disconnect(true);
-      return;
-    }
-    let decoded: JwtPayload;
-
-    try {
-      decoded = jwt.verify(accessToken, JWT_SECRET) as JwtPayload;
-    } catch (error) {
-      socket.disconnect(true);
-      return;
-    }
-    const userId = decoded.sub;
+export function createPostSocket(
+  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+) {
+  io.on("connection", (socket: Socket) => {
+    const userId = (socket as any).user.sub as string;
 
     const session = {
       initialPostText: "",
