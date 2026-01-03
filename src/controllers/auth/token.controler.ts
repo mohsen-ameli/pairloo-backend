@@ -52,9 +52,12 @@ export async function tokenPost(req: Request, res: Response) {
   });
 
   if (!user) {
-    return res.status(404).json({
-      error:
-        "Sorry this gmail account is not associated with an active account.",
+    return res.status(409).json({
+      email: userInfo.email,
+      firstName: userInfo.given_name,
+      lastName: userInfo.family_name,
+      picture: userInfo.picture,
+      emailVerified: userInfo.email_verified,
     });
   }
 
