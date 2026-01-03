@@ -10,6 +10,7 @@ dotenv.config();
 export const IS_PRODUCTION = process.env.NODE_ENV === "production";
 
 export const MAX_POST_QUESTIONS = IS_PRODUCTION ? 10 : 2;
+export const AI_ON = IS_PRODUCTION ? true : process.env.AI_ON === "1";
 
 // Authentication Constants
 export const COOKIE_NAME = "auth_token";
