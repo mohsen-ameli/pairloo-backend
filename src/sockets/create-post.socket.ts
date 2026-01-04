@@ -19,7 +19,7 @@ export function createPostSocket(
 
     socket.on("chat", async (text: string) => {
       if (!session) return;
-      console.log(session);
+
       if (session.initialPostText === "") {
         session.initialPostText = text;
         const question = await callForQuestion(session);
