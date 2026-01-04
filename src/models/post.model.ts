@@ -14,9 +14,17 @@ const postSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  image: {
-    type: String,
+  images: {
+    type: [String],
     required: false,
+  },
+  publicPost: {
+    type: Boolean,
+    default: false,
+  },
+  numMatches: {
+    type: Number,
+    default: 5,
   },
   qna: {
     type: [

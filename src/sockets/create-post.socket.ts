@@ -19,6 +19,7 @@ export function createPostSocket(
 
     socket.on("chat", async (text: string) => {
       if (!session) return;
+
       if (session.initialPostText === "") {
         session.initialPostText = text;
         const question = await callForQuestion(session);
@@ -41,21 +42,38 @@ export function createPostSocket(
         }
       }
 
-      // No more questions or reached max, get embedding
-      const { summary, embedding } = await callForEmbedding(session);
-      const post = new Post({
-        userId,
-        content: session.initialPostText,
-        summary,
-        qna: session.context,
-        embedding,
-      });
-      const closestPosts = await getClosestPosts(post);
-      post.set("closestPosts", closestPosts);
-      await post.save();
-
-      socket.emit("finished", post._id);
-      socket.disconnect(true);
+      socket.emit("chat-finished");
     });
+
+    socket.on(
+      "submit",
+      async ({
+        numMatches,
+        publicPost,
+        images,
+      }: {
+        numMatches: number;
+        publicPost: boolean;
+        images: string[];
+      }) => {
+        const { summary, embedding } = await callForEmbedding(session);
+        const post = new Post({
+          userId,
+          content: session.initialPostText,
+          images,
+          publicPost,
+          numMatches,
+          summary,
+          qna: session.context,
+          embedding,
+        });
+        const closestPosts = await getClosestPosts(post);
+        post.set("closestPosts", closestPosts);
+        await post.save();
+
+        socket.emit("success", post._id);
+        socket.disconnect(true);
+      }
+    );
   });
 }

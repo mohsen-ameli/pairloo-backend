@@ -23,7 +23,7 @@ export async function postGet(req: Request, res: Response) {
     userId: post.userId,
     content: post.content,
     summary: post.summary,
-    image: post.image,
+    images: post.images,
     closePost: post.closestPosts,
     createdAt: post.createdAt,
   });
