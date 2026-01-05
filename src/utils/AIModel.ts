@@ -3,7 +3,11 @@ import { AI_ON } from "./constants";
 
 export async function AIModel(contents: any) {
   if (!AI_ON) {
-    return "This is a placeholder response from the AI model.";
+    return  `\`\`\`json{
+      "type": "short_answer",
+      "question": "You have disabled AI mode in the backend env file. Therefore, this is a placeholder value. Enable AI mode to get actual questions.",
+      "options": []
+    }`;
   }
 
   const response = await ai.models.generateContent({
@@ -27,3 +31,4 @@ export async function getEmbedding(contents: string) {
   }
   return response.embeddings[0].values;
 }
+ 
