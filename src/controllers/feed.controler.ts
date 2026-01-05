@@ -9,6 +9,7 @@ export async function feedGet(req: Request, res: Response) {
     {
       $match: {
         userId: { $ne: userId },
+        publicPost: true,
       },
     },
     {
