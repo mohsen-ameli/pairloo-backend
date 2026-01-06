@@ -1,28 +1,58 @@
-import { cosineSimilarity } from "./embedding";
-import mongoose from "mongoose";
 import Post, { PostType } from "../models/post.model";
 
-// IMPROVEMENTS NEEDED: Use atlas search to find closest posts based on embedding
-export async function getClosestPosts(post: Partial<PostType>, K = 5) {
-  if (!post.embedding) {
+export async function getClosestPosts(newPost: Partial<PostType>, K = 5) {
+  if (!newPost.embedding) {
     throw new Error("Post must have an embedding");
   }
 
-  const results: {
-    score: number;
-    item: mongoose.Types.ObjectId;
-  }[] = [];
+  const results = await Post.aggregate([
+    {
+      $vectorSearch: {
+        index: "embedding_index",
+        exact: false,
+        limit: K,
+        numCandidates: K * 2,
+        path: "embedding",
+        queryVector: newPost.embedding,
+        filter: {
+          userId: { $ne: (newPost as any).userId }, // Exclude posts from the same user
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        score: { $meta: "vectorSearchScore" },
+        content: 1,
+      },
+    },
+  ]);
 
-  const posts = await Post.find({
-    userId: { $ne: post.userId },
-  });
+  // Add newPost to each of its closestPosts's closestPosts array
+  for (const doc of results) {
+    const id = doc._id.toString();
+    // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
+    const closePost = await Post.findById(id);
+    const alreadyExists = (closePost?.closestPosts || []).some(
+      (cp) => cp.item.toString() === (newPost as any)._id.toString()
+    );
+    if (alreadyExists) continue;
 
-  for (const postInDB of posts) {
-    const score = cosineSimilarity(post.embedding, postInDB.embedding);
-    results.push({ score, item: postInDB._id });
+    await Post.updateOne(
+      { _id: id },
+      {
+        $push: {
+          closestPosts: {
+            item: (newPost as any)._id,
+            score: doc.score,
+          },
+        },
+      }
+    );
   }
 
-  results.sort((a, b) => b.score - a.score);
-
-  return results.slice(0, K);
+  return results.map((doc: any) => ({
+    item: doc._id,
+    score: doc.score,
+  }));
 }
