@@ -1,5 +1,3 @@
-import { cosineSimilarity } from "./embedding";
-import mongoose from "mongoose";
 import Post, { PostType } from "../models/post.model";
 
 // IMPROVEMENTS NEEDED: Use atlas search to find closest posts based on embedding
@@ -8,21 +6,33 @@ export async function getClosestPosts(post: Partial<PostType>, K = 5) {
     throw new Error("Post must have an embedding");
   }
 
-  const results: {
-    score: number;
-    item: mongoose.Types.ObjectId;
-  }[] = [];
+  // Atlas Search knnBeta expects a vector and a path to the embedding field
+  // Assumes Atlas Search index is set up on the 'embedding' field
+  const results = await Post.aggregate([
+    {
+      $vectorSearch: {
+        index: "embedding_index",
+        exact: false,
+        limit: K,
+        numCandidates: K * 2,
+        path: "embedding",
+        queryVector: post.embedding,
+        filter: {
+          userId: { $ne: (post as any).userId }, // Exclude posts from the same user
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        score: { $meta: "vectorSearchScore" },
+        content: 1,
+      },
+    },
+  ]);
 
-  const posts = await Post.find({
-    userId: { $ne: post.userId },
-  });
-
-  for (const postInDB of posts) {
-    const score = cosineSimilarity(post.embedding, postInDB.embedding);
-    results.push({ score, item: postInDB._id });
-  }
-
-  results.sort((a, b) => b.score - a.score);
-
-  return results.slice(0, K);
+  return results.map((doc: any) => ({
+    item: doc._id,
+    score: doc.score,
+  }));
 }

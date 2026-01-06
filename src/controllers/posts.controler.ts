@@ -24,7 +24,7 @@ export async function postGet(req: Request, res: Response) {
     content: post.content,
     summary: post.summary,
     images: post.images,
-    closePost: post.closestPosts,
+    closestPosts: post.closestPosts,
     createdAt: post.createdAt,
   });
 }
