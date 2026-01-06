@@ -1,13 +1,10 @@
 import Post, { PostType } from "../models/post.model";
 
-// IMPROVEMENTS NEEDED: Use atlas search to find closest posts based on embedding
 export async function getClosestPosts(post: Partial<PostType>, K = 5) {
   if (!post.embedding) {
     throw new Error("Post must have an embedding");
   }
 
-  // Atlas Search knnBeta expects a vector and a path to the embedding field
-  // Assumes Atlas Search index is set up on the 'embedding' field
   const results = await Post.aggregate([
     {
       $vectorSearch: {
