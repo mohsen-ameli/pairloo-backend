@@ -6,7 +6,7 @@ import {
   FRONTEND_URL,
   IS_PRODUCTION,
 } from "./utils/constants";
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import authRoutes from "./routes/auth.routes";
@@ -18,10 +18,11 @@ import csurf from "csurf";
 import { Server } from "socket.io";
 import http from "http";
 import authMiddleware from "./middleware/auth.middleware";
-// import { csvToMongo } from "./utils/csvToMongo";
 import { createPostSocket } from "./sockets/create-post.socket";
 import { GoogleGenAI } from "@google/genai";
 import { authSocketMiddleware } from "./middleware/auth-socket.middle";
+import OpenAI from "openai";
+import { test } from "./controllers/test.controller";
 
 const app = express();
 
@@ -39,6 +40,7 @@ const io = new Server(server, {
 });
 
 export const ai = new GoogleGenAI({});
+export const openai = new OpenAI({});
 
 app.use(cookieParser());
 app.use(cors(corsOptions));
@@ -71,6 +73,7 @@ export const transporter = nodemailer.createTransport({
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
 app.use("/api/settings", authMiddleware, settingsRoutes);
+app.use("/api/test", test);
 
 // Sockets - Routes
 const createPostIo = io.of("/create-post").use(authSocketMiddleware);

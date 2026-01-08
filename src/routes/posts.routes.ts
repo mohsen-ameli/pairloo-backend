@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { myPostGet, postListGet } from "../controllers/posts.controler";
-import { postGet, postDelete } from "../controllers/posts.controler";
-import { feedGet } from "../controllers/feed.controler";
+import { myPostGet, postListGet } from "../controllers/posts.controller";
+import { postGet, postDelete } from "../controllers/posts.controller";
+import { feedGet } from "../controllers/feed.controller";
 
 const router = Router();
 

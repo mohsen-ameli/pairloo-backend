@@ -1,12 +1,13 @@
 import { PostType } from "../models/post.model";
 import User from "../models/user.model";
+import { cosineSimilarity } from "./embedding";
 
 export async function getClosestPosts(newPost: Partial<PostType>, K = 5) {
   if (!newPost.embedding) {
     throw new Error("Post must have an embedding");
   }
 
-  const results = await User.aggregate([
+  const closePosts = await User.aggregate([
     { $unwind: "$posts" },
     {
       $vectorSearch: {
@@ -15,7 +16,7 @@ export async function getClosestPosts(newPost: Partial<PostType>, K = 5) {
         limit: K,
         numCandidates: K * 2,
         path: "embedding",
-        queryVector: newPost.embedding,
+        queryVector: newPost.embedding!,
         filter: {
           userId: { $ne: (newPost as any).userId }, // Exclude posts from the same user
         },
@@ -26,12 +27,24 @@ export async function getClosestPosts(newPost: Partial<PostType>, K = 5) {
         _id: 1,
         score: { $meta: "vectorSearchScore" },
         content: 1,
+        embedding: 1,
       },
     },
   ]);
 
+  // Step 2: For each result, calculate true cosine similarity
+  const results = closePosts.map((doc) => {
+    const score = cosineSimilarity(newPost.embedding!, doc.embedding!);
+    return {
+      item: doc._id,
+      atlasScore: doc.score,
+      score,
+      content: doc.content,
+    };
+  });
+
   // // Add newPost to each of its closestPosts's closestPosts array
-  // for (const doc of results) {
+  // for (const doc of closePosts) {
   //   const id = doc._id.toString();
   //   // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
   //   const closePost = await Post.findById(id);
@@ -53,8 +66,5 @@ export async function getClosestPosts(newPost: Partial<PostType>, K = 5) {
   //   );
   // }
 
-  return results.map((doc: any) => ({
-    item: doc._id,
-    score: doc.score,
-  }));
+  return results;
 }

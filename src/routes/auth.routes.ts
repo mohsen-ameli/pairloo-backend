@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { signupPost } from "../controllers/auth/auth.controler";
-import { authorizeGet } from "../controllers/auth/authorize.controler";
+import { signupPost } from "../controllers/auth/auth.controller";
+import { authorizeGet } from "../controllers/auth/authorize.controller";
 import { callbackGet } from "../controllers/auth/callback.controller";
-import { tokenPost } from "../controllers/auth/token.controler";
-import { refreshTokenPost } from "../controllers/auth/refresh-token.controler";
-import { requestEmailVerification } from "../controllers/auth/request-email-verification.controler";
-import { verifyEmailCode } from "../controllers/auth/verify-email-code.controler";
+import { tokenPost } from "../controllers/auth/token.controller";
+import { refreshTokenPost } from "../controllers/auth/refresh-token.controller";
+import { requestEmailVerification } from "../controllers/auth/request-email-verification.controller";
+import { verifyEmailCode } from "../controllers/auth/verify-email-code.controller";
 
 const router = Router();
 
