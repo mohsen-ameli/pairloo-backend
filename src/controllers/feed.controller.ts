@@ -30,6 +30,8 @@ export async function feedGet(req: Request, res: Response) {
     {
       $project: {
         userId: 1,
+        firstName: 1,
+        lastName: 1,
         username: 1,
         content: 1,
         summary: 1,

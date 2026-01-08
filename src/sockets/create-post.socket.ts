@@ -1,5 +1,5 @@
 import { DefaultEventsMap, Namespace, Socket } from "socket.io";
-import { callForQuestion, callForEmbedding } from "../utils/AIQA";
+import { callForQuestion, callForSummaryAndEmbedding } from "../utils/AIQA";
 import { MAX_POST_QUESTIONS } from "../utils/constants";
 import Post from "../models/post.model";
 import { getClosestPosts } from "../utils/getClosestPosts";
@@ -56,7 +56,8 @@ export function createPostSocket(
         publicPost: boolean;
         images: string[];
       }) => {
-        const { summary, embedding } = await callForEmbedding(session);
+        const { summary, embedding } =
+          await callForSummaryAndEmbedding(session);
         const post = new Post({
           userId,
           content: session.initialPostText,

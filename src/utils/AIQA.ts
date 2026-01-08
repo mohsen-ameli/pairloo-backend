@@ -25,7 +25,7 @@ export async function callForQuestion(session: {
         
         3. If the type of question is multiple_choice, ensure that there are no options such as "Other (please specify)". All options must be definitive choices.
           
-        4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `
+        4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `,
     },
   ];
 
@@ -36,17 +36,15 @@ export async function callForQuestion(session: {
   return response;
 }
 
-export async function callForEmbedding(session: {
+export async function callForSummaryAndEmbedding(session: {
   initialPostText: string;
   context: { question: any; answer: any }[];
-  step: number;
-  maxQuestions: number;
 }) {
   const summary = await AIModel([
     {
       type: "text",
-      text: `Based on the following context, generate a concise summary (1-2 sentences) of the post
-      suitable for creating an embedding for matching purposes.
+      text: `Based on the following context, generate a summary of the post.
+      This summary will be used to create a semantic embedding for matching similar posts, so focus only on the core topics and intent.
       Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`,
     },
   ]);
@@ -56,4 +54,34 @@ export async function callForEmbedding(session: {
 
   const embedding = await getEmbedding(summary);
   return { summary, embedding };
+}
+
+export async function callForIntention(session: {
+  initialPostText: string;
+  context: { question: any; answer: any }[];
+}) {
+  // For example, if the post is about looking for a running partner, the intention would be "need".
+  // If the post is about selling a bike, the intention would be "provide".
+  // If the post is about asking for advice on programming, the intention would be "need".
+  // If the post is about someone losing their wallet, the intention would be "need".
+  // If the post is about offering tutoring, the intention would be "provide".
+  // If the post does not have a clear intention, respond with "general".
+  const intention = await AIModel([
+    {
+      type: "text",
+      text: `Strictly based on the following context, decide what the intention of the post is.
+      You have two possible intentions to choose from: need or provide.
+      Now consider a matching post scenario where users are either looking for something (need) or offering something (provide).
+      What would the ideal matching post's intention be?
+      Again you have only two possible intentions to choose from: need or provide.
+      Your answer must be in a json format: { "my_intention": "need or provide", "matching_post_intention": "need or provide" }.
+      Do not include any other formatting like bullet points or punctuation or **.
+      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`,
+    },
+  ]);
+  if (!intention) {
+    throw new Error("Could not generate intention for embedding");
+  }
+
+  return intention;
 }

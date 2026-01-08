@@ -6,7 +6,7 @@ import {
   FRONTEND_URL,
   IS_PRODUCTION,
 } from "./utils/constants";
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import nodemailer from "nodemailer";
 import authRoutes from "./routes/auth.routes";
@@ -18,12 +18,11 @@ import csurf from "csurf";
 import { Server } from "socket.io";
 import http from "http";
 import authMiddleware from "./middleware/auth.middleware";
-// import { csvToMongo } from "./utils/csvToMongo";
 import { createPostSocket } from "./sockets/create-post.socket";
 import { GoogleGenAI } from "@google/genai";
 import { authSocketMiddleware } from "./middleware/auth-socket.middle";
-import Post from "./models/post.model";
-import { getClosestPosts } from "./utils/getClosestPosts";
+import OpenAI from "openai";
+import { test } from "./controllers/test.controller";
 
 const app = express();
 
@@ -41,6 +40,7 @@ const io = new Server(server, {
 });
 
 export const ai = new GoogleGenAI({});
+export const openai = new OpenAI({});
 
 app.use(cookieParser());
 app.use(cors(corsOptions));
@@ -58,23 +58,6 @@ export const transporter = nodemailer.createTransport({
   },
 });
 
-// Simple route for testing
-app.get("/", async (req: Request, res: Response) => {
-  const postId = req.query.postId as string;
-  const samplePost = await Post.findOne({
-    _id: new mongoose.Types.ObjectId(postId),
-  });
-  if (!samplePost) {
-    return res.status(404).json({ message: "Sample post not found" });
-  }
-  console.log(samplePost.embedding.length);
-  const closestPosts = await getClosestPosts(samplePost, 5);
-  res.json({
-    message: "Server is running.",
-    samplePostContent: samplePost.content,
-    closestPosts,
-  });
-});
 // app.get("/pop-mongo", async (req: Request, res: Response) => {
 //   console.log("Populating MongoDB from CSV...");
 //   const start = Date.now();
@@ -90,6 +73,7 @@ app.get("/", async (req: Request, res: Response) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
 app.use("/api/settings", authMiddleware, settingsRoutes);
+app.use("/api/test", test);
 
 // Sockets - Routes
 const createPostIo = io.of("/create-post").use(authSocketMiddleware);
