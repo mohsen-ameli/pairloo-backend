@@ -1,9 +1,9 @@
-import { ai } from "../server";
+import { ai, openai } from "../server";
 import { AI_ON } from "./constants";
 
 export async function AIModel(contents: any) {
   if (!AI_ON) {
-    return  `\`\`\`json{
+    return `\`\`\`json{
       "type": "short_answer",
       "question": "You have disabled AI mode in the backend env file. Therefore, this is a placeholder value. Enable AI mode to get actual questions.",
       "options": []
@@ -22,13 +22,12 @@ export async function getEmbedding(contents: string) {
     return [1, 2, 3, 4, 5];
   }
 
-  const response = await ai.models.embedContent({
-    model: "gemini-embedding-001",
-    contents,
+  const response = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: contents,
   });
-  if (!response.embeddings || response.embeddings.length === 0) {
+  if (!response.data || response.data.length === 0) {
     throw new Error("No embeddings returned from AI model");
   }
-  return response.embeddings[0].values;
+  return response.data[0].embedding;
 }
- 
