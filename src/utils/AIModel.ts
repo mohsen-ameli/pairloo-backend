@@ -19,7 +19,7 @@ export async function AIModel(contents: any) {
 
 export async function getEmbedding(contents: string) {
   if (!AI_ON) {
-    return [1, 2, 3, 4, 5];
+    return Array(1536).fill(1);
   }
 
   const response = await openai.embeddings.create({

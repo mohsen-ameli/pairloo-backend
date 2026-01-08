@@ -3,17 +3,24 @@ import { callForSummaryAndEmbedding, callForIntention } from "../utils/AIQA";
 import { cosineSimilarity } from "../utils/embedding";
 import mongoose from "mongoose";
 import { Request, Response } from "express";
-import Post from "../models/post.model";
+import User from "../models/user.model";
 
 // Simple route for testing
 export async function test(req: Request, res: Response) {
   const postId = req.query.postId as string;
-  const samplePost = await Post.findOne({
-    _id: new mongoose.Types.ObjectId(postId),
-  });
+  const userId = req.query.userId as string;
+
+  const user = await User.findById(userId);
+  if (!user) {
+    return res.status(404).json({ message: "Sample post not found" });
+  }
+  const samplePost = user.posts.id(postId);
   if (!samplePost) {
     return res.status(404).json({ message: "Sample post not found" });
   }
+
+  // const allPosts = await User.aggregate([{ $unwind: "$posts" }]);
+  // console.log(allPosts.length);
 
   /**
    * Generate embedding for 100 posts and update their embeddings
@@ -45,7 +52,7 @@ export async function test(req: Request, res: Response) {
   /**
    * Get closest posts for the sample post
    */
-  const results = await getClosestPosts(samplePost, 5);
+  const results = await getClosestPosts(userId, samplePost, 5);
   return res.json(results);
 
   /**

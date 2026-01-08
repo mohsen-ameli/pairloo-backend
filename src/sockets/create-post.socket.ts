@@ -3,6 +3,7 @@ import { callForQuestion, callForSummaryAndEmbedding } from "../utils/AIQA";
 import { MAX_POST_QUESTIONS } from "../utils/constants";
 import { getClosestPosts } from "../utils/getClosestPosts";
 import User from "../models/user.model";
+import { PostType } from "../models/post.model";
 
 export function createPostSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
@@ -67,7 +68,6 @@ export function createPostSocket(
           await callForSummaryAndEmbedding(session);
 
         const post = {
-          userId,
           content: session.initialPostText,
           images,
           publicPost,
@@ -76,9 +76,8 @@ export function createPostSocket(
           qna: session.context,
           embedding,
           closestPosts: null,
-        };
-        // @ts-ignore
-        const closestPosts = await getClosestPosts(post);
+        } as PostType;
+        const closestPosts = await getClosestPosts(userId, post, numMatches);
         // @ts-ignore
         post.closestPosts = closestPosts;
         await User.updateOne({ _id: userId }, { $push: { posts: post } });

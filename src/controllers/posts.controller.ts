@@ -43,7 +43,7 @@ export async function myPostGet(req: Request, res: Response) {
     if (!closePost) continue;
     closestPosts.push({
       score,
-      _id: closePost._id,
+      _id: item,
       username: closePost.username,
       firstName: closePost.firstName,
       lastName: closePost.lastName,
@@ -51,6 +51,7 @@ export async function myPostGet(req: Request, res: Response) {
       content: closePost.posts[0].content,
       summary: closePost.posts[0].summary,
       images: closePost.posts[0].images,
+      createdAt: closePost.posts[0].createdAt,
     });
   }
 
@@ -72,21 +73,19 @@ export async function myPostGet(req: Request, res: Response) {
 // Get a post by ID (public)
 export async function postGet(req: Request, res: Response) {
   const postId = req.params.id;
-  const userId = req.user!.sub;
 
-  const user = await User.findById(userId).select("posts");
+  const user = await User.findOne({ "posts._id": postId });
+
   if (!user) {
-    return res.status(404).json({ message: "User not found" });
+    return res.status(404).json({ message: "Post not found" });
   }
-
   const post = user.posts.id(postId);
   if (!post) {
     return res.status(404).json({ message: "Post not found" });
   }
 
   res.status(200).json({
-    _id: post._id,
-    userId,
+    _id: user._id,
     username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
@@ -107,11 +106,6 @@ export async function postDelete(req: Request, res: Response) {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const post = user.posts.id(postId);
-  if (!post) {
-    return res.status(404).json({ message: "Post not found" });
-  }
-
-  await post.deleteOne();
+  await User.updateOne({ _id: userId }, { $pull: { posts: { _id: postId } } });
   res.status(200).json({ message: "Post deleted successfully" });
 }

@@ -1,65 +1,87 @@
+import mongoose from "mongoose";
 import { PostType } from "../models/post.model";
 import User from "../models/user.model";
 import { cosineSimilarity } from "./embedding";
 
-export async function getClosestPosts(newPost: Partial<PostType>, K = 5) {
+export async function getClosestPosts(
+  userId: string,
+  newPost: PostType,
+  K = 5
+) {
   if (!newPost.embedding) {
     throw new Error("Post must have an embedding");
   }
 
-  const closePosts = await User.aggregate([
-    { $unwind: "$posts" },
+  // Unwind posts, exclude posts from the same user, and perform vector search on posts
+  const closePosts = await User.aggregate<{
+    _id: mongoose.Types.ObjectId;
+    userId: mongoose.Types.ObjectId;
+    score: number;
+    content: string;
+    embedding: number[];
+  }>([
     {
       $vectorSearch: {
-        index: "embedding_index",
+        index: "post_embedding",
         exact: false,
         limit: K,
         numCandidates: K * 2,
-        path: "embedding",
+        path: "posts.embedding",
         queryVector: newPost.embedding!,
         filter: {
-          userId: { $ne: (newPost as any).userId }, // Exclude posts from the same user
+          _id: {
+            $ne: new mongoose.Types.ObjectId(userId), // Exclude posts from the same user
+          },
         },
       },
     },
+    { $unwind: "$posts" },
     {
       $project: {
-        _id: 1,
+        _id: "$posts._id",
+        userId: "$_id",
         score: { $meta: "vectorSearchScore" },
-        content: 1,
-        embedding: 1,
+        content: "$posts.content",
+        embedding: "$posts.embedding",
       },
     },
   ]);
 
   // Step 2: For each result, calculate true cosine similarity
-  const results = closePosts.map((doc) => {
+  let results = closePosts.map((doc) => {
     const score = cosineSimilarity(newPost.embedding!, doc.embedding!);
     return {
       item: doc._id,
+      userId: doc.userId,
       atlasScore: doc.score,
       score,
       content: doc.content,
     };
   });
 
+  // Sort results by score descending
+  results = results.sort((a, b) => b.score - a.score);
+  results = results.slice(0, K);
+
   // // Add newPost to each of its closestPosts's closestPosts array
   // for (const doc of closePosts) {
   //   const id = doc._id.toString();
   //   // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
-  //   const closePost = await Post.findById(id);
+  //   const closeUser = await User.findById(doc.userId);
+  //   const closePost = closeUser?.posts.id(id);
+  //   if (!closePost) continue;
   //   const alreadyExists = (closePost?.closestPosts || []).some(
   //     (cp) => cp.item.toString() === (newPost as any)._id.toString()
   //   );
   //   if (alreadyExists) continue;
 
-  //   await Post.updateOne(
-  //     { _id: id },
+  //   await User.updateOne(
+  //     { _id: doc.userId, "posts._id": id },
   //     {
   //       $push: {
-  //         closestPosts: {
+  //         "posts.$.closestPosts": {
   //           item: (newPost as any)._id,
-  //           score: doc.score,
+  //           score: cosineSimilarity(newPost.embedding!, doc.embedding!),
   //         },
   //       },
   //     }
