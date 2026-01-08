@@ -63,30 +63,41 @@ export async function getClosestPosts(
   results = results.sort((a, b) => b.score - a.score);
   results = results.slice(0, K);
 
-  // // Add newPost to each of its closestPosts's closestPosts array
-  // for (const doc of closePosts) {
-  //   const id = doc._id.toString();
-  //   // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
-  //   const closeUser = await User.findById(doc.userId);
-  //   const closePost = closeUser?.posts.id(id);
-  //   if (!closePost) continue;
-  //   const alreadyExists = (closePost?.closestPosts || []).some(
-  //     (cp) => cp.item.toString() === (newPost as any)._id.toString()
-  //   );
-  //   if (alreadyExists) continue;
+  // Add newPost to each of its closestPosts's closestPosts array
+  for (const doc of results) {
+    const id = doc.item.toString();
+    // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
+    const closeUser = await User.findById(doc.userId);
+    const closePost = closeUser?.posts.id(id);
+    if (!closePost) continue;
 
-  //   await User.updateOne(
-  //     { _id: doc.userId, "posts._id": id },
-  //     {
-  //       $push: {
-  //         "posts.$.closestPosts": {
-  //           item: (newPost as any)._id,
-  //           score: cosineSimilarity(newPost.embedding!, doc.embedding!),
-  //         },
-  //       },
-  //     }
-  //   );
-  // }
+    // If newPost is already in closestPosts, skip
+    if (!closePost.closestPosts || closePost.closestPosts.length == 0) continue;
+    for (const cp of closePost.closestPosts) {
+      if (cp.item.toString() === (newPost as any).id?.toString()) {
+        continue;
+      }
+    }
+
+    // Push, sort, and slice in one update
+    await User.updateOne(
+      { _id: doc.userId, "posts._id": id },
+      {
+        $push: {
+          "posts.$.closestPosts": {
+            $each: [
+              {
+                item: (newPost as any)._id,
+                score: doc.score,
+              },
+            ],
+            $sort: { score: -1 },
+            $slice: closePost.numMatches,
+          },
+        },
+      }
+    );
+  }
 
   return results;
 }
