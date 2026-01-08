@@ -1,11 +1,6 @@
 import mongoose from "mongoose";
 
 const postSchema = new mongoose.Schema({
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
-    required: true,
-  },
   content: {
     type: String,
     required: [true, "Post content is required"],
@@ -58,8 +53,6 @@ const postSchema = new mongoose.Schema({
   },
 });
 
-const Post = mongoose.model("post", postSchema);
-
 export type PostType = mongoose.InferSchemaType<typeof postSchema>;
 
-export default Post;
+export default postSchema;

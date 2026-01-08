@@ -22,8 +22,6 @@ import authMiddleware from "./middleware/auth.middleware";
 import { createPostSocket } from "./sockets/create-post.socket";
 import { GoogleGenAI } from "@google/genai";
 import { authSocketMiddleware } from "./middleware/auth-socket.middle";
-import Post from "./models/post.model";
-import { getClosestPosts } from "./utils/getClosestPosts";
 
 const app = express();
 
@@ -58,23 +56,6 @@ export const transporter = nodemailer.createTransport({
   },
 });
 
-// Simple route for testing
-app.get("/", async (req: Request, res: Response) => {
-  const postId = req.query.postId as string;
-  const samplePost = await Post.findOne({
-    _id: new mongoose.Types.ObjectId(postId),
-  });
-  if (!samplePost) {
-    return res.status(404).json({ message: "Sample post not found" });
-  }
-  console.log(samplePost.embedding.length);
-  const closestPosts = await getClosestPosts(samplePost, 5);
-  res.json({
-    message: "Server is running.",
-    samplePostContent: samplePost.content,
-    closestPosts,
-  });
-});
 // app.get("/pop-mongo", async (req: Request, res: Response) => {
 //   console.log("Populating MongoDB from CSV...");
 //   const start = Date.now();

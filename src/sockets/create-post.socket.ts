@@ -1,18 +1,25 @@
 import { DefaultEventsMap, Namespace, Socket } from "socket.io";
 import { callForQuestion, callForEmbedding } from "../utils/AIQA";
 import { MAX_POST_QUESTIONS } from "../utils/constants";
-import Post from "../models/post.model";
 import { getClosestPosts } from "../utils/getClosestPosts";
+import User from "../models/user.model";
 
 export function createPostSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) {
-  io.on("connection", (socket: Socket) => {
+  io.on("connection", async (socket: Socket) => {
     const userId = (socket as any).user.sub as string;
+    const user = await User.findById(userId);
+
+    if (!user) {
+      socket.emit("error", "User not found");
+      socket.disconnect(true);
+      return;
+    }
 
     const session = {
       initialPostText: "",
-      context: [] as { question: any; answer: any }[],
+      context: [] as { question: string; answer: string }[],
       step: 0,
       maxQuestions: MAX_POST_QUESTIONS,
     };
@@ -57,7 +64,8 @@ export function createPostSocket(
         images: string[];
       }) => {
         const { summary, embedding } = await callForEmbedding(session);
-        const post = new Post({
+
+        const post = {
           userId,
           content: session.initialPostText,
           images,
@@ -66,12 +74,16 @@ export function createPostSocket(
           summary,
           qna: session.context,
           embedding,
-        });
+          closestPosts: null,
+        };
+        // @ts-ignore
         const closestPosts = await getClosestPosts(post);
-        post.set("closestPosts", closestPosts);
-        await post.save();
+        // @ts-ignore
+        post.closestPosts = closestPosts;
+        await User.updateOne({ _id: userId }, { $push: { posts: post } });
+        const postId = (await User.findById(userId))!.posts.slice(-1)[0]._id;
 
-        socket.emit("success", post._id);
+        socket.emit("success", postId);
         socket.disconnect(true);
       }
     );

@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { isEmail } from "validator";
+import postSchema from "./post.model";
 
 const userSchema = new mongoose.Schema(
   {
@@ -52,6 +53,7 @@ const userSchema = new mongoose.Schema(
       required: false,
       unique: false,
     },
+    posts: [postSchema],
   },
   { timestamps: true }
 );
