@@ -4,7 +4,11 @@ import Verification from "../../models/verification.model";
 import createJWT from "../../utils/create-jwt";
 
 export async function verifyEmailCode(req: Request, res: Response) {
-  const { email, code } = req.body;
+  const {
+    email,
+    code,
+    signUp,
+  }: { email: string; code: string; signUp: boolean } = req.body;
 
   try {
     const userVerify = await Verification.findOne({
@@ -18,34 +22,40 @@ export async function verifyEmailCode(req: Request, res: Response) {
       });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
-      return res.status(400).json({
-        error:
-          "Invalid email. Please check your email address again and try again.",
+    if (!signUp) {
+      const user = await User.findOne({ email: email.toLowerCase() });
+      if (!user) {
+        return res.status(400).json({
+          error:
+            "Invalid email. Please check your email address again and try again.",
+        });
+      }
+
+      await Verification.deleteMany({ email: email.toLowerCase() });
+
+      const { accessToken, refreshToken } = await createJWT(
+        user._id.toString()
+      );
+
+      return res.status(200).json({
+        id: user._id,
+        username: user.username,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phoneNumber: user.phoneNumber,
+        country: user.country,
+        city: user.city,
+        email: user.email,
+        picture: user.picture,
+        accessToken,
+        refreshToken,
       });
     }
 
-    await Verification.deleteMany({ email: email.toLowerCase() });
-
-    const { accessToken, refreshToken } = await createJWT(user._id.toString());
-
-    return res.status(200).json({
-      id: user._id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      country: user.country,
-      city: user.city,
-      email: user.email,
-      picture: user.picture,
-      accessToken,
-      refreshToken,
-    });
+    return res.status(200).json({ message: "Email verified successfully." });
   } catch (err: any) {
     return res.status(500).json({
-      error: "Failed to connect to database. Please try again later.",
+      error: "Failed to connect. Please try again later.",
     });
   }
 }
