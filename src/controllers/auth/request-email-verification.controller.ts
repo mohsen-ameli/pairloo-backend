@@ -5,11 +5,16 @@ import { transporter } from "../../server";
 import Verification from "../../models/verification.model";
 
 export async function requestEmailVerification(req: Request, res: Response) {
-  const { email } = req.body;
+  let { email, signUp }: { email: string; signUp: boolean } = req.body;
+  email = email.trim().toLowerCase();
 
   try {
-    const user = await User.findOne({ email: email.toLowerCase() });
-    if (!user) {
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (signUp && user) {
+      return res.status(400).json({
+        error: "Email already in use. Please use a different email.",
+      });
+    } else if (!user && !signUp) {
       return res.status(400).json({
         error:
           "Invalid email. Please check your email address again and try again.",
@@ -20,22 +25,20 @@ export async function requestEmailVerification(req: Request, res: Response) {
 
     try {
       const verification = new Verification({
-        email: user.email,
+        email,
         code: verificationCode,
         createdAt: Date.now(),
       });
       await verification.save();
     } catch (err) {
       // user is requesting a resend, before the previous code expired
-      const existingVerification = await Verification.findOne({
-        email: user.email,
-      });
+      const existingVerification = await Verification.findOne({ email });
       verificationCode = existingVerification!.code;
     }
 
     const mailOptions = {
       from: EMAIL_USER,
-      to: user.email,
+      to: email,
       subject: "Verification Code",
       text: `Your verification code is: ${verificationCode}.\nPlease use this code within 5 minutes or it will expire and you will need to retrieve a new code.\n\nDo not share this code with anyone.`,
     };
@@ -47,7 +50,7 @@ export async function requestEmailVerification(req: Request, res: Response) {
     });
   } catch (err: any) {
     return res.status(400).json({
-      error: "Failed to connect to database. Please try again later.",
+      error: "Failed to connect. Please try again later.",
     });
   }
 }
