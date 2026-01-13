@@ -1,7 +1,9 @@
 import { ai, openai } from "../server";
 import { AI_ON } from "./constants";
 
-export async function AIModel(contents: any) {
+export async function AIModel(
+  contents: any,
+): Promise<string | undefined | null> {
   if (!AI_ON) {
     return `\`\`\`json{
       "type": "short_answer",
@@ -17,7 +19,7 @@ export async function AIModel(contents: any) {
   return response.text === "NO_QUESTION" ? null : response.text;
 }
 
-export async function getEmbedding(contents: string) {
+export async function getEmbedding(contents: string): Promise<number[]> {
   if (!AI_ON) {
     return Array(1536).fill(1);
   }

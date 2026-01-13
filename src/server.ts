@@ -23,6 +23,7 @@ import { GoogleGenAI } from "@google/genai";
 import { authSocketMiddleware } from "./middleware/auth-socket.middle";
 import OpenAI from "openai";
 import { test } from "./controllers/test.controller";
+import { chatSocket } from "./sockets/chat.socket";
 
 const app = express();
 
@@ -77,9 +78,11 @@ app.use("/api/test", test);
 
 // Sockets - Routes
 const createPostIo = io.of("/create-post").use(authSocketMiddleware);
+const chatIo = io.of("/chat").use(authSocketMiddleware);
 
 // Sockets - Handlers
 createPostSocket(createPostIo);
+chatSocket(chatIo);
 
 // Connect to MongoDB and start the server
 mongoose

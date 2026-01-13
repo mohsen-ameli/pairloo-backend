@@ -5,7 +5,10 @@ import {
   REFRESH_TOKEN_EXPIRY,
 } from "../utils/constants";
 
-export default async function createJWT(id: string) {
+export default async function createJWT(id: string): Promise<{
+  accessToken: string;
+  refreshToken: string;
+}> {
   // Current timestamp in seconds
   const issuedAt = Math.floor(Date.now() / 1000);
 

@@ -67,7 +67,7 @@ export function createPostSocket(
         const { summary, embedding } =
           await callForSummaryAndEmbedding(session);
 
-        const post = {
+        const post: Partial<PostType> = {
           content: session.initialPostText,
           images,
           publicPost,
@@ -76,9 +76,8 @@ export function createPostSocket(
           qna: session.context,
           embedding,
           closestPosts: null,
-        } as PostType;
+        };
         const closestPosts = await getClosestPosts(userId, post, numMatches);
-        // @ts-ignore
         post.closestPosts = closestPosts;
         await User.updateOne({ _id: userId }, { $push: { posts: post } });
         const postId = (await User.findById(userId))!.posts.slice(-1)[0]._id;
