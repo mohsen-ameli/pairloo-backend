@@ -92,10 +92,7 @@ export function chatSocket(
         })
         .lean();
       if (existingConversation) {
-        socket.emit("conversation", {
-          success: true,
-          conversation: existingConversation,
-        });
+        socket.emit("conversation", existingConversation);
         return;
       }
 
@@ -122,15 +119,12 @@ export function chatSocket(
         .lean();
 
       if (!populatedConversation) {
-        socket.emit("conversation", {
-          success: false,
-          message: "Conversation not found after creation",
-        });
+        socket.emit("error", "Conversation not found after creation");
         return;
       }
 
       io.to(conversation._id.toString()).emit(
-        "conversationCreated",
+        "conversation",
         populatedConversation
       );
     });
@@ -189,36 +183,33 @@ export function chatSocket(
       }
     );
 
-    socket.on(
-      "getMessages",
-      async ({ conversationId }: { conversationId: string }) => {
-        const messages = await Message.find({ conversationId })
-          .sort({
-            createdAt: 1,
-          })
-          .populate<{
-            senderId: {
-              _id: Types.ObjectId;
-              username: string;
-              picture?: string;
-            };
-          }>({
-            path: "senderId",
-            select: "username picture",
-          })
-          .lean();
+    socket.on("getMessages", async (conversationId: string) => {
+      const messages = await Message.find({ conversationId })
+        .sort({
+          createdAt: 1,
+        })
+        .populate<{
+          senderId: {
+            _id: Types.ObjectId;
+            username: string;
+            picture?: string;
+          };
+        }>({
+          path: "senderId",
+          select: "username picture",
+        })
+        .lean();
 
-        const formattedMessages = messages.map((msg) => ({
-          ...msg,
-          sender: {
-            username: msg.senderId.username.toString(),
-            picture: msg.senderId.picture?.toString(),
-          },
-        }));
+      const formattedMessages = messages.map((msg) => ({
+        ...msg,
+        sender: {
+          username: msg.senderId.username.toString(),
+          picture: msg.senderId.picture?.toString(),
+        },
+      }));
 
-        socket.emit("messages", formattedMessages);
-      }
-    );
+      socket.emit("messages", formattedMessages);
+    });
 
     socket.emit("connected", "You are connected to chat namespace");
   });
