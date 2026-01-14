@@ -193,3 +193,14 @@ export async function test(req: Request, res: Response) {
 
   // console.log(embedding);
 }
+
+// app.get("/pop-mongo", async (req: Request, res: Response) => {
+//   console.log("Populating MongoDB from CSV...");
+//   const start = Date.now();
+//   await csvToMongo();
+//   const end = Date.now();
+//   res.json({
+//     message: "MongoDB populated from CSV.",
+//     timeTakenSeconds: (end - start) / 1000,
+//   });
+// });

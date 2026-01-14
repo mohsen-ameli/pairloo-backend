@@ -36,7 +36,6 @@ export function chatSocket(
     });
 
     socket.on("getConversations", async () => {
-      console.log("GETTING CONVERSATIONS FOR: ", userId);
       const conversations = await Conversation.find({
         members: userId,
       })

@@ -59,17 +59,6 @@ export const transporter = nodemailer.createTransport({
   },
 });
 
-// app.get("/pop-mongo", async (req: Request, res: Response) => {
-//   console.log("Populating MongoDB from CSV...");
-//   const start = Date.now();
-//   await csvToMongo();
-//   const end = Date.now();
-//   res.json({
-//     message: "MongoDB populated from CSV.",
-//     timeTakenSeconds: (end - start) / 1000,
-//   });
-// });
-
 // Express - Routes & handlers
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
