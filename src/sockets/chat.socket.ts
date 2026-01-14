@@ -14,12 +14,9 @@ export function chatSocket(
     if (!user) {
       socket.emit("error", "User not found");
       socket.disconnect(true);
+      console.error("user is not logged in");
       return;
     }
-
-    socket.emit("connected", "You are connected to chat namespace");
-
-    console.log("user connected: ", userId);
 
     try {
       const conversations = await Conversation.find({
@@ -30,7 +27,8 @@ export function chatSocket(
         socket.join(conversation._id.toString());
       });
     } catch (err: any) {
-      console.log(err);
+      console.error("Error joining conversation rooms:", err.message);
+      return;
     }
 
     socket.on("disconnect", () => {
@@ -38,7 +36,7 @@ export function chatSocket(
     });
 
     socket.on("getConversations", async () => {
-      console.log("getting conversations for:", userId);
+      console.log("GETTING CONVERSATIONS FOR: ", userId);
       const conversations = await Conversation.find({
         members: userId,
       })
@@ -51,19 +49,41 @@ export function chatSocket(
           lastMessage: {
             _id: Types.ObjectId;
             conversationId: Types.ObjectId;
-            senderId: Types.ObjectId;
+            senderId: {
+              _id: Types.ObjectId;
+              username: string;
+            };
             content: string;
+            attachment: string;
             createdAt: Date;
+            updatedAt: Date;
           };
         }>({
-          path: "lastMessage",
-          select: "_id conversationId senderId content createdAt",
-        });
-      socket.emit("conversations", conversations);
+          path: "lastMessage.senderId",
+          select: "username",
+        })
+        .lean();
+
+      const formattedConversations = conversations.map((conv) => {
+        if (conv.lastMessage) {
+          return {
+            ...conv,
+            lastMessage: {
+              ...conv.lastMessage,
+              sender: {
+                _id: conv.lastMessage.senderId._id,
+                username: conv.lastMessage.senderId.username,
+              },
+            },
+          };
+        }
+        return conv;
+      });
+
+      socket.emit("conversations", formattedConversations);
     });
 
     socket.on("newConversation", async (memberIds: Types.ObjectId[]) => {
-      console.log("creating new conversation with members:", memberIds);
       const existingConversation = await Conversation.findOne({
         members: { $all: memberIds },
       })
@@ -110,10 +130,10 @@ export function chatSocket(
         return;
       }
 
-      io.to(conversation._id.toString()).emit("conversation", {
-        success: true,
-        conversation: populatedConversation,
-      });
+      io.to(conversation._id.toString()).emit(
+        "conversationCreated",
+        populatedConversation
+      );
     });
 
     socket.on(
@@ -125,7 +145,6 @@ export function chatSocket(
         conversationId: string;
         content: string;
       }) => {
-        console.log("new message:", content);
         const message = await Message.create({
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
@@ -150,21 +169,24 @@ export function chatSocket(
 
         const formattedMessage = {
           ...populatedMessage.toObject(),
-          id: populatedMessage._id.toString(),
           sender: {
-            id: populatedMessage.senderId._id.toString(),
             username: populatedMessage.senderId.username,
             picture: populatedMessage.senderId.picture,
           },
         };
 
-        await new Promise((resolve) => setTimeout(resolve, 3000));
         io.to(conversationId).emit("message", formattedMessage);
 
         // Update lastMessage in Conversation
         await Conversation.findByIdAndUpdate(conversationId, {
-          lastMessage: message._id,
+          lastMessage: formattedMessage,
         });
+
+        io.to(conversationId).emit(
+          "lastMessageUpdated",
+          conversationId,
+          formattedMessage
+        );
       }
     );
 
@@ -179,7 +201,7 @@ export function chatSocket(
             senderId: {
               _id: Types.ObjectId;
               username: string;
-              picture: string;
+              picture?: string;
             };
           }>({
             path: "senderId",
@@ -189,16 +211,16 @@ export function chatSocket(
 
         const formattedMessages = messages.map((msg) => ({
           ...msg,
-          id: msg._id.toString(),
           sender: {
-            id: msg.senderId._id.toString(),
             username: msg.senderId.username.toString(),
-            picture: msg.senderId.picture.toString(),
+            picture: msg.senderId.picture?.toString(),
           },
         }));
 
         socket.emit("messages", formattedMessages);
       }
     );
+
+    socket.emit("connected", "You are connected to chat namespace");
   });
 }

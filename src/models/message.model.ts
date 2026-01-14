@@ -10,7 +10,7 @@ export interface MessageType extends mongoose.Document {
   updatedAt: Date;
 }
 
-const messageSchema = new mongoose.Schema<MessageType>({
+export const messageSchema = new mongoose.Schema<MessageType>({
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "conversation",

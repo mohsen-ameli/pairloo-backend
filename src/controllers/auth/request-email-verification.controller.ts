@@ -9,7 +9,7 @@ export async function requestEmailVerification(req: Request, res: Response) {
   email = email.trim().toLowerCase();
 
   try {
-    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    const user = await User.findOne({ email });
     if (signUp && user) {
       return res.status(400).json({
         error: "Email already in use. Please use a different email.",
