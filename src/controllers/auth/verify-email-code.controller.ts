@@ -38,7 +38,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
       );
 
       return res.status(200).json({
-        id: user._id,
+        _id: user._id,
         username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,

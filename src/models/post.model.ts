@@ -1,6 +1,20 @@
 import mongoose from "mongoose";
+import { ClosePost } from "../types/closePost.types";
 
-const postSchema = new mongoose.Schema({
+export interface PostType extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+  content: string;
+  summary: string;
+  images?: string[];
+  publicPost: boolean;
+  numMatches: number;
+  qna: { question: string; answer: string }[];
+  embedding: number[];
+  closestPosts?: ClosePost[] | null;
+  createdAt: Date;
+}
+
+const postSchema = new mongoose.Schema<PostType>({
   content: {
     type: String,
     required: [true, "Post content is required"],
@@ -52,7 +66,5 @@ const postSchema = new mongoose.Schema({
     default: Date.now,
   },
 });
-
-export type PostType = mongoose.InferSchemaType<typeof postSchema>;
 
 export default postSchema;

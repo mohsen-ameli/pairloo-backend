@@ -1,8 +1,23 @@
 import mongoose from "mongoose";
 import { isEmail } from "validator";
-import postSchema from "./post.model";
+import postSchema, { PostType } from "./post.model";
 
-const userSchema = new mongoose.Schema(
+export interface UserType extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+  username: string;
+  firstName: string;
+  lastName: string;
+  phoneNumber: string;
+  country: string;
+  city: string;
+  email: string;
+  picture?: string | undefined;
+  posts: mongoose.Types.DocumentArray<PostType>;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const userSchema = new mongoose.Schema<UserType>(
   {
     username: {
       type: String,
@@ -58,5 +73,5 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const User = mongoose.model("user", userSchema);
+const User = mongoose.model<UserType>("user", userSchema);
 export default User;

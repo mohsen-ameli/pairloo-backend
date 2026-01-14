@@ -23,6 +23,7 @@ import { GoogleGenAI } from "@google/genai";
 import { authSocketMiddleware } from "./middleware/auth-socket.middle";
 import OpenAI from "openai";
 import { test } from "./controllers/test.controller";
+import { chatSocket } from "./sockets/chat.socket";
 
 const app = express();
 
@@ -58,17 +59,6 @@ export const transporter = nodemailer.createTransport({
   },
 });
 
-// app.get("/pop-mongo", async (req: Request, res: Response) => {
-//   console.log("Populating MongoDB from CSV...");
-//   const start = Date.now();
-//   await csvToMongo();
-//   const end = Date.now();
-//   res.json({
-//     message: "MongoDB populated from CSV.",
-//     timeTakenSeconds: (end - start) / 1000,
-//   });
-// });
-
 // Express - Routes & handlers
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
@@ -77,9 +67,11 @@ app.use("/api/test", test);
 
 // Sockets - Routes
 const createPostIo = io.of("/create-post").use(authSocketMiddleware);
+const chatIo = io.of("/chat").use(authSocketMiddleware);
 
 // Sockets - Handlers
 createPostSocket(createPostIo);
+chatSocket(chatIo);
 
 // Connect to MongoDB and start the server
 mongoose

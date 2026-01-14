@@ -1,7 +1,15 @@
 import mongoose from "mongoose";
 import { isEmail } from "validator";
 
-const verificationSchema = new mongoose.Schema({
+export interface VerificationType extends mongoose.Document {
+  _id: mongoose.Types.ObjectId;
+  email?: string;
+  phoneNumber?: string;
+  code: number;
+  createdAt: Date;
+}
+
+const verificationSchema = new mongoose.Schema<VerificationType>({
   email: {
     type: String,
     required: [false, "Please enter your email"],
@@ -28,5 +36,8 @@ const verificationSchema = new mongoose.Schema({
   },
 });
 
-const Verification = mongoose.model("verification", verificationSchema);
+const Verification = mongoose.model<VerificationType>(
+  "verification",
+  verificationSchema,
+);
 export default Verification;

@@ -5,12 +5,12 @@ export async function callForQuestion(session: {
   context: { question: any; answer: any }[];
   step: number;
   maxQuestions: number;
-}) {
+}): Promise<string | undefined> {
   const { initialPostText, context, step, maxQuestions } = session;
   const contents = [
     {
       type: "text",
-      text: `Instructions on how to answer: 
+      text: `Instructions on how to answer:
         1.  Based on the following context, generate the next relevant question to
             ask the user to specifically understand the contents of the post.
             The question should help in gathering more information to create a comprehensive post.
@@ -22,9 +22,9 @@ export async function callForQuestion(session: {
           - "type": What type of question you will be asking next: Pick one of the following: short_answer, multiple_choice(including yes or no), multi_select.
           - "question": The next relevant question to ask the user.
           - "options": An array of options if the type is multiple_choice or multi_select; otherwise, an empty array if the type is short_answer.
-        
+
         3. If the type of question is multiple_choice or multi_select, ensure that there are no options such as "Other (please specify)". All options must be definitive choices.
-          
+
         4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `,
     },
   ];
@@ -59,7 +59,7 @@ export async function callForSummaryAndEmbedding(session: {
 export async function callForIntention(session: {
   initialPostText: string;
   context: { question: any; answer: any }[];
-}) {
+}): Promise<string> {
   // For example, if the post is about looking for a running partner, the intention would be "need".
   // If the post is about selling a bike, the intention would be "provide".
   // If the post is about asking for advice on programming, the intention would be "need".

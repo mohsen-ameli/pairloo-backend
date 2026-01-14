@@ -2,12 +2,13 @@ import mongoose from "mongoose";
 import { PostType } from "../models/post.model";
 import User from "../models/user.model";
 import { cosineSimilarity } from "./embedding";
+import { ClosePost } from "../types/closePost.types";
 
 export async function getClosestPosts(
   userId: string,
-  newPost: PostType,
+  newPost: Partial<PostType>,
   K = 5
-) {
+): Promise<ClosePost[]> {
   if (!newPost.embedding) {
     throw new Error("Post must have an embedding");
   }
@@ -65,10 +66,10 @@ export async function getClosestPosts(
 
   // Add newPost to each of its closestPosts's closestPosts array
   for (const doc of results) {
-    const id = doc.item.toString();
+    const postId = doc.item;
     // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
     const closeUser = await User.findById(doc.userId);
-    const closePost = closeUser?.posts.id(id);
+    const closePost = closeUser?.posts.find((p) => p._id === postId);
     if (!closePost) continue;
 
     // If newPost is already in closestPosts, skip
@@ -81,7 +82,7 @@ export async function getClosestPosts(
 
     // Push, sort, and slice in one update
     await User.updateOne(
-      { _id: doc.userId, "posts._id": id },
+      { _id: doc.userId, "posts._id": postId },
       {
         $push: {
           "posts.$.closestPosts": {

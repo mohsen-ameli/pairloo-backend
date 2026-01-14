@@ -100,7 +100,7 @@ export async function tokenPost(req: Request, res: Response) {
 
   // For native platforms, return both tokens in the response body
   return res.json({
-    id: user._id,
+    _id: user._id,
     username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
