@@ -22,18 +22,26 @@ export async function requestPhoneVerification(req: Request, res: Response) {
       });
     }
 
-    let verificationCode = Math.floor(100000 + Math.random() * 900000); // Generate a 6-digit code
+    const existingVerification = await Verification.findOne({
+      phoneNumber: fullNumber,
+    });
+    let verificationCode: number;
 
-    try {
-      await Verification.create({
-        phoneNumber: fullNumber,
-        code: verificationCode,
-      });
-    } catch (err) {
-      const existingVerification = await Verification.findOne({
-        phoneNumber: fullNumber,
-      });
-      verificationCode = existingVerification!.code;
+    if (existingVerification) {
+      verificationCode = existingVerification.code;
+    } else {
+      verificationCode = Math.floor(100000 + Math.random() * 900000); // Generate a 6-digit code
+      try {
+        await Verification.create({
+          phoneNumber: fullNumber,
+          code: verificationCode,
+        });
+      } catch (err) {
+        console.log(err);
+        throw new Error(
+          "Failed to create verification record. Please try again."
+        );
+      }
     }
 
     // Send SMS via AWS SNS
