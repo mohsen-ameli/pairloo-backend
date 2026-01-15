@@ -36,7 +36,7 @@ openssl rand -base64 50
 And copy the contents into the backend's .env JWT_SECRET
 
 Next, go to https://console.cloud.google.com/
-and make a new oAuth 2.0 client.
+Then go to Google auth platform, then client, then add a new oAuth 2.0 client.
 Make a new web application and for the "authorized javascript origins",
 put the frontend url "http://localhost:3000"
 and for "authorized redirect URIs" put the backend url
