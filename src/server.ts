@@ -24,6 +24,7 @@ import { authSocketMiddleware } from "./middleware/auth-socket.middle";
 import OpenAI from "openai";
 import { test } from "./controllers/test.controller";
 import { chatSocket } from "./sockets/chat.socket";
+import { SNSClient } from "@aws-sdk/client-sns";
 
 const app = express();
 
@@ -42,6 +43,8 @@ const io = new Server(server, {
 
 export const ai = new GoogleGenAI({});
 export const openai = new OpenAI({});
+
+export const snsClient = new SNSClient({});
 
 app.use(cookieParser());
 app.use(cors(corsOptions));

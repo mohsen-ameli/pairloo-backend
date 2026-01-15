@@ -24,12 +24,10 @@ export async function requestEmailVerification(req: Request, res: Response) {
     let verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
 
     try {
-      const verification = new Verification({
+      await Verification.create({
         email,
         code: verificationCode,
-        createdAt: Date.now(),
       });
-      await verification.save();
     } catch (err) {
       // user is requesting a resend, before the previous code expired
       const existingVerification = await Verification.findOne({ email });
