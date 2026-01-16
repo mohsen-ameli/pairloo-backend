@@ -6,7 +6,16 @@ export async function updateProfile(req: Request, res: Response) {
     const userId = req.user?.sub;
     if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
-    const allowedFields = ["firstName", "lastName", "country", "city"];
+    const allowedFields = [
+      "firstName",
+      "lastName",
+      "country",
+      "city",
+      "state",
+      "coordinates",
+      "timezone",
+      "locationRef",
+    ];
     const updates: Record<string, any> = {};
     for (const field of allowedFields) {
       if (field in req.body) updates[field] = req.body[field];
@@ -25,6 +34,10 @@ export async function updateProfile(req: Request, res: Response) {
       phoneNumber: user.phoneNumber,
       country: user.country,
       city: user.city,
+      state: user.state,
+      coordinates: user.coordinates,
+      timezone: user.timezone,
+      locationRef: user.locationRef,
       email: user.email,
       picture: user.picture,
     });

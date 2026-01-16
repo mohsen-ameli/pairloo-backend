@@ -14,6 +14,10 @@ export async function feedGet(req: Request, res: Response) {
         firstName: user.firstName,
         lastName: user.lastName,
         picture: user.picture,
+        state: user.state,
+        coordinates: user.coordinates,
+        timezone: user.timezone,
+        locationRef: user.locationRef,
         content: post.content,
       };
       results.push(data);

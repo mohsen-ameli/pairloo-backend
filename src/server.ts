@@ -12,6 +12,7 @@ import nodemailer from "nodemailer";
 import authRoutes from "./routes/auth.routes";
 import postsRoutes from "./routes/posts.routes";
 import settingsRoutes from "./routes/settings.routes";
+import locationRoutes from "./routes/location.routes";
 import mongoose from "mongoose";
 import cookieParser from "cookie-parser";
 import csurf from "csurf";
@@ -63,6 +64,7 @@ export const transporter = nodemailer.createTransport({
 app.use("/api/auth", authRoutes);
 app.use("/api/posts", authMiddleware, postsRoutes);
 app.use("/api/settings", authMiddleware, settingsRoutes);
+app.use("/api/locations", locationRoutes);
 app.use("/api/test", test);
 
 // Sockets - Routes
