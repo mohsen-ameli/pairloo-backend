@@ -110,7 +110,7 @@ export async function tokenPost(req: Request, res: Response) {
     state: user.state,
     coordinates: user.coordinates,
     timezone: user.timezone,
-    locationRef: user.locationRef,
+    locationId: user.locationId,
     email: user.email,
     picture: user.picture,
     accessToken,

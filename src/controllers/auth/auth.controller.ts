@@ -13,7 +13,7 @@ export async function signupPost(req: Request, res: Response) {
     state: req.body.state,
     coordinates: req.body.coordinates,
     timezone: req.body.timezone,
-    locationRef: req.body.locationRef,
+    locationId: req.body.locationId,
     email: req.body.email.toLowerCase(),
   };
   try {
@@ -36,7 +36,7 @@ export async function signupPost(req: Request, res: Response) {
       state: user.state,
       coordinates: user.coordinates,
       timezone: user.timezone,
-      locationRef: user.locationRef,
+      locationId: user.locationId,
       email: user.email,
       accessToken,
       refreshToken,
