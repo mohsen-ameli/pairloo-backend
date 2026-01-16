@@ -17,7 +17,7 @@ export async function feedGet(req: Request, res: Response) {
         state: user.state,
         coordinates: user.coordinates,
         timezone: user.timezone,
-        locationRef: user.locationRef,
+        locationId: user.locationId,
         content: post.content,
       };
       results.push(data);

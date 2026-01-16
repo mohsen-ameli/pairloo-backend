@@ -3,8 +3,8 @@ import Location from '../models/location.model';
 
 export const searchLocations = async (req: Request, res: Response) => {
   try {
-    const query = req.query.q as string;
-    if (!query || query.length < 2) {
+    const query = (req.query.q as string).trim();
+    if (!query) {
       return res.json([]);
     }
     const results = await Location.aggregate([

@@ -13,7 +13,7 @@ export interface UserType extends mongoose.Document {
   state: string;
   coordinates: [number, number]; // [longitude, latitude]
   timezone: string;
-  locationRef: number;
+  locationId: number;
   email: string;
   picture?: string | undefined;
   posts: mongoose.Types.DocumentArray<PostType>;
@@ -61,25 +61,20 @@ const userSchema = new mongoose.Schema<UserType>(
     },
     state: {
       type: String,
-      required: [true, "Please enter your state"],
-      trim: true,
+      required: false,
     },
     coordinates: {
       type: [Number],
-      required: [true, "Please enter coordinates"],
-      validate: {
-        validator: (arr: number[]) => arr.length === 2,
-        message: "Coordinates must be an array of [longitude, latitude]",
-      },
+      required: true,
     },
     timezone: {
       type: String,
       required: [true, "Please enter your timezone"],
       trim: true,
     },
-    locationRef: {
+    locationId: {
       type: Number,
-      required: [true, "Please enter location reference (_id)"],
+      required: true,
     },
     email: {
       type: String,

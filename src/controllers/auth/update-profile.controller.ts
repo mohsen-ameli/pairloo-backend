@@ -14,7 +14,7 @@ export async function updateProfile(req: Request, res: Response) {
       "state",
       "coordinates",
       "timezone",
-      "locationRef",
+      "locationId",
     ];
     const updates: Record<string, any> = {};
     for (const field of allowedFields) {
@@ -37,7 +37,7 @@ export async function updateProfile(req: Request, res: Response) {
       state: user.state,
       coordinates: user.coordinates,
       timezone: user.timezone,
-      locationRef: user.locationRef,
+      locationId: user.locationId,
       email: user.email,
       picture: user.picture,
     });
