@@ -10,6 +10,10 @@ export interface UserType extends mongoose.Document {
   phoneNumber: string;
   country: string;
   city: string;
+  state: string;
+  coordinates: [number, number]; // [longitude, latitude]
+  timezone: string;
+  locationId: number;
   email: string;
   picture?: string | undefined;
   posts: mongoose.Types.DocumentArray<PostType>;
@@ -54,6 +58,23 @@ const userSchema = new mongoose.Schema<UserType>(
       required: [true, "Please enter your city"],
       unique: false,
       trim: true,
+    },
+    state: {
+      type: String,
+      required: false,
+    },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
+    timezone: {
+      type: String,
+      required: [true, "Please enter your timezone"],
+      trim: true,
+    },
+    locationId: {
+      type: Number,
+      required: true,
     },
     email: {
       type: String,

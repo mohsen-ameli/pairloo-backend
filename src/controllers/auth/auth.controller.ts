@@ -10,6 +10,10 @@ export async function signupPost(req: Request, res: Response) {
     phoneNumber: req.body.phoneNumber,
     country: req.body.country,
     city: req.body.city,
+    state: req.body.state,
+    coordinates: req.body.coordinates,
+    timezone: req.body.timezone,
+    locationId: req.body.locationId,
     email: req.body.email.toLowerCase(),
   };
   try {
@@ -29,6 +33,10 @@ export async function signupPost(req: Request, res: Response) {
       phoneNumber: user.phoneNumber,
       country: user.country,
       city: user.city,
+      state: user.state,
+      coordinates: user.coordinates,
+      timezone: user.timezone,
+      locationId: user.locationId,
       email: user.email,
       accessToken,
       refreshToken,
