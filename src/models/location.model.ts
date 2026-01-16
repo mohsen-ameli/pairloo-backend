@@ -30,4 +30,5 @@ const locationSchema = new mongoose.Schema<LocationType>({
   timezone: { type: String },
 });
 
-export default mongoose.model<LocationType>("Location", locationSchema);
+const Location = mongoose.model<LocationType>("location", locationSchema);
+export default Location;
