@@ -27,6 +27,7 @@ const locationSchema = new mongoose.Schema<LocationType>({
   latitude: { type: String },
   longitude: { type: String },
   type: { type: String },
+  population: { type: Number },
   timezone: { type: String },
 });
 

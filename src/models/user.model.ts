@@ -11,7 +11,8 @@ export interface UserType extends mongoose.Document {
   country: string;
   city: string;
   state: string;
-  coordinates: [number, number]; // [longitude, latitude]
+  latitude: number;
+  longitude: number;
   timezone: string;
   locationId: number;
   email: string;
@@ -63,8 +64,12 @@ const userSchema = new mongoose.Schema<UserType>(
       type: String,
       required: false,
     },
-    coordinates: {
-      type: [Number],
+    latitude: {
+      type: Number,
+      required: true,
+    },
+    longitude: {
+      type: Number,
       required: true,
     },
     timezone: {
