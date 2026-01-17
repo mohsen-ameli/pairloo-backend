@@ -1,5 +1,14 @@
-import { Request, Response } from 'express';
-import Location from '../models/location.model';
+import { Request, Response } from "express";
+import Location from "../models/location.model";
+import mongoose from "mongoose";
+
+type LocationType = mongoose.Document & {
+  name: string;
+  country_name: string;
+  state_name: string;
+  population: number;
+  score: number;
+};
 
 export const searchLocations = async (req: Request, res: Response) => {
   try {
@@ -7,15 +16,19 @@ export const searchLocations = async (req: Request, res: Response) => {
     if (!query) {
       return res.json([]);
     }
-    const results = await Location.aggregate([
+
+    const results: LocationType[] = await Location.aggregate([
       {
         $search: {
           index: "location_autocomplete",
           autocomplete: {
             query,
-            path: "name"
-          }
-        }
+            path: "name",
+          },
+        },
+      },
+      {
+        $sort: { searchScore: -1 },
       },
       { $limit: 10 },
       {
@@ -23,16 +36,22 @@ export const searchLocations = async (req: Request, res: Response) => {
           name: 1,
           country_name: 1,
           state_name: 1,
-          score: { $meta: "searchScore" },
+          population: 1,
           latitude: 1,
           longitude: 1,
           timezone: 1,
-        }
-      }
+          score: {
+            $meta: "searchScore",
+          },
+        },
+      },
     ]);
-    res.json(results);
+
+    // sort by population descending
+    const locations = results.sort((a, b) => b.population - a.population);
+    res.json(locations);
   } catch (error) {
     console.error("Error searching locations:", error);
-    res.status(500).json({ error: 'Failed to search locations' });
+    res.status(500).json({ error: "Failed to search locations" });
   }
 };

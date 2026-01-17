@@ -200,6 +200,11 @@ export function chatSocket(
         })
         .lean();
 
+      if (messages.length === 0) {
+        socket.emit("messages", []);
+        return;
+      }
+
       const formattedMessages = messages.map((msg) => ({
         ...msg,
         sender: {

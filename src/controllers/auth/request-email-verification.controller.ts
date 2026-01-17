@@ -21,19 +21,24 @@ export async function requestEmailVerification(req: Request, res: Response) {
       });
     }
 
-    let verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
+    const existingVerification = await Verification.findOne({ email });
+    let verificationCode: number;
 
-    try {
-      const verification = new Verification({
-        email,
-        code: verificationCode,
-        createdAt: Date.now(),
-      });
-      await verification.save();
-    } catch (err) {
-      // user is requesting a resend, before the previous code expired
-      const existingVerification = await Verification.findOne({ email });
-      verificationCode = existingVerification!.code;
+    if (existingVerification) {
+      verificationCode = existingVerification.code;
+    } else {
+      verificationCode = Math.floor(100000 + Math.random() * 900000); // 6-digit code
+      try {
+        await Verification.create({
+          email,
+          code: verificationCode,
+        });
+      } catch (err) {
+        console.log(err);
+        throw new Error(
+          "Failed to create verification record. Please try again."
+        );
+      }
     }
 
     const mailOptions = {

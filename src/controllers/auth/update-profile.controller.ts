@@ -12,14 +12,15 @@ export async function updateProfile(req: Request, res: Response) {
       "country",
       "city",
       "state",
-      "coordinates",
+      "latitude",
+      "longitude",
       "timezone",
       "locationId",
     ];
     const updates: Record<string, any> = {};
     for (const field of allowedFields) {
       if (field in req.body) updates[field] = req.body[field];
-    } 
+    }
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No valid fields to update." });
     }
@@ -35,7 +36,8 @@ export async function updateProfile(req: Request, res: Response) {
       country: user.country,
       city: user.city,
       state: user.state,
-      coordinates: user.coordinates,
+      latitude: user.latitude,
+      longitude: user.longitude,
       timezone: user.timezone,
       locationId: user.locationId,
       email: user.email,
