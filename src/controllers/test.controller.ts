@@ -1,13 +1,25 @@
 import { getClosestPosts } from "../utils/getClosestPosts";
-import { callForSummaryAndEmbedding, callForIntention } from "../utils/AIQA";
+import {
+  callForSummaryAndEmbedding,
+  callForIntention,
+  callForQuestion,
+} from "../utils/AIQA";
 import { cosineSimilarity } from "../utils/embedding";
 import mongoose from "mongoose";
 import { Request, Response } from "express";
 import User from "../models/user.model";
+import { generateQuestion } from "../utils/AIModel";
 
 // Simple route for testing
 export async function test(req: Request, res: Response) {
-  res.json({ message: "Test route is working!" });
+  const question = await callForQuestion({
+    initialPostText: "Looking for a running partner in NYC.",
+    context: [],
+    step: 0,
+    maxQuestions: 5,
+  });
+
+  res.json({ message: "Test route is working!", question });
 
   // const postId = req.query.postId as string;
   // const userId = req.query.userId as string;

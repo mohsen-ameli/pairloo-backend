@@ -4,9 +4,17 @@ import { MAX_POST_QUESTIONS } from "../utils/constants";
 import { getClosestPosts } from "../utils/getClosestPosts";
 import User from "../models/user.model";
 import { PostType } from "../models/post.model";
+import { PostSession } from "../types/session.types";
+
+const initialSession: PostSession = {
+  initialPostText: "",
+  context: [],
+  step: 0,
+  maxQuestions: MAX_POST_QUESTIONS,
+};
 
 export function createPostSocket(
-  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
 ) {
   io.on("connection", async (socket: Socket) => {
     const userId = (socket as any).user.sub as string;
@@ -18,12 +26,7 @@ export function createPostSocket(
       return;
     }
 
-    const session = {
-      initialPostText: "",
-      context: [] as { question: string; answer: string }[],
-      step: 0,
-      maxQuestions: MAX_POST_QUESTIONS,
-    };
+    let session = structuredClone(initialSession);
 
     socket.on("chat", async (text: string) => {
       if (!session) return;
@@ -83,8 +86,8 @@ export function createPostSocket(
         const postId = (await User.findById(userId))!.posts.slice(-1)[0]._id;
 
         socket.emit("success", postId);
-        socket.disconnect(true);
-      }
+        session = structuredClone(initialSession);
+      },
     );
   });
 }

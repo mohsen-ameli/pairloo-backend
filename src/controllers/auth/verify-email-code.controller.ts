@@ -7,8 +7,8 @@ export async function verifyEmailCode(req: Request, res: Response) {
   const {
     email,
     code,
-    signUp,
-  }: { email: string; code: string; signUp: boolean } = req.body;
+    isSignUp,
+  }: { email: string; code: string; isSignUp: boolean } = req.body;
 
   try {
     const userVerify = await Verification.findOne({
@@ -18,23 +18,23 @@ export async function verifyEmailCode(req: Request, res: Response) {
     if (!userVerify) {
       return res.status(400).json({
         error:
-          "Invalid verification code. Please check the code again and try again.",
+          "Invalid verification code. Please check the code and try again.",
       });
     }
 
-    if (!signUp) {
+    if (!isSignUp) {
       const user = await User.findOne({ email: email.toLowerCase() });
       if (!user) {
         return res.status(400).json({
           error:
-            "Invalid email. Please check your email address again and try again.",
+            "Invalid email. Please check your email address and try again.",
         });
       }
 
       await Verification.deleteMany({ email: email.toLowerCase() });
 
       const { accessToken, refreshToken } = await createJWT(
-        user._id.toString()
+        user._id.toString(),
       );
 
       return res.status(200).json({
