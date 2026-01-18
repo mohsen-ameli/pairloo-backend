@@ -163,6 +163,7 @@ export function chatSocket(
         const formattedMessage = {
           ...populatedMessage.toObject(),
           sender: {
+            _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
             picture: populatedMessage.senderId.picture,
           },
