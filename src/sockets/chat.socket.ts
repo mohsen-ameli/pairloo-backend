@@ -5,7 +5,7 @@ import { Types } from "mongoose";
 import Message from "../models/message.model";
 
 export function chatSocket(
-  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
 ) {
   io.on("connection", async (socket: Socket) => {
     const userId = socket.user!.sub;
@@ -64,7 +64,7 @@ export function chatSocket(
         .lean();
 
       const formattedConversations = conversations.map((conv) => {
-        if (conv.lastMessage) {
+        if (conv.lastMessage && conv.lastMessage.senderId) {
           return {
             ...conv,
             lastMessage: {
@@ -102,7 +102,7 @@ export function chatSocket(
       });
 
       const connectedSockets = Array.from(io.sockets.values()).filter((s) =>
-        memberIds.includes(s.user!.sub as unknown as Types.ObjectId)
+        memberIds.includes(s.user!.sub as unknown as Types.ObjectId),
       );
 
       connectedSockets.forEach((s) => {
@@ -110,7 +110,7 @@ export function chatSocket(
       });
 
       const populatedConversation = await Conversation.findById(
-        conversation._id
+        conversation._id,
       )
         .populate({
           path: "members",
@@ -125,7 +125,7 @@ export function chatSocket(
 
       io.to(conversation._id.toString()).emit(
         "conversation",
-        populatedConversation
+        populatedConversation,
       );
     });
 
@@ -163,6 +163,7 @@ export function chatSocket(
         const formattedMessage = {
           ...populatedMessage.toObject(),
           sender: {
+            _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
             picture: populatedMessage.senderId.picture,
           },
@@ -178,9 +179,9 @@ export function chatSocket(
         io.to(conversationId).emit(
           "lastMessageUpdated",
           conversationId,
-          formattedMessage
+          formattedMessage,
         );
-      }
+      },
     );
 
     socket.on("getMessages", async (conversationId: string) => {
@@ -216,6 +217,9 @@ export function chatSocket(
       socket.emit("messages", formattedMessages);
     });
 
-    socket.emit("connected", "You are connected to chat namespace");
+    socket.emit("connected", () => {
+      console.log("user connected: ", userId);
+      return "You are connected to chat namespace";
+    });
   });
 }
