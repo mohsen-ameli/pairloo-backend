@@ -1,13 +1,22 @@
-import { getClosestPosts } from "../utils/getClosestPosts";
-import { callForSummaryAndEmbedding, callForIntention } from "../utils/AIQA";
-import { cosineSimilarity } from "../utils/embedding";
-import mongoose from "mongoose";
-import { Request, Response } from "express";
-import User from "../models/user.model";
+import { getClosestPosts } from "../utils/getClosestPosts"
+import { callForSummaryAndEmbedding, callForIntention } from "../utils/AIQA"
+import { cosineSimilarity } from "../utils/embedding"
+import mongoose from "mongoose"
+import { Request, Response } from "express"
+import User from "../models/user.model"
+import { createAvatar } from "@dicebear/core"
+import { adventurer, lorelei, thumbs } from "@dicebear/collection"
 
 // Simple route for testing
 export async function test(req: Request, res: Response) {
-  res.json({ message: "Test route is working!" });
+  // const avatar = createAvatar(adventurer, {
+  //   seed: Math.random().toString(36).substring(2, 20),
+  //   // ... other options
+  // });
+
+  // const svg = avatar.toString();
+
+  return res.json({ message: "Test route is working!" })
 
   // const postId = req.query.postId as string;
   // const userId = req.query.userId as string;
