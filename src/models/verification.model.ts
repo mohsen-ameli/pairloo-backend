@@ -1,11 +1,11 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 export interface VerificationType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  email?: string;
-  phoneNumber?: string;
-  code: number;
-  createdAt: Date;
+  _id: mongoose.Types.ObjectId
+  email?: string
+  phoneNumber?: string
+  code: number
+  createdAt: Date
 }
 
 const verificationSchema = new mongoose.Schema<VerificationType>({
@@ -27,10 +27,7 @@ const verificationSchema = new mongoose.Schema<VerificationType>({
     default: Date.now,
     expires: 300, // Code expires in 5 minutes
   },
-});
+})
 
-const Verification = mongoose.model<VerificationType>(
-  "verification",
-  verificationSchema
-);
-export default Verification;
+const Verification = mongoose.model<VerificationType>("verification", verificationSchema)
+export default Verification

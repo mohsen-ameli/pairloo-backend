@@ -1,13 +1,13 @@
-import mongoose from "mongoose";
-import { messageSchema, MessageType } from "./message.model";
+import mongoose from "mongoose"
+import { messageSchema, MessageType } from "./message.model"
 
 export interface ConversationType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  members: mongoose.Types.ObjectId[];
-  lastMessage?: MessageType;
-  createdBy: mongoose.Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
+  _id: mongoose.Types.ObjectId
+  members: mongoose.Types.ObjectId[]
+  lastMessage?: MessageType
+  createdBy: mongoose.Types.ObjectId
+  createdAt: Date
+  updatedAt: Date
 }
 
 const conversationSchema = new mongoose.Schema<ConversationType>({
@@ -33,14 +33,11 @@ const conversationSchema = new mongoose.Schema<ConversationType>({
     type: Date,
     default: Date.now,
   },
-});
+})
 
 conversationSchema.pre("save", function () {
-  this.updatedAt = new Date();
-});
+  this.updatedAt = new Date()
+})
 
-const Conversation = mongoose.model<ConversationType>(
-  "conversation",
-  conversationSchema
-);
-export default Conversation;
+const Conversation = mongoose.model<ConversationType>("conversation", conversationSchema)
+export default Conversation

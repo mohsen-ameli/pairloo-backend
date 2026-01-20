@@ -1,13 +1,13 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 export interface MessageType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  conversationId: mongoose.Types.ObjectId;
-  senderId: mongoose.Types.ObjectId;
-  content: string;
-  attachment: string;
-  createdAt: Date;
-  updatedAt: Date;
+  _id: mongoose.Types.ObjectId
+  conversationId: mongoose.Types.ObjectId
+  senderId: mongoose.Types.ObjectId
+  content: string
+  attachment: string
+  createdAt: Date
+  updatedAt: Date
 }
 
 export const messageSchema = new mongoose.Schema<MessageType>({
@@ -36,11 +36,11 @@ export const messageSchema = new mongoose.Schema<MessageType>({
     type: Date,
     default: Date.now,
   },
-});
+})
 
 messageSchema.pre("save", function () {
-  this.updatedAt = new Date();
-});
+  this.updatedAt = new Date()
+})
 
-const Message = mongoose.model<MessageType>("message", messageSchema);
-export default Message;
+const Message = mongoose.model<MessageType>("message", messageSchema)
+export default Message

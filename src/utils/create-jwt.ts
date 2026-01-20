@@ -1,16 +1,12 @@
-import * as jose from "jose";
-import {
-  ACCESS_TOKEN_EXPIRY,
-  JWT_SECRET,
-  REFRESH_TOKEN_EXPIRY,
-} from "../utils/constants";
+import * as jose from "jose"
+import { ACCESS_TOKEN_EXPIRY, JWT_SECRET, REFRESH_TOKEN_EXPIRY } from "../utils/constants"
 
 export default async function createJWT(id: string): Promise<{
-  accessToken: string;
-  refreshToken: string;
+  accessToken: string
+  refreshToken: string
 }> {
   // Current timestamp in seconds
-  const issuedAt = Math.floor(Date.now() / 1000);
+  const issuedAt = Math.floor(Date.now() / 1000)
 
   // Create access token (short-lived)
   const accessToken = await new jose.SignJWT()
@@ -18,7 +14,7 @@ export default async function createJWT(id: string): Promise<{
     .setExpirationTime(ACCESS_TOKEN_EXPIRY)
     .setSubject(id)
     .setIssuedAt(issuedAt)
-    .sign(new TextEncoder().encode(JWT_SECRET));
+    .sign(new TextEncoder().encode(JWT_SECRET))
 
   // Create refresh token (long-lived)
   const refreshToken = await new jose.SignJWT({
@@ -29,7 +25,7 @@ export default async function createJWT(id: string): Promise<{
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime(REFRESH_TOKEN_EXPIRY)
     .setIssuedAt(issuedAt)
-    .sign(new TextEncoder().encode(JWT_SECRET));
+    .sign(new TextEncoder().encode(JWT_SECRET))
 
-  return { accessToken, refreshToken };
+  return { accessToken, refreshToken }
 }

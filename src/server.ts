@@ -5,53 +5,53 @@ import {
   EMAIL_USER,
   FRONTEND_URL,
   IS_PRODUCTION,
-} from "./utils/constants";
-import express from "express";
-import cors from "cors";
-import nodemailer from "nodemailer";
-import authRoutes from "./routes/auth.routes";
-import postsRoutes from "./routes/posts.routes";
-import settingsRoutes from "./routes/settings.routes";
-import locationRoutes from "./routes/location.routes";
-import mongoose from "mongoose";
-import cookieParser from "cookie-parser";
-import csurf from "csurf";
-import { Server } from "socket.io";
-import http from "http";
-import authMiddleware from "./middleware/auth.middleware";
-import { createPostSocket } from "./sockets/create-post.socket";
-import { GoogleGenAI } from "@google/genai";
-import { authSocketMiddleware } from "./middleware/auth-socket.middle";
-import OpenAI from "openai";
-import { test } from "./controllers/test.controller";
-import { chatSocket } from "./sockets/chat.socket";
-import { SNSClient } from "@aws-sdk/client-sns";
+} from "./utils/constants"
+import express from "express"
+import cors from "cors"
+import nodemailer from "nodemailer"
+import authRoutes from "./routes/auth.routes"
+import postsRoutes from "./routes/posts.routes"
+import settingsRoutes from "./routes/settings.routes"
+import locationRoutes from "./routes/location.routes"
+import mongoose from "mongoose"
+import cookieParser from "cookie-parser"
+import csurf from "csurf"
+import { Server } from "socket.io"
+import http from "http"
+import authMiddleware from "./middleware/auth.middleware"
+import { createPostSocket } from "./sockets/create-post.socket"
+import { GoogleGenAI } from "@google/genai"
+import { authSocketMiddleware } from "./middleware/auth-socket.middle"
+import OpenAI from "openai"
+import { test } from "./controllers/test.controller"
+import { chatSocket } from "./sockets/chat.socket"
+import { SNSClient } from "@aws-sdk/client-sns"
 
-const app = express();
+const app = express()
 
 const corsOptions = {
   origin: IS_PRODUCTION ? false : FRONTEND_URL,
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true,
-};
+}
 
-const server = http.createServer(app);
+const server = http.createServer(app)
 
 const io = new Server(server, {
   cors: corsOptions,
   serveClient: false,
-});
+})
 
-export const ai = new GoogleGenAI({});
-export const openai = new OpenAI({});
+export const ai = new GoogleGenAI({})
+export const openai = new OpenAI({})
 
-export const snsClient = new SNSClient({});
+export const snsClient = new SNSClient({})
 
-app.use(cookieParser());
-app.use(cors(corsOptions));
-app.use(express.json());
+app.use(cookieParser())
+app.use(cors(corsOptions))
+app.use(express.json())
 if (IS_PRODUCTION) {
-  app.use(csurf({ cookie: true }));
+  app.use(csurf({ cookie: true }))
 }
 
 export const transporter = nodemailer.createTransport({
@@ -61,32 +61,32 @@ export const transporter = nodemailer.createTransport({
     user: EMAIL_USER,
     pass: EMAIL_PASS,
   },
-});
+})
 
 // Express - Routes & handlers
-app.use("/api/auth", authRoutes);
-app.use("/api/posts", authMiddleware, postsRoutes);
-app.use("/api/settings", authMiddleware, settingsRoutes);
-app.use("/api/locations", locationRoutes);
-app.use("/api/test", test);
+app.use("/api/auth", authRoutes)
+app.use("/api/posts", authMiddleware, postsRoutes)
+app.use("/api/settings", authMiddleware, settingsRoutes)
+app.use("/api/locations", locationRoutes)
+app.use("/api/test", test)
 
 // Sockets - Routes
-const createPostIo = io.of("/create-post").use(authSocketMiddleware);
-const chatIo = io.of("/chat").use(authSocketMiddleware);
+const createPostIo = io.of("/create-post").use(authSocketMiddleware)
+const chatIo = io.of("/chat").use(authSocketMiddleware)
 
 // Sockets - Handlers
-createPostSocket(createPostIo);
-chatSocket(chatIo);
+createPostSocket(createPostIo)
+chatSocket(chatIo)
 
 // Connect to MongoDB and start the server
 mongoose
   .connect(DB_URI)
   .then(() => {
     server.listen(process.env.PORT, () => {
-      console.log(`Server is running on port ${process.env.PORT}.`);
-    });
+      console.log(`Server is running on port ${process.env.PORT}.`)
+    })
   })
-  .catch((err) => {
-    console.error("Connection error:", err);
-    process.exit();
-  });
+  .catch(err => {
+    console.error("Connection error:", err)
+    process.exit()
+  })

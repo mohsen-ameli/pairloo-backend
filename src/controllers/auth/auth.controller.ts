@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
-import User from "../../models/user.model";
-import createJWT from "../../utils/create-jwt";
+import { Request, Response } from "express"
+import User from "../../models/user.model"
+import createJWT from "../../utils/create-jwt"
 
 export async function signupPost(req: Request, res: Response) {
   const userData = {
@@ -16,15 +16,15 @@ export async function signupPost(req: Request, res: Response) {
     timezone: req.body.timezone,
     locationId: req.body.locationId,
     email: req.body.email.toLowerCase(),
-  };
+  }
   try {
-    const user = new User(userData);
-    const err = user.validateSync();
-    const errors = await handleSignupErrors(err, userData);
-    if (errors) return res.status(400).json({ errors });
-    await user.save();
+    const user = new User(userData)
+    const err = user.validateSync()
+    const errors = await handleSignupErrors(err, userData)
+    if (errors) return res.status(400).json({ errors })
+    await user.save()
 
-    const { accessToken, refreshToken } = await createJWT(user._id.toString());
+    const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
     res.status(201).json({
       _id: user._id,
@@ -42,9 +42,9 @@ export async function signupPost(req: Request, res: Response) {
       email: user.email,
       accessToken,
       refreshToken,
-    });
+    })
   } catch (err: any) {
-    res.status(500).json({ errors: { general: err.message } });
+    res.status(500).json({ errors: { general: err.message } })
   }
 }
 
@@ -57,34 +57,30 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
     country: "",
     city: "",
     email: "",
-  };
+  }
   if (err) {
     Object.values(err.errors).forEach(({ properties }: any) => {
-      errors[properties.path as keyof typeof errors] = properties.message;
-    });
-    return errors;
+      errors[properties.path as keyof typeof errors] = properties.message
+    })
+    return errors
   } else {
     // query for existing username, email, phoneNumber
     const existingUser = await User.findOne({
-      $or: [
-        { username: user.username },
-        { email: user.email },
-        { phoneNumber: user.phoneNumber },
-      ],
-    });
+      $or: [{ username: user.username }, { email: user.email }, { phoneNumber: user.phoneNumber }],
+    })
 
     if (existingUser) {
       if (existingUser.username === user.username) {
-        errors.username = "Username already exists";
+        errors.username = "Username already exists"
       }
       if (existingUser.email === user.email) {
-        errors.email = "Email already exists";
+        errors.email = "Email already exists"
       }
       if (existingUser.phoneNumber === user.phoneNumber) {
-        errors.phoneNumber = "Phone number already exists";
+        errors.phoneNumber = "Phone number already exists"
       }
-      return errors;
+      return errors
     }
   }
-  return null;
+  return null
 }

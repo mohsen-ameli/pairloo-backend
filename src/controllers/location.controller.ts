@@ -1,20 +1,20 @@
-import { Request, Response } from "express";
-import Location from "../models/location.model";
-import mongoose from "mongoose";
+import { Request, Response } from "express"
+import Location from "../models/location.model"
+import mongoose from "mongoose"
 
 type LocationType = mongoose.Document & {
-  name: string;
-  country_name: string;
-  state_name: string;
-  population: number;
-  score: number;
-};
+  name: string
+  country_name: string
+  state_name: string
+  population: number
+  score: number
+}
 
 export const searchLocations = async (req: Request, res: Response) => {
   try {
-    const query = (req.query.q as string).trim();
+    const query = (req.query.q as string).trim()
     if (!query) {
-      return res.json([]);
+      return res.json([])
     }
 
     const results: LocationType[] = await Location.aggregate([
@@ -45,13 +45,13 @@ export const searchLocations = async (req: Request, res: Response) => {
           },
         },
       },
-    ]);
+    ])
 
     // sort by population descending
-    const locations = results.sort((a, b) => b.population - a.population);
-    res.json(locations);
+    const locations = results.sort((a, b) => b.population - a.population)
+    res.json(locations)
   } catch (error) {
-    console.error("Error searching locations:", error);
-    res.status(500).json({ error: "Failed to search locations" });
+    console.error("Error searching locations:", error)
+    res.status(500).json({ error: "Failed to search locations" })
   }
-};
+}

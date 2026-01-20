@@ -3,21 +3,21 @@
  * Get autocomplete suggestions for location names.
  */
 
-use("test");
+use("test")
 
-const K = 5;
-const userId = "";
-const postId = "";
+const K = 5
+const userId = ""
+const postId = ""
 
 const user = db.users.findOne({
   _id: new ObjectId(userId),
-});
+})
 
-let post;
+let post
 
 for (const p of user.posts) {
   if (p._id.equals(new ObjectId(postId))) {
-    post = p;
+    post = p
   }
 }
 
@@ -47,4 +47,4 @@ db.users.aggregate([
       // embedding: "$posts.embedding",
     },
   },
-]);
+])

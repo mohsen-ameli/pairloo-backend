@@ -1,12 +1,12 @@
-import { AIModel, getEmbedding } from "./AIModel";
+import { AIModel, getEmbedding } from "./AIModel"
 
 export async function callForQuestion(session: {
-  initialPostText: string;
-  context: { question: any; answer: any }[];
-  step: number;
-  maxQuestions: number;
+  initialPostText: string
+  context: { question: any; answer: any }[]
+  step: number
+  maxQuestions: number
 }): Promise<string | undefined> {
-  const { initialPostText, context, step, maxQuestions } = session;
+  const { initialPostText, context, step, maxQuestions } = session
   const contents = [
     {
       type: "text",
@@ -27,18 +27,18 @@ export async function callForQuestion(session: {
 
         4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `,
     },
-  ];
+  ]
 
-  const response = await AIModel(contents);
+  const response = await AIModel(contents)
   if (response === null) {
-    throw new Error("Could not generate question from AI model");
+    throw new Error("Could not generate question from AI model")
   }
-  return response;
+  return response
 }
 
 export async function callForSummaryAndEmbedding(session: {
-  initialPostText: string;
-  context: { question: any; answer: any }[];
+  initialPostText: string
+  context: { question: any; answer: any }[]
 }) {
   const summary = await AIModel([
     {
@@ -47,18 +47,18 @@ export async function callForSummaryAndEmbedding(session: {
       This summary will be used to create a semantic embedding for matching similar posts, so focus only on the core topics and intent.
       Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`,
     },
-  ]);
+  ])
   if (!summary) {
-    throw new Error("Could not generate summary for embedding");
+    throw new Error("Could not generate summary for embedding")
   }
 
-  const embedding = await getEmbedding(summary);
-  return { summary, embedding };
+  const embedding = await getEmbedding(summary)
+  return { summary, embedding }
 }
 
 export async function callForIntention(session: {
-  initialPostText: string;
-  context: { question: any; answer: any }[];
+  initialPostText: string
+  context: { question: any; answer: any }[]
 }): Promise<string> {
   // For example, if the post is about looking for a running partner, the intention would be "need".
   // If the post is about selling a bike, the intention would be "provide".
@@ -78,10 +78,10 @@ export async function callForIntention(session: {
       Do not include any other formatting like bullet points or punctuation or **.
       Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`,
     },
-  ]);
+  ])
   if (!intention) {
-    throw new Error("Could not generate intention for embedding");
+    throw new Error("Could not generate intention for embedding")
   }
 
-  return intention;
+  return intention
 }

@@ -1,17 +1,17 @@
-import mongoose from "mongoose";
-import { ClosePost } from "../types/closePost.types";
+import mongoose from "mongoose"
+import { ClosePost } from "../types/closePost.types"
 
 export interface PostType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  content: string;
-  summary: string;
-  images?: string[];
-  publicPost: boolean;
-  numMatches: number;
-  qna: { question: string; answer: string }[];
-  embedding: number[];
-  closestPosts?: ClosePost[] | null;
-  createdAt: Date;
+  _id: mongoose.Types.ObjectId
+  content: string
+  summary: string
+  images?: string[]
+  publicPost: boolean
+  numMatches: number
+  qna: { question: string; answer: string }[]
+  embedding: number[]
+  closestPosts?: ClosePost[] | null
+  createdAt: Date
 }
 
 const postSchema = new mongoose.Schema<PostType>({
@@ -65,6 +65,6 @@ const postSchema = new mongoose.Schema<PostType>({
     type: Date,
     default: Date.now,
   },
-});
+})
 
-export default postSchema;
+export default postSchema

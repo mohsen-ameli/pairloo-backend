@@ -1,11 +1,11 @@
-import { Request, Response } from "express";
-import User from "../models/user.model";
+import { Request, Response } from "express"
+import User from "../models/user.model"
 
 export async function feedGet(req: Request, res: Response) {
-  const userId = req.user!.sub;
-  const results = [];
+  const userId = req.user!.sub
+  const results = []
 
-  const allUsers = await User.find({ _id: { $ne: userId } });
+  const allUsers = await User.find({ _id: { $ne: userId } })
   for (const user of allUsers) {
     for (const post of user.posts) {
       const data = {
@@ -20,10 +20,10 @@ export async function feedGet(req: Request, res: Response) {
         timezone: user.timezone,
         locationId: user.locationId,
         content: post.content,
-      };
-      results.push(data);
+      }
+      results.push(data)
     }
   }
 
-  res.status(200).json(results);
+  res.status(200).json(results)
 }

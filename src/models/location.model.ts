@@ -1,19 +1,19 @@
-import mongoose from "mongoose";
+import mongoose from "mongoose"
 
 export interface LocationType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  name: string;
-  state_id: number;
-  state_code: string;
-  state_name: string;
-  country_id: number;
-  country_code: string;
-  country_name: string;
-  latitude: string;
-  longitude: string;
-  type: string;
-  population?: number;
-  timezone: string;
+  _id: mongoose.Types.ObjectId
+  name: string
+  state_id: number
+  state_code: string
+  state_name: string
+  country_id: number
+  country_code: string
+  country_name: string
+  latitude: string
+  longitude: string
+  type: string
+  population?: number
+  timezone: string
 }
 
 const locationSchema = new mongoose.Schema<LocationType>({
@@ -29,7 +29,7 @@ const locationSchema = new mongoose.Schema<LocationType>({
   type: { type: String },
   population: { type: Number },
   timezone: { type: String },
-});
+})
 
-const Location = mongoose.model<LocationType>("location", locationSchema);
-export default Location;
+const Location = mongoose.model<LocationType>("location", locationSchema)
+export default Location
