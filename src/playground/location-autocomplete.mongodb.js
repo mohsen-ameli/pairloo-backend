@@ -5,7 +5,7 @@
 
 use("test")
 
-const query = "toronto"
+const query = ""
 
 const locations = db.locations.aggregate([
   {
