@@ -5,7 +5,7 @@ import { Types } from "mongoose"
 import Message from "../models/message.model"
 
 export function chatSocket(
-  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
+  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
 ) {
   io.on("connection", async (socket: Socket) => {
     const userId = socket.user!.sub
@@ -152,6 +152,7 @@ export function chatSocket(
         const formattedMessage = {
           ...populatedMessage.toObject(),
           sender: {
+            _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
             picture: populatedMessage.senderId.picture,
           },
@@ -201,6 +202,9 @@ export function chatSocket(
       socket.emit("messages", formattedMessages)
     })
 
-    socket.emit("connected", "You are connected to chat namespace")
-  })
+    socket.emit("connected", () => {
+      console.log("user connected: ", userId);
+      return "You are connected to chat namespace";
+    });
+  });
 }

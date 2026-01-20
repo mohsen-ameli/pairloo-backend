@@ -1,23 +1,54 @@
-import { ai, openai } from "../server"
-import { AI_ON } from "./constants"
+import { ai, openai } from "../server";
+import { Question, questionSchema } from "../types/question.types";
+import { AI_ON } from "./constants";
 
-export async function AIModel(contents: any): Promise<string | undefined | null> {
+export async function generateQuestion(
+  contents: string,
+): Promise<Question | null> {
   if (!AI_ON) {
-    return `\`\`\`json{
-      "type": "short_answer",
-      "question": "You have disabled AI mode in the backend env file. Therefore, this is a placeholder value. Enable AI mode to get actual questions.",
-      "options": []
-    }`
+    return {
+      type: "short_answer",
+      question:
+        "You have disabled AI mode in the backend env file. Therefore, this is a placeholder value. Enable AI mode to get actual questions.",
+      options: [],
+    };
   }
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
     contents,
-  })
-  return response.text === "NO_QUESTION" ? null : response.text
+    config: {
+      responseMimeType: "application/json",
+      responseJsonSchema: questionSchema,
+    },
+  });
+
+  if (!response || !response.text) {
+    throw new Error("No response from AI model");
+  }
+
+  const question = questionSchema.parse(JSON.parse(response.text));
+  return question.question === "NO_QUESTION" ? null : question;
 }
 
-export async function getEmbedding(contents: string): Promise<number[]> {
+export async function generateSummary(contents: string): Promise<string> {
+  if (!AI_ON) {
+    return "AI mode is disabled in the backend env file. Therefore, this is a placeholder summary. Enable AI mode to get actual summaries.";
+  }
+
+  const response = await ai.models.generateContent({
+    model: "gemini-2.5-flash",
+    contents,
+  });
+
+  if (!response || !response.text) {
+    throw new Error("Could not generate summary for embedding");
+  }
+
+  return response.text;
+}
+
+export async function generateEmbedding(contents: string): Promise<number[]> {
   if (!AI_ON) {
     return Array(1536).fill(1)
   }

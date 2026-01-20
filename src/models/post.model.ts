@@ -1,17 +1,18 @@
-import mongoose from "mongoose"
-import { ClosePost } from "../types/closePost.types"
+import mongoose from "mongoose";
+import { ClosePost } from "../types/closePost.types";
+import { Question } from "../types/question.types";
 
 export interface PostType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId
-  content: string
-  summary: string
-  images?: string[]
-  publicPost: boolean
-  numMatches: number
-  qna: { question: string; answer: string }[]
-  embedding: number[]
-  closestPosts?: ClosePost[] | null
-  createdAt: Date
+  _id: mongoose.Types.ObjectId;
+  content: string;
+  summary: string;
+  images?: string[];
+  publicPost: boolean;
+  numMatches: number;
+  qna: { question: Question; answer: string }[];
+  embedding: number[];
+  closestPosts?: ClosePost[] | null;
+  createdAt: Date;
 }
 
 const postSchema = new mongoose.Schema<PostType>({
@@ -38,7 +39,15 @@ const postSchema = new mongoose.Schema<PostType>({
   qna: {
     type: [
       {
-        question: { type: String, required: true },
+        question: {
+          type: {
+            type: String,
+            enum: ["short_answer", "multiple_choice", "multi_select"],
+            required: true,
+          },
+          question: { type: String, required: true },
+          options: { type: [String], required: false },
+        },
         answer: { type: String, required: true },
       },
     ],
