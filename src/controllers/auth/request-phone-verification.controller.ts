@@ -38,14 +38,18 @@ export async function requestPhoneVerification(req: Request, res: Response) {
     }
 
     // Send SMS via AWS SNS
-    const message = `Your verification code is: ${verificationCode}.\nThis code will expire in 5 minutes.\n\nDo not share this code with anyone.`
-    const response = await snsClient.send(
-      new PublishCommand({
-        Message: message,
-        PhoneNumber: fullNumber,
-      })
-    )
-    if (!response.MessageId) {
+    try {
+      const message = `Your verification code is: ${verificationCode}.\nThis code will expire in 5 minutes.\n\nDo not share this code with anyone.`
+      const response = await snsClient.send(
+        new PublishCommand({
+          Message: message,
+          PhoneNumber: fullNumber,
+        })
+      )
+      if (!response.MessageId) {
+        throw new Error("Failed to send verification code. Please try again.")
+      }
+    } catch (err) {
       throw new Error("Failed to send verification code. Please try again.")
     }
 
