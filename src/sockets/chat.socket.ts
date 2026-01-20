@@ -1,39 +1,39 @@
-import { DefaultEventsMap, Namespace, Server, Socket } from "socket.io";
-import User from "../models/user.model";
-import Conversation from "../models/conversation.model";
-import { Types } from "mongoose";
-import Message from "../models/message.model";
+import { DefaultEventsMap, Namespace, Server, Socket } from "socket.io"
+import User from "../models/user.model"
+import Conversation from "../models/conversation.model"
+import { Types } from "mongoose"
+import Message from "../models/message.model"
 
 export function chatSocket(
-  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>,
+  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) {
   io.on("connection", async (socket: Socket) => {
-    const userId = socket.user!.sub;
-    const user = await User.findById(userId);
+    const userId = socket.user!.sub
+    const user = await User.findById(userId)
 
     if (!user) {
-      socket.emit("error", "User not found");
-      socket.disconnect(true);
-      console.error("user is not logged in");
-      return;
+      socket.emit("error", "User not found")
+      socket.disconnect(true)
+      console.error("user is not logged in")
+      return
     }
 
     try {
       const conversations = await Conversation.find({
         members: userId,
-      }).select("_id");
+      }).select("_id")
 
-      conversations.forEach((conversation) => {
-        socket.join(conversation._id.toString());
-      });
+      conversations.forEach(conversation => {
+        socket.join(conversation._id.toString())
+      })
     } catch (err: any) {
-      console.error("Error joining conversation rooms:", err.message);
-      return;
+      console.error("Error joining conversation rooms:", err.message)
+      return
     }
 
     socket.on("disconnect", () => {
-      console.log("user disconnected: ", userId);
-    });
+      console.log("user disconnected: ", userId)
+    })
 
     socket.on("getConversations", async () => {
       const conversations = await Conversation.find({
@@ -46,24 +46,24 @@ export function chatSocket(
         .select("_id members lastMessage")
         .populate<{
           lastMessage: {
-            _id: Types.ObjectId;
-            conversationId: Types.ObjectId;
+            _id: Types.ObjectId
+            conversationId: Types.ObjectId
             senderId: {
-              _id: Types.ObjectId;
-              username: string;
-            };
-            content: string;
-            attachment: string;
-            createdAt: Date;
-            updatedAt: Date;
-          };
+              _id: Types.ObjectId
+              username: string
+            }
+            content: string
+            attachment: string
+            createdAt: Date
+            updatedAt: Date
+          }
         }>({
           path: "lastMessage.senderId",
-          select: "username",
+          select: "_id username",
         })
-        .lean();
+        .lean()
 
-      const formattedConversations = conversations.map((conv) => {
+      const formattedConversations = conversations.map(conv => {
         if (conv.lastMessage && conv.lastMessage.senderId) {
           return {
             ...conv,
@@ -74,13 +74,13 @@ export function chatSocket(
                 username: conv.lastMessage.senderId.username,
               },
             },
-          };
+          }
         }
-        return conv;
-      });
+        return conv
+      })
 
-      socket.emit("conversations", formattedConversations);
-    });
+      socket.emit("conversations", formattedConversations)
+    })
 
     socket.on("newConversation", async (memberIds: Types.ObjectId[]) => {
       const existingConversation = await Conversation.findOne({
@@ -90,74 +90,63 @@ export function chatSocket(
           path: "members",
           select: "username picture email",
         })
-        .lean();
+        .lean()
       if (existingConversation) {
-        socket.emit("conversation", existingConversation);
-        return;
+        socket.emit("conversation", existingConversation)
+        return
       }
 
       const conversation = await Conversation.create({
         members: memberIds,
         createdBy: userId,
-      });
+      })
 
-      const connectedSockets = Array.from(io.sockets.values()).filter((s) =>
-        memberIds.includes(s.user!.sub as unknown as Types.ObjectId),
-      );
-
-      connectedSockets.forEach((s) => {
-        s.join(conversation._id.toString());
-      });
-
-      const populatedConversation = await Conversation.findById(
-        conversation._id,
+      const connectedSockets = Array.from(io.sockets.values()).filter(s =>
+        memberIds.includes(s.user!.sub as unknown as Types.ObjectId)
       )
+
+      connectedSockets.forEach(s => {
+        s.join(conversation._id.toString())
+      })
+
+      const populatedConversation = await Conversation.findById(conversation._id)
         .populate({
           path: "members",
           select: "username picture email",
         })
-        .lean();
+        .lean()
 
       if (!populatedConversation) {
-        socket.emit("error", "Conversation not found after creation");
-        return;
+        socket.emit("error", "Conversation not found after creation")
+        return
       }
 
-      io.to(conversation._id.toString()).emit(
-        "conversation",
-        populatedConversation,
-      );
-    });
+      io.to(conversation._id.toString()).emit("conversation", populatedConversation)
+    })
 
     socket.on(
       "newMessage",
-      async ({
-        conversationId,
-        content,
-      }: {
-        conversationId: string;
-        content: string;
-      }) => {
+      async ({ conversationId, content }: { conversationId: string; content: string }) => {
         const message = await Message.create({
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
           content,
-        });
+        })
 
         const populatedMessage = await Message.findById(message._id).populate<{
           senderId: {
-            _id: Types.ObjectId;
-            username: string;
-            picture: string;
-          };
+            _id: Types.ObjectId
+            username: string
+            picture: string
+          }
         }>({
           path: "senderId",
           select: "username picture",
-        });
+        })
 
         if (!populatedMessage) {
-          socket.emit("error", "Message not found after creation");
-          return;
+          socket.emit("error", "Message not found after creation")
+          return
         }
 
         const formattedMessage = {
@@ -167,22 +156,18 @@ export function chatSocket(
             username: populatedMessage.senderId.username,
             picture: populatedMessage.senderId.picture,
           },
-        };
+        }
 
-        io.to(conversationId).emit("message", formattedMessage);
+        io.to(conversationId).emit("message", formattedMessage)
 
         // Update lastMessage in Conversation
         await Conversation.findByIdAndUpdate(conversationId, {
           lastMessage: formattedMessage,
-        });
+        })
 
-        io.to(conversationId).emit(
-          "lastMessageUpdated",
-          conversationId,
-          formattedMessage,
-        );
-      },
-    );
+        io.to(conversationId).emit("lastMessageUpdated", conversationId, formattedMessage)
+      }
+    )
 
     socket.on("getMessages", async (conversationId: string) => {
       const messages = await Message.find({ conversationId })
@@ -191,35 +176,35 @@ export function chatSocket(
         })
         .populate<{
           senderId: {
-            _id: Types.ObjectId;
-            username: string;
-            picture?: string;
-          };
+            _id: Types.ObjectId
+            username: string
+            picture?: string
+          }
         }>({
           path: "senderId",
           select: "username picture",
         })
-        .lean();
+        .lean()
 
       if (messages.length === 0) {
-        socket.emit("messages", []);
-        return;
+        socket.emit("messages", [])
+        return
       }
 
-      const formattedMessages = messages.map((msg) => ({
+      const formattedMessages = messages.map(msg => ({
         ...msg,
         sender: {
           username: msg.senderId.username.toString(),
           picture: msg.senderId.picture?.toString(),
         },
-      }));
+      }))
 
-      socket.emit("messages", formattedMessages);
-    });
+      socket.emit("messages", formattedMessages)
+    })
 
     socket.emit("connected", () => {
-      console.log("user connected: ", userId);
-      return "You are connected to chat namespace";
-    });
-  });
+      console.log("user connected: ", userId)
+      return "You are connected to chat namespace"
+    })
+  })
 }

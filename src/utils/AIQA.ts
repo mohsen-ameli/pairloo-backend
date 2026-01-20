@@ -1,12 +1,8 @@
-import { PostSession } from "../types/session.types";
-import {
-  generateSummary,
-  generateQuestion,
-  generateEmbedding,
-} from "./AIModel";
+import { PostSession } from "../types/session.types"
+import { generateSummary, generateQuestion, generateEmbedding } from "./AIModel"
 
 export async function callForQuestion(session: PostSession) {
-  const { initialPostText, context, step, maxQuestions } = session;
+  const { initialPostText, context, step, maxQuestions } = session
   const prompt = `Instructions on how to answer:
         1.  Based on the following context, generate the next relevant question to
             ask the user to specifically understand the contents of the post.
@@ -22,28 +18,28 @@ export async function callForQuestion(session: PostSession) {
 
         3. If the type of question is multiple_choice or multi_select, ensure that there are no options such as "Other (please specify)". All options must be definitive choices.
 
-        4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `;
+        4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `
 
-  const response = await generateQuestion(prompt);
-  return response;
+  const response = await generateQuestion(prompt)
+  return response
 }
 
 export async function callForSummaryAndEmbedding(session: {
-  initialPostText: string;
-  context: { question: any; answer: any }[];
+  initialPostText: string
+  context: { question: any; answer: any }[]
 }) {
   const prompt = `Based on the following context, generate a summary of the post.
       This summary will be used to create a semantic embedding for matching similar posts, so focus only on the core topics and intent.
-      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`;
+      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
 
-  const summary = await generateSummary(prompt);
-  const embedding = await generateEmbedding(summary);
-  return { summary, embedding };
+  const summary = await generateSummary(prompt)
+  const embedding = await generateEmbedding(summary)
+  return { summary, embedding }
 }
 
 export async function callForIntention(session: {
-  initialPostText: string;
-  context: { question: any; answer: any }[];
+  initialPostText: string
+  context: { question: any; answer: any }[]
 }): Promise<string> {
   // For example, if the post is about looking for a running partner, the intention would be "need".
   // If the post is about selling a bike, the intention would be "provide".
@@ -58,11 +54,11 @@ export async function callForIntention(session: {
       Again you have only two possible intentions to choose from: need or provide.
       Your answer must be in a json format: { "my_intention": "need or provide", "matching_post_intention": "need or provide" }.
       Do not include any other formatting like bullet points or punctuation or **.
-      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`;
-  const intention = await generateSummary(prompt);
+      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
+  const intention = await generateSummary(prompt)
   if (!intention) {
-    throw new Error("Could not generate intention for embedding");
+    throw new Error("Could not generate intention for embedding")
   }
 
-  return intention;
+  return intention
 }

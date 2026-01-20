@@ -1,10 +1,10 @@
-import { Request, Response } from "express";
-import User from "../../models/user.model";
+import { Request, Response } from "express"
+import User from "../../models/user.model"
 
 export async function updateProfile(req: Request, res: Response) {
   try {
-    const userId = req.user?.sub;
-    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+    const userId = req.user?.sub
+    if (!userId) return res.status(401).json({ error: "Unauthorized" })
 
     const allowedFields = [
       "firstName",
@@ -16,17 +16,17 @@ export async function updateProfile(req: Request, res: Response) {
       "longitude",
       "timezone",
       "locationId",
-    ];
-    const updates: Record<string, any> = {};
+    ]
+    const updates: Record<string, any> = {}
     for (const field of allowedFields) {
-      if (field in req.body) updates[field] = req.body[field];
+      if (field in req.body) updates[field] = req.body[field]
     }
     if (Object.keys(updates).length === 0) {
-      return res.status(400).json({ error: "No valid fields to update." });
+      return res.status(400).json({ error: "No valid fields to update." })
     }
 
-    const user = await User.findByIdAndUpdate(userId, updates, { new: true });
-    if (!user) return res.status(404).json({ error: "User not found" });
+    const user = await User.findByIdAndUpdate(userId, updates, { new: true })
+    if (!user) return res.status(404).json({ error: "User not found" })
     res.json({
       _id: user._id,
       username: user.username,
@@ -42,8 +42,8 @@ export async function updateProfile(req: Request, res: Response) {
       locationId: user.locationId,
       email: user.email,
       picture: user.picture,
-    });
+    })
   } catch (err) {
-    res.status(500).json({ error: "Server error" });
+    res.status(500).json({ error: "Server error" })
   }
 }

@@ -60,6 +60,12 @@ Then sign in via the terminal.
 Guide:
 https://docs.aws.amazon.com/signin/latest/userguide/command-line-sign-in.html#command-line-sign-in-local-development
 
+Then do the following:
+
+```bash
+aws configure set region "ca-central-1"
+```
+
 5. Start the backend server
 
 ```bash

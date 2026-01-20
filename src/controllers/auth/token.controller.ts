@@ -1,20 +1,16 @@
-import * as jose from "jose";
-import {
-  GOOGLE_CLIENT_ID,
-  GOOGLE_CLIENT_SECRET,
-  GOOGLE_REDIRECT_URI,
-} from "../../utils/constants";
-import { Request, Response } from "express";
-import User from "../../models/user.model";
-import createJWT from "../../utils/create-jwt";
+import * as jose from "jose"
+import { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI } from "../../utils/constants"
+import { Request, Response } from "express"
+import User from "../../models/user.model"
+import createJWT from "../../utils/create-jwt"
 
 // Exchanges authorization code for JWT tokens and user info
 export async function tokenPost(req: Request, res: Response) {
-  const code = req.body.code as string;
-  const platform = (req.body.platform as string) || "native"; // Default to native if not specified
+  const code = req.body.code as string
+  const platform = (req.body.platform as string) || "native" // Default to native if not specified
 
   if (!code) {
-    return res.status(400).json({ error: "Missing authorization code" });
+    return res.status(400).json({ error: "Missing authorization code" })
   }
 
   // Exchange authorization code for tokens
@@ -28,11 +24,11 @@ export async function tokenPost(req: Request, res: Response) {
       grant_type: "authorization_code",
       code: code,
     }),
-  });
-  const data = await response.json();
+  })
+  const data = await response.json()
 
   if (!data.id_token) {
-    return res.status(400).json({ error: "Missing required parameters" });
+    return res.status(400).json({ error: "Missing required parameters" })
   }
   if (data.error) {
     return res.status(400).json({
@@ -40,16 +36,16 @@ export async function tokenPost(req: Request, res: Response) {
       error_description: data.error_description,
       message:
         "OAuth validation error - please ensure the app complies with Google's OAuth 2.0 policy",
-    });
+    })
   }
 
   // userInfo from Google
-  const userInfo = jose.decodeJwt(data.id_token) as any;
+  const userInfo = jose.decodeJwt(data.id_token) as any
 
   // Find user in DB
   const user = await User.findOne({
     email: userInfo.email,
-  });
+  })
 
   if (!user) {
     return res.status(409).json({
@@ -58,17 +54,17 @@ export async function tokenPost(req: Request, res: Response) {
       lastName: userInfo.family_name,
       picture: userInfo.picture,
       emailVerified: userInfo.email_verified,
-    });
+    })
   }
 
   // Update user picture if not set
   if (!user.picture) {
-    user.picture = userInfo.picture;
-    await user.save();
+    user.picture = userInfo.picture
+    await user.save()
   }
 
   // Create JWT tokens
-  const { accessToken, refreshToken } = await createJWT(user._id.toString());
+  const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
   // Handle web platform with cookies
   // if (platform === "web") {
@@ -116,5 +112,5 @@ export async function tokenPost(req: Request, res: Response) {
     picture: user.picture,
     accessToken,
     refreshToken,
-  });
+  })
 }

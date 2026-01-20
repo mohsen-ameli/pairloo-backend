@@ -1,34 +1,30 @@
-import { Request, Response } from "express";
-import Verification from "../../models/verification.model";
+import { Request, Response } from "express"
+import Verification from "../../models/verification.model"
 
 export async function verifyPhoneCode(req: Request, res: Response) {
   const {
     callingCode,
     phoneNumber,
     code,
-  }: { callingCode: string; phoneNumber: string; code: string } = req.body;
+  }: { callingCode: string; phoneNumber: string; code: string } = req.body
 
-  const fullNumber =
-    "+" + callingCode.trim() + phoneNumber.trim().toLowerCase();
+  const fullNumber = "+" + callingCode.trim() + phoneNumber.trim().toLowerCase()
 
   try {
     const userVerify = await Verification.findOne({
       phoneNumber: fullNumber,
       code: Number(code),
-    });
+    })
     if (!userVerify) {
       return res.status(400).json({
-        error:
-          "Invalid verification code. Please check the code again and try again.",
-      });
+        error: "Invalid verification code. Please check the code again and try again.",
+      })
     }
 
-    return res
-      .status(200)
-      .json({ message: "Phone Number verified successfully." });
+    return res.status(200).json({ message: "Phone Number verified successfully." })
   } catch (err: any) {
     return res.status(500).json({
       error: "Failed to connect. Please try again later.",
-    });
+    })
   }
 }

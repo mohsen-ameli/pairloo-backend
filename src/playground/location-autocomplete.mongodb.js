@@ -3,9 +3,9 @@
  * Get autocomplete suggestions for location names.
  */
 
-use("test");
+use("test")
 
-const query = "toronto";
+const query = ""
 
 const locations = db.locations.aggregate([
   {
@@ -34,10 +34,8 @@ const locations = db.locations.aggregate([
       },
     },
   },
-]);
+])
 
-const sortedLocations = locations
-  .toArray()
-  .sort((a, b) => b.population - a.population);
+const sortedLocations = locations.toArray().sort((a, b) => b.population - a.population)
 
-sortedLocations;
+sortedLocations

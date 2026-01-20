@@ -1,4 +1,4 @@
-import User from "../models/user.model";
+import User from "../models/user.model"
 
 // Function to create the Atlas Search index for embeddings
 // If we switch to a different database, this function can be called once to set up the index
@@ -23,5 +23,5 @@ async function createIndex() {
         ],
       },
     },
-  });
+  })
 }

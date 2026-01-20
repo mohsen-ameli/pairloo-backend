@@ -1,25 +1,25 @@
-import mongoose from "mongoose";
-import { isEmail } from "validator";
-import postSchema, { PostType } from "./post.model";
+import mongoose from "mongoose"
+import { isEmail } from "validator"
+import postSchema, { PostType } from "./post.model"
 
 export interface UserType extends mongoose.Document {
-  _id: mongoose.Types.ObjectId;
-  username: string;
-  firstName: string;
-  lastName: string;
-  phoneNumber: string;
-  country: string;
-  city: string;
-  state: string;
-  latitude: number;
-  longitude: number;
-  timezone: string;
-  locationId: number;
-  email: string;
-  picture?: string | undefined;
-  posts: mongoose.Types.DocumentArray<PostType>;
-  createdAt: Date;
-  updatedAt: Date;
+  _id: mongoose.Types.ObjectId
+  username: string
+  firstName: string
+  lastName: string
+  phoneNumber: string
+  country: string
+  city: string
+  state: string
+  latitude: number
+  longitude: number
+  timezone: string
+  locationId: number
+  email: string
+  picture?: string | undefined
+  posts: mongoose.Types.DocumentArray<PostType>
+  createdAt: Date
+  updatedAt: Date
 }
 
 const userSchema = new mongoose.Schema<UserType>(
@@ -97,7 +97,7 @@ const userSchema = new mongoose.Schema<UserType>(
     posts: [postSchema],
   },
   { timestamps: true }
-);
+)
 
-const User = mongoose.model<UserType>("user", userSchema);
-export default User;
+const User = mongoose.model<UserType>("user", userSchema)
+export default User
