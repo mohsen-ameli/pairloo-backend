@@ -5,15 +5,15 @@ import { transporter } from "../../server"
 import Verification from "../../models/verification.model"
 
 export async function requestEmailVerification(req: Request, res: Response) {
-  let { email, isSignUp }: { email: string; isSignUp: boolean } = req.body;
-  email = email.trim().toLowerCase();
+  let { email, isSignUp }: { email: string; isSignUp: boolean } = req.body
+  email = email.trim().toLowerCase()
 
   try {
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ email })
     if (isSignUp && user) {
       return res.status(400).json({
         error: "Email already in use. Please use a different email.",
-      });
+      })
     } else if (!user && !isSignUp) {
       return res.status(400).json({
         error: "Invalid email. Please check your email address again and try again.",

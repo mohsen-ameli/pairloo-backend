@@ -1,11 +1,11 @@
-import { Question } from "./question.types";
+import { Question } from "./question.types"
 
 export type PostSession = {
-  initialPostText: string;
+  initialPostText: string
   context: {
-    question: Question;
-    answer: string;
-  }[];
-  step: number;
-  maxQuestions: number;
-};
+    question: Question
+    answer: string
+  }[]
+  step: number
+  maxQuestions: number
+}
