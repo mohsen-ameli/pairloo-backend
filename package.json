@@ -6,12 +6,16 @@
   "author": "",
   "type": "commonjs",
   "main": "server.js",
+  "private": true,
   "scripts": {
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "nodemon --watch '.env' --watch 'src/**/*.ts' --exec 'ts-node' src/server.ts",
     "lint": "eslint 'src/**/*.ts'",
     "prepare": "husky"
+  },
+  "lint-staged": {
+    "**/*": "prettier --write --ignore-unknown"
   },
   "dependencies": {
     "@aws-sdk/client-sns": "^3.968.0",
