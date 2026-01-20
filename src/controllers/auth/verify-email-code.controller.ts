@@ -4,11 +4,7 @@ import Verification from "../../models/verification.model"
 import createJWT from "../../utils/create-jwt"
 
 export async function verifyEmailCode(req: Request, res: Response) {
-  const {
-    email,
-    code,
-    isSignUp,
-  }: { email: string; code: string; isSignUp: boolean } = req.body;
+  const { email, code, isSignUp }: { email: string; code: string; isSignUp: boolean } = req.body
 
   try {
     const userVerify = await Verification.findOne({
@@ -17,18 +13,16 @@ export async function verifyEmailCode(req: Request, res: Response) {
     })
     if (!userVerify) {
       return res.status(400).json({
-        error:
-          "Invalid verification code. Please check the code and try again.",
-      });
+        error: "Invalid verification code. Please check the code and try again.",
+      })
     }
 
     if (!isSignUp) {
-      const user = await User.findOne({ email: email.toLowerCase() });
+      const user = await User.findOne({ email: email.toLowerCase() })
       if (!user) {
         return res.status(400).json({
-          error:
-            "Invalid email. Please check your email address and try again.",
-        });
+          error: "Invalid email. Please check your email address and try again.",
+        })
       }
 
       await Verification.deleteMany({ email: email.toLowerCase() })
