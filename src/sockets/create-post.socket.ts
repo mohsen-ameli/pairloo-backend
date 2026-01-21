@@ -31,13 +31,20 @@ export function createPostSocket(
     // Check if there's a draft and restore session
     if (user.posts.length > 0) {
       const lastPost = user.posts[user.posts.length - 1]
-      if (lastPost.draft && lastPost.draft.length > 0) {
-        session.context = lastPost.draft
-        session.step = lastPost.draft.length
+      if (lastPost.isDraft && lastPost.qna && lastPost.qna.length > 0) {
+        session.context = lastPost.qna
+        // Set step to the first unanswered question, or to length if all are answered
+        session.step = session.context.findIndex(item => item.answer.trim() === "")
+        if (session.step === -1) {
+          session.step = session.context.length
+        }
         session.initialPostText = lastPost.content || ""
         socket.emit("draft-restored", {
           context: session.context,
           initialPostText: session.initialPostText,
+          images: lastPost.images || [],
+          publicPost: lastPost.publicPost || false,
+          numMatches: lastPost.numMatches || 5,
         })
       }
     }
@@ -56,9 +63,11 @@ export function createPostSocket(
         return
       }
 
-      session.context[session.step].answer = text
-      session.step++
-      await saveDraft(userId, session)
+      if (session.step < session.context.length) {
+        session.context[session.step].answer = text
+        session.step++
+        await saveDraft(userId, session)
+      }
 
       if (session.step < session.maxQuestions) {
         const question = await callForQuestion(session)
@@ -95,19 +104,14 @@ export function createPostSocket(
           qna: session.context,
           embedding,
           closestPosts: null,
-          draft: null, // Clear draft on submission
+          isDraft: false,
         }
         const closestPosts = await getClosestPosts(userId, post, numMatches)
         post.closestPosts = closestPosts
 
-        // If there was a draft post, update it instead of creating new draft
+        // Change the existing draft value to false
         const user = await User.findById(userId)
-        if (
-          user &&
-          user.posts.length > 0 &&
-          user.posts[user.posts.length - 1].draft !== null &&
-          user.posts[user.posts.length - 1].draft !== undefined
-        ) {
+        if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
           await User.updateOne(
             { _id: userId, "posts._id": user.posts[user.posts.length - 1]._id },
             { $set: { "posts.$": post } }
@@ -135,7 +139,7 @@ export function createPostSocket(
       if (!user || user.posts.length === 0) return
 
       const lastPost = user.posts[user.posts.length - 1]
-      if (!lastPost.summary || !lastPost.embedding) {
+      if (lastPost.isDraft) {
         await User.updateOne({ _id: userId }, { $pop: { posts: 1 } })
       }
 
@@ -143,6 +147,46 @@ export function createPostSocket(
       session = structuredClone(initialSession)
       socket.emit("draft-discarded")
     })
+
+    socket.on(
+      "update-draft-settings",
+      async ({
+        images,
+        publicPost,
+        numMatches,
+      }: {
+        images: string[]
+        publicPost: boolean
+        numMatches: number
+      }) => {
+        const user = await User.findById(userId)
+        if (!user || user.posts.length === 0) return
+
+        const lastPost = user.posts[user.posts.length - 1]
+        if (lastPost.isDraft) {
+          await User.updateOne(
+            { _id: userId, "posts._id": lastPost._id },
+            {
+              $set: {
+                "posts.$.images": images,
+                "posts.$.publicPost": publicPost,
+                "posts.$.numMatches": numMatches,
+              },
+            }
+          )
+        }
+      }
+    )
+
+    socket.on(
+      "update-draft-state",
+      async ({ inputs, currPage }: { inputs: string[]; currPage: number }) => {
+        if (currPage > 0 && currPage - 1 < session.context.length && inputs[currPage]) {
+          session.context[currPage - 1].answer = inputs[currPage]
+          await saveDraft(userId, session)
+        }
+      }
+    )
   })
 }
 
@@ -152,13 +196,13 @@ async function saveDraft(userId: string, session: PostSession) {
 
   if (user.posts.length > 0) {
     const lastPost = user.posts[user.posts.length - 1]
-    if (!lastPost.summary || !lastPost.embedding) {
+    if (lastPost.isDraft) {
       await User.updateOne(
         { _id: userId, "posts._id": lastPost._id },
         {
           $set: {
             "posts.$.content": session.initialPostText,
-            "posts.$.draft": session.context,
+            "posts.$.qna": session.context,
           },
         }
       )
@@ -169,12 +213,12 @@ async function saveDraft(userId: string, session: PostSession) {
   // Create new draft post if no draft exists
   const draftPost: Partial<PostType> = {
     content: session.initialPostText,
-    draft: session.context,
+    qna: session.context,
     summary: "",
     embedding: [],
     publicPost: false,
     numMatches: 5,
-    qna: [],
+    isDraft: true,
   }
 
   await User.updateOne({ _id: userId }, { $push: { posts: draftPost } })
