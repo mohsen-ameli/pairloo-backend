@@ -12,6 +12,7 @@ export interface PostType extends mongoose.Document {
   qna: { question: Question; answer: string }[]
   embedding: number[]
   closestPosts?: ClosePost[] | null
+  draft?: { question: Question; answer: string }[] | null
   createdAt: Date
 }
 
@@ -69,6 +70,24 @@ const postSchema = new mongoose.Schema<PostType>({
       },
     ],
     required: false,
+  },
+  draft: {
+    type: [
+      {
+        question: {
+          type: {
+            type: String,
+            enum: ["short_answer", "multiple_choice", "multi_select"],
+            required: true,
+          },
+          question: { type: String, required: true },
+          options: { type: [String], required: false },
+        },
+        answer: { type: String, required: true },
+      },
+    ],
+    required: false,
+    default: null,
   },
   createdAt: {
     type: Date,
