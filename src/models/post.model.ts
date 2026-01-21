@@ -73,7 +73,7 @@ const postSchema = new mongoose.Schema<PostType>({
   },
   isDraft: {
     type: Boolean,
-    default: false,
+    required: false,
   },
   createdAt: {
     type: Date,
