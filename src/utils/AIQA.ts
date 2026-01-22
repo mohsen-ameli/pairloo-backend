@@ -2,7 +2,8 @@ import { PostSession } from "../types/session.types"
 import { generateSummary, generateQuestion, generateEmbedding } from "./AIModel"
 
 export async function callForQuestion(session: PostSession) {
-  const { initialPostText, context, step, maxQuestions } = session
+  const { initialPostText, context, maxQuestions } = session
+  const step = context.length
   const prompt = `Instructions on how to answer:
         1.  Based on the following context, generate the next relevant question to
             ask the user to specifically understand the contents of the post.

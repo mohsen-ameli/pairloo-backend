@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 import { ClosePost } from "../types/closePost.types"
-import { Question } from "../types/question.types"
+import { QnaType } from "../types/session.types"
 
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
@@ -9,7 +9,7 @@ export interface PostType extends mongoose.Document {
   images?: string[]
   publicPost: boolean
   numMatches: number
-  qna: { question: Question; answer: string }[]
+  qna: QnaType
   embedding: number[]
   closestPosts?: ClosePost[] | null
   isDraft?: boolean
@@ -49,7 +49,7 @@ const postSchema = new mongoose.Schema<PostType>({
           question: { type: String, required: true },
           options: { type: [String], required: false },
         },
-        answer: { type: String, required: true },
+        answer: { type: [String], required: true },
       },
     ],
     required: true,
