@@ -52,6 +52,50 @@ export function createPostSocket(
     socket.on("chat", async (text: string) => {
       if (!session) return
 
+      // Type guard for chat payload
+      function isAnswerPayload(obj: any): obj is { value: string; questionIdx: number } {
+        return (
+          typeof obj === "object" &&
+          obj !== null &&
+          typeof obj.value === "string" &&
+          typeof obj.questionIdx === "number"
+        )
+      }
+
+      if (isAnswerPayload(text)) {
+        // If answering the initial post
+        if (text.questionIdx === 0 && session.initialPostText === "") {
+          session.initialPostText = text.value
+          const question = await callForQuestion(session)
+          if (question) {
+            session.context.push({ question: question, answer: "" })
+            await saveDraft(userId, session)
+            socket.emit("question", question)
+          }
+          return
+        }
+
+        if (text.questionIdx > 0 && text.questionIdx - 1 < session.context.length) {
+          session.context[text.questionIdx - 1].answer = text.value
+          await saveDraft(userId, session)
+          if (text.questionIdx - 1 === session.step) {
+            session.step++
+          }
+        }
+
+        if (session.step < session.maxQuestions && session.step === session.context.length) {
+          const question = await callForQuestion(session)
+          if (question) {
+            session.context.push({ question, answer: "" })
+            await saveDraft(userId, session)
+            socket.emit("question", question)
+            return
+          }
+        }
+        socket.emit("chat-finished")
+        return
+      }
+
       if (session.initialPostText === "") {
         session.initialPostText = text
         const question = await callForQuestion(session)
@@ -65,8 +109,8 @@ export function createPostSocket(
 
       if (session.step < session.context.length) {
         session.context[session.step].answer = text
-        session.step++
         await saveDraft(userId, session)
+        session.step++
       }
 
       if (session.step < session.maxQuestions) {
@@ -174,16 +218,6 @@ export function createPostSocket(
               },
             }
           )
-        }
-      }
-    )
-
-    socket.on(
-      "update-draft-state",
-      async ({ inputs, currPage }: { inputs: string[]; currPage: number }) => {
-        if (currPage > 0 && currPage - 1 < session.context.length && inputs[currPage]) {
-          session.context[currPage - 1].answer = inputs[currPage]
-          await saveDraft(userId, session)
         }
       }
     )
