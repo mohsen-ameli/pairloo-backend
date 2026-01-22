@@ -1,11 +1,9 @@
 import { Question } from "./question.types"
 
+export type QnaType = { question: Question; answer: string[] }[]
+
 export type PostSession = {
   initialPostText: string
-  context: {
-    question: Question
-    answer: string
-  }[]
-  step: number
+  context: QnaType
   maxQuestions: number
 }

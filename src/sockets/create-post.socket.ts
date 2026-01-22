@@ -4,12 +4,11 @@ import { MAX_POST_QUESTIONS } from "../utils/constants"
 import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
 import { PostType } from "../models/post.model"
-import { PostSession } from "../types/session.types"
+import { PostSession, QnaType } from "../types/session.types"
 
 const initialSession: PostSession = {
   initialPostText: "",
   context: [],
-  step: 0,
   maxQuestions: MAX_POST_QUESTIONS,
 }
 
@@ -31,16 +30,13 @@ export function createPostSocket(
     // Check if there's a draft and restore session
     if (user.posts.length > 0) {
       const lastPost = user.posts[user.posts.length - 1]
-      if (lastPost.isDraft && lastPost.qna && lastPost.qna.length > 0) {
+
+      if (lastPost.isDraft) {
         session.context = lastPost.qna
-        // Set step to the first unanswered question, or to length if all are answered
-        session.step = session.context.findIndex(item => item.answer.trim() === "")
-        if (session.step === -1) {
-          session.step = session.context.length
-        }
-        session.initialPostText = lastPost.content || ""
+        session.initialPostText = lastPost.content
+
         socket.emit("draft-restored", {
-          context: session.context,
+          qna: session.context,
           initialPostText: session.initialPostText,
           images: lastPost.images || [],
           publicPost: lastPost.publicPost || false,
@@ -49,81 +45,29 @@ export function createPostSocket(
       }
     }
 
-    socket.on("chat", async (text: string) => {
+    socket.on("chat", async (qna: QnaType) => {
       if (!session) return
 
-      // Type guard for chat payload
-      function isAnswerPayload(obj: any): obj is { value: string; questionIdx: number } {
-        return (
-          typeof obj === "object" &&
-          obj !== null &&
-          typeof obj.value === "string" &&
-          typeof obj.questionIdx === "number"
-        )
+      // If answering the initial post
+      if (qna.length === 1 && session.initialPostText === "") {
+        session.initialPostText = qna[0].answer[0]
       }
 
-      if (isAnswerPayload(text)) {
-        // If answering the initial post
-        if (text.questionIdx === 0 && session.initialPostText === "") {
-          session.initialPostText = text.value
-          const question = await callForQuestion(session)
-          if (question) {
-            session.context.push({ question: question, answer: "" })
-            await saveDraft(userId, session)
-            socket.emit("question", question)
-          }
-          return
+      session.context = qna
+      let askedQuestion = false
+      if (session.context.length < session.maxQuestions) {
+        const question = await callForQuestion(session)
+        if (question) {
+          session.context.push({ question, answer: [] })
+          socket.emit("question", session.context)
+          askedQuestion = true
         }
+      }
+      await saveDraft(userId, session)
 
-        if (text.questionIdx > 0 && text.questionIdx - 1 < session.context.length) {
-          session.context[text.questionIdx - 1].answer = text.value
-          await saveDraft(userId, session)
-          if (text.questionIdx - 1 === session.step) {
-            session.step++
-          }
-        }
-
-        if (session.step < session.maxQuestions && session.step === session.context.length) {
-          const question = await callForQuestion(session)
-          if (question) {
-            session.context.push({ question, answer: "" })
-            await saveDraft(userId, session)
-            socket.emit("question", question)
-            return
-          }
-        }
+      if (!askedQuestion && session.context.length >= session.maxQuestions) {
         socket.emit("chat-finished")
-        return
       }
-
-      if (session.initialPostText === "") {
-        session.initialPostText = text
-        const question = await callForQuestion(session)
-        if (question) {
-          session.context.push({ question: question, answer: "" })
-          await saveDraft(userId, session)
-          socket.emit("question", question)
-        }
-        return
-      }
-
-      if (session.step < session.context.length) {
-        session.context[session.step].answer = text
-        await saveDraft(userId, session)
-        session.step++
-      }
-
-      if (session.step < session.maxQuestions) {
-        const question = await callForQuestion(session)
-        if (question) {
-          session.context.push({ question, answer: "" })
-          await saveDraft(userId, session)
-          socket.emit("question", question)
-          return
-        }
-      }
-
-      socket.emit("chat-finished")
     })
 
     socket.on(
