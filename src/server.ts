@@ -26,6 +26,7 @@ import OpenAI from "openai"
 import { test } from "./controllers/test.controller"
 import { chatSocket } from "./sockets/chat.socket"
 import { SNSClient } from "@aws-sdk/client-sns"
+import { S3Client } from "@aws-sdk/client-s3"
 
 const app = express()
 
@@ -40,12 +41,14 @@ const server = http.createServer(app)
 const io = new Server(server, {
   cors: corsOptions,
   serveClient: false,
+  maxHttpBufferSize: 1e8, // 100 MB
 })
 
 export const ai = new GoogleGenAI({})
 export const openai = new OpenAI({})
 
 export const snsClient = new SNSClient({})
+export const s3Client = new S3Client({})
 
 app.use(cookieParser())
 app.use(cors(corsOptions))
