@@ -181,7 +181,6 @@ export function chatSocket(
             picture: populatedMessage.senderId.picture,
           },
         }
-        console.log("Emitting message:", formattedMessage)
 
         io.to(conversationId).emit("message", formattedMessage)
 
