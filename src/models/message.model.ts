@@ -23,7 +23,6 @@ export const messageSchema = new mongoose.Schema<MessageType>({
   },
   content: {
     type: String,
-    required: true,
   },
   attachment: {
     type: String,

@@ -3,6 +3,7 @@ import User from "../models/user.model"
 import Conversation from "../models/conversation.model"
 import { Types } from "mongoose"
 import Message from "../models/message.model"
+import { getObject, sendObject } from "../utils/s3"
 
 export function chatSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
@@ -126,11 +127,33 @@ export function chatSocket(
 
     socket.on(
       "newMessage",
-      async ({ conversationId, content }: { conversationId: string; content: string }) => {
+      async ({
+        conversationId,
+        content,
+        file,
+        mimeType,
+      }: {
+        conversationId: string
+        content?: string
+        file?: Blob
+        mimeType?: string
+      }) => {
+        let url: string | null = ""
+        let fileName: string | null = ""
+        if (file && mimeType) {
+          fileName = await sendObject("chat", file, mimeType)
+          if (!fileName) {
+            socket.emit("error", "Failed to upload attachment")
+            return
+          }
+          url = await getObject(fileName)
+        }
+
         const message = await Message.create({
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
           content,
+          attachment: fileName,
         })
 
         const populatedMessage = await Message.findById(message._id).populate<{
@@ -151,6 +174,7 @@ export function chatSocket(
 
         const formattedMessage = {
           ...populatedMessage.toObject(),
+          attachmentUrl: url,
           sender: {
             _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
@@ -191,13 +215,22 @@ export function chatSocket(
         return
       }
 
-      const formattedMessages = messages.map(msg => ({
-        ...msg,
-        sender: {
-          username: msg.senderId.username.toString(),
-          picture: msg.senderId.picture?.toString(),
-        },
-      }))
+      const formattedMessages = []
+
+      for (const msg of messages) {
+        let attachmentUrl: string | null = null
+        if (msg.attachment) {
+          attachmentUrl = await getObject(msg.attachment)
+        }
+        formattedMessages.push({
+          ...msg,
+          attachmentUrl,
+          sender: {
+            username: msg.senderId.username.toString(),
+            picture: msg.senderId.picture?.toString(),
+          },
+        })
+      }
 
       socket.emit("messages", formattedMessages)
     })
