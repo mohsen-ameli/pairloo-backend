@@ -1,12 +1,13 @@
 import mongoose from "mongoose"
 import { ClosePost } from "../types/closePost.types"
 import { QnaType } from "../types/session.types"
+import { S3Object, s3ObjectSchema } from "./s3Object.model"
 
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   content: string
   summary: string
-  images?: string[]
+  images?: S3Object[]
   publicPost: boolean
   numMatches: number
   qna: QnaType
@@ -26,7 +27,7 @@ const postSchema = new mongoose.Schema<PostType>({
     required: true,
   },
   images: {
-    type: [String],
+    type: [s3ObjectSchema],
     required: false,
   },
   publicPost: {

@@ -1,9 +1,10 @@
-import { DefaultEventsMap, Namespace, Server, Socket } from "socket.io"
+import { DefaultEventsMap, Namespace, Socket } from "socket.io"
 import User from "../models/user.model"
 import Conversation from "../models/conversation.model"
 import { Types } from "mongoose"
 import Message from "../models/message.model"
 import { getObject, sendObject } from "../utils/s3"
+import { S3Object } from "../models/s3Object.model"
 
 export function chatSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
@@ -40,7 +41,14 @@ export function chatSocket(
       const conversations = await Conversation.find({
         members: userId,
       })
-        .populate({
+        .populate<{
+          members: {
+            _id: Types.ObjectId
+            username: string
+            picture: S3Object
+            email: string
+          }[]
+        }>({
           path: "members",
           select: "username picture email",
         })
@@ -87,7 +95,14 @@ export function chatSocket(
       const existingConversation = await Conversation.findOne({
         members: { $all: memberIds },
       })
-        .populate({
+        .populate<{
+          members: {
+            _id: Types.ObjectId
+            username: string
+            picture: S3Object
+            email: string
+          }[]
+        }>({
           path: "members",
           select: "username picture email",
         })
@@ -111,7 +126,14 @@ export function chatSocket(
       })
 
       const populatedConversation = await Conversation.findById(conversation._id)
-        .populate({
+        .populate<{
+          members: {
+            _id: Types.ObjectId
+            username: string
+            picture: string
+            email: string
+          }[]
+        }>({
           path: "members",
           select: "username picture email",
         })
@@ -138,7 +160,7 @@ export function chatSocket(
         file?: Blob
         mimeType?: string
       }) => {
-        let url: string | null = ""
+        let url: string | null | undefined = ""
         let fileName: string | null = ""
         if (file && mimeType) {
           fileName = await sendObject("chat", file, mimeType)
@@ -153,7 +175,11 @@ export function chatSocket(
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
           content,
-          attachment: fileName,
+          attachment: {
+            key: fileName,
+            url: url,
+            createdAt: new Date(),
+          },
         })
 
         const populatedMessage = await Message.findById(message._id).populate<{
@@ -202,7 +228,7 @@ export function chatSocket(
           senderId: {
             _id: Types.ObjectId
             username: string
-            picture?: string
+            picture?: S3Object
           }
         }>({
           path: "senderId",
@@ -216,18 +242,17 @@ export function chatSocket(
       }
 
       const formattedMessages = []
-
       for (const msg of messages) {
-        let attachmentUrl: string | null = null
-        if (msg.attachment) {
-          attachmentUrl = await getObject(msg.attachment)
-        }
         formattedMessages.push({
-          ...msg,
-          attachmentUrl,
+          _id: msg._id,
+          conversationId: msg.conversationId,
+          content: msg.content,
+          createdAt: msg.createdAt,
+          updatedAt: msg.updatedAt,
+          attachment: msg.attachment,
           sender: {
             username: msg.senderId.username.toString(),
-            picture: msg.senderId.picture?.toString(),
+            picture: msg.senderId.picture,
           },
         })
       }

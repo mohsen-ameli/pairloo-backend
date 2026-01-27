@@ -5,6 +5,7 @@ import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
 import { PostType } from "../models/post.model"
 import { PostSession, QnaType } from "../types/session.types"
+import { S3Object } from "../models/s3Object.model"
 
 const initialSession: PostSession = {
   initialPostText: "",
@@ -79,7 +80,7 @@ export function createPostSocket(
       }: {
         numMatches: number
         publicPost: boolean
-        images: string[]
+        images: S3Object[]
       }) => {
         const { summary, embedding } = await callForSummaryAndEmbedding(session)
 

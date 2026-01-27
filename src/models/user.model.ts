@@ -1,6 +1,9 @@
 import mongoose from "mongoose"
 import { isEmail } from "validator"
 import postSchema, { PostType } from "./post.model"
+import { getObject } from "../utils/s3"
+import { S3Object, s3ObjectSchema } from "./s3Object.model"
+import { S3_EXPIRES_IN_SECONDS } from "../utils/constants"
 
 export interface UserType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
@@ -16,7 +19,7 @@ export interface UserType extends mongoose.Document {
   timezone: string
   locationId: number
   email: string
-  picture?: string | undefined
+  picture?: S3Object
   posts: mongoose.Types.DocumentArray<PostType>
   createdAt: Date
   updatedAt: Date
@@ -90,7 +93,7 @@ const userSchema = new mongoose.Schema<UserType>(
       validate: [isEmail, "Please enter a valid email"],
     },
     picture: {
-      type: String,
+      type: s3ObjectSchema,
       required: false,
       unique: false,
     },
@@ -98,6 +101,24 @@ const userSchema = new mongoose.Schema<UserType>(
   },
   { timestamps: true }
 )
+
+userSchema.post("find", async function (docs: UserType[]) {
+  for (const doc of docs) {
+    if (
+      !doc.picture ||
+      !doc.picture.key ||
+      (doc.picture.url &&
+        Date.now() - new Date(doc.picture.createdAt).getTime() < 1000 * S3_EXPIRES_IN_SECONDS)
+    )
+      continue
+
+    const url = await getObject(doc.picture.key)
+    if (!url) continue
+    doc.picture.url = url
+    doc.picture.createdAt = new Date()
+    await User.findByIdAndUpdate(doc._id, { picture: doc.picture })
+  }
+})
 
 const User = mongoose.model<UserType>("user", userSchema)
 export default User
