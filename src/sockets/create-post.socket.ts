@@ -8,6 +8,7 @@ import { PostSession, QnaType } from "../types/session.types"
 import { S3Object } from "../models/s3Object.model"
 import { ImageType, PostSession, QnaType } from "../types/session.types"
 import { sendObject } from "../utils/s3"
+import { S3Object } from "../models/s3Object.model"
 
 const initialSession: PostSession = {
   initialPostText: "",
@@ -76,7 +77,7 @@ export function createPostSocket(
     socket.on("submit", async (numMatches: number, publicPost: boolean, images: ImageType[]) => {
       const { summary, embedding } = await callForSummaryAndEmbedding(session)
 
-      const fileNames: string[] = []
+      const postImages: Partial<S3Object>[] = []
       for (const img of images) {
         const { file, mimeType } = img
         let fileName: string | null = ""
@@ -86,13 +87,14 @@ export function createPostSocket(
             socket.emit("error", "Failed to upload attachment")
             return
           }
-          fileNames.push(fileName)
+          postImages.push({ key: fileName, url: "", createdAt: new Date() })
         }
       }
 
       const post: Partial<PostType> = {
         content: session.initialPostText,
-        images: fileNames,
+        // @ts-ignore
+        images: postImages,
         publicPost,
         numMatches,
         summary,
