@@ -58,8 +58,12 @@ export async function tokenPost(req: Request, res: Response) {
   }
 
   // Update user picture if not set
-  if (!user.picture) {
-    user.picture = userInfo.picture
+  if (!user.picture?.key) {
+    user.set("picture", {
+      key: "Google",
+      url: userInfo.picture,
+      createdAt: new Date(),
+    })
     await user.save()
   }
 
@@ -100,6 +104,7 @@ export async function tokenPost(req: Request, res: Response) {
     username: user.username,
     firstName: user.firstName,
     lastName: user.lastName,
+    picture: user.picture,
     phoneNumber: user.phoneNumber,
     country: user.country,
     city: user.city,
@@ -109,7 +114,8 @@ export async function tokenPost(req: Request, res: Response) {
     timezone: user.timezone,
     locationId: user.locationId,
     email: user.email,
-    picture: user.picture,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
     accessToken,
     refreshToken,
   })

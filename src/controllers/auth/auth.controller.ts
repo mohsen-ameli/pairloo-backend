@@ -31,6 +31,7 @@ export async function signupPost(req: Request, res: Response) {
       username: user.username,
       firstName: user.firstName,
       lastName: user.lastName,
+      picture: user.picture,
       phoneNumber: user.phoneNumber,
       country: user.country,
       city: user.city,
@@ -40,6 +41,8 @@ export async function signupPost(req: Request, res: Response) {
       timezone: user.timezone,
       locationId: user.locationId,
       email: user.email,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
       accessToken,
       refreshToken,
     })

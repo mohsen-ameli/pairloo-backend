@@ -102,7 +102,13 @@ const userSchema = new mongoose.Schema<UserType>(
   { timestamps: true }
 )
 
-userSchema.post("find", async function (docs: UserType[]) {
+async function updateUserPicture(docs: UserType[] | UserType) {
+  if (!docs || (docs instanceof Array && docs.length === 0)) return
+
+  if (!(docs instanceof Array)) {
+    docs = [docs]
+  }
+
   for (const doc of docs) {
     if (
       !doc.picture ||
@@ -118,7 +124,10 @@ userSchema.post("find", async function (docs: UserType[]) {
     doc.picture.createdAt = new Date()
     await User.findByIdAndUpdate(doc._id, { picture: doc.picture })
   }
-})
+}
+
+userSchema.post("find", updateUserPicture)
+userSchema.post("findOne", updateUserPicture)
 
 const User = mongoose.model<UserType>("user", userSchema)
 export default User

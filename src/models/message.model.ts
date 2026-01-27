@@ -40,11 +40,14 @@ export const messageSchema = new mongoose.Schema<MessageType>({
   },
 })
 
-messageSchema.pre("save", function () {
-  this.updatedAt = new Date()
-})
+async function updateAttachmentUrls(docs: MessageType[] | MessageType) {
+  if (!docs || (docs instanceof Array && docs.length === 0)) return
 
-messageSchema.post("find", async function (docs: MessageType[]) {
+  if (!(docs instanceof Array)) {
+    docs = [docs]
+  }
+
+  const start = Date.now()
   for (const doc of docs) {
     // If document doesn't have an attachment or the attachment signed URL is still valid, skip
     if (
@@ -61,7 +64,14 @@ messageSchema.post("find", async function (docs: MessageType[]) {
     doc.attachment.createdAt = new Date()
     await Message.findByIdAndUpdate(doc._id, { attachment: doc.attachment })
   }
+}
+
+messageSchema.pre("save", function () {
+  this.updatedAt = new Date()
 })
+
+messageSchema.post("find", updateAttachmentUrls)
+messageSchema.post("findOne", updateAttachmentUrls)
 
 const Message = mongoose.model<MessageType>("message", messageSchema)
 export default Message

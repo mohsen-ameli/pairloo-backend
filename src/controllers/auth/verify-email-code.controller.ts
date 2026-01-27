@@ -13,7 +13,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
     })
     if (!userVerify) {
       return res.status(400).json({
-        error: "Invalid verification code. Please check the code and try again.",
+        errors: { general: "Invalid verification code. Please check the code and try again." },
       })
     }
 
@@ -21,7 +21,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
       const user = await User.findOne({ email: email.toLowerCase() })
       if (!user) {
         return res.status(400).json({
-          error: "Invalid email. Please check your email address and try again.",
+          errors: { general: "Invalid email. Please check your email address and try again." },
         })
       }
 
@@ -34,6 +34,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
         username: user.username,
         firstName: user.firstName,
         lastName: user.lastName,
+        picture: user.picture,
         phoneNumber: user.phoneNumber,
         country: user.country,
         city: user.city,
@@ -43,7 +44,8 @@ export async function verifyEmailCode(req: Request, res: Response) {
         timezone: user.timezone,
         locationId: user.locationId,
         email: user.email,
-        picture: user.picture,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
         accessToken,
         refreshToken,
       })
@@ -52,7 +54,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
     return res.status(200).json({ message: "Email verified successfully." })
   } catch (err: any) {
     return res.status(500).json({
-      error: "Failed to connect. Please try again later.",
+      errors: { general: "Failed to connect. Please try again later." },
     })
   }
 }
