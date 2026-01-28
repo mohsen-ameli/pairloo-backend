@@ -115,14 +115,19 @@ async function updateUserPicture(docs: UserType[] | UserType) {
       !doc.picture.key ||
       (doc.picture.url &&
         Date.now() - new Date(doc.picture.createdAt).getTime() < 1000 * S3_EXPIRES_IN_SECONDS)
-    )
+    ) {
       continue
+    }
 
     const url = await getObject(doc.picture.key)
     if (!url) continue
-    doc.picture.url = url
-    doc.picture.createdAt = new Date()
-    await User.findByIdAndUpdate(doc._id, { picture: doc.picture })
+    await User.findByIdAndUpdate(doc._id, {
+      picture: {
+        key: doc.picture.key,
+        url,
+        createdAt: new Date(),
+      },
+    })
   }
 }
 
