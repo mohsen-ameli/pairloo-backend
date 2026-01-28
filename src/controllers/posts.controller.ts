@@ -1,5 +1,6 @@
 import { Request, Response } from "express"
 import User from "../models/user.model"
+import { getObject } from "../utils/s3"
 
 export async function postListGet(req: Request, res: Response) {
   const userId = req.user!.sub
@@ -27,6 +28,14 @@ export async function myPostGet(req: Request, res: Response) {
     return res.status(404).json({ message: "Post not found" })
   }
 
+  const images = []
+  if (post.images && post.images.length != 0) {
+    for (const img of post.images) {
+      const url = await getObject(img)
+      images.push(url)
+    }
+  }
+
   const closestPosts = []
 
   for (const { score, item } of post.closestPosts || []) {
@@ -41,6 +50,15 @@ export async function myPostGet(req: Request, res: Response) {
       }
     )
     if (!closePost) continue
+
+    const images = []
+    if (closePost.posts[0].images && closePost.posts[0].images.length != 0) {
+      for (const img of closePost.posts[0].images) {
+        const url = await getObject(img)
+        images.push(url)
+      }
+    }
+
     closestPosts.push({
       score,
       _id: item,
@@ -50,7 +68,7 @@ export async function myPostGet(req: Request, res: Response) {
       picture: closePost.picture,
       content: closePost.posts[0].content,
       summary: closePost.posts[0].summary,
-      images: closePost.posts[0].images,
+      images,
       createdAt: closePost.posts[0].createdAt,
     })
   }
@@ -69,7 +87,7 @@ export async function myPostGet(req: Request, res: Response) {
     locationId: user.locationId,
     content: post.content,
     summary: post.summary,
-    images: post.images,
+    images,
     createdAt: post.createdAt,
     closestPosts,
   })
@@ -89,6 +107,14 @@ export async function postGet(req: Request, res: Response) {
     return res.status(404).json({ message: "Post not found" })
   }
 
+  const images = []
+  if (post.images && post.images.length != 0) {
+    for (const img of post.images) {
+      const url = await getObject(img)
+      images.push(url)
+    }
+  }
+
   res.status(200).json({
     _id: user._id,
     username: user.username,
@@ -102,7 +128,7 @@ export async function postGet(req: Request, res: Response) {
     locationId: user.locationId,
     content: post.content,
     summary: post.summary,
-    images: post.images,
+    images,
     createdAt: post.createdAt,
   })
 }
