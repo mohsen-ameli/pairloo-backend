@@ -80,7 +80,7 @@ export async function myPostGet(req: Request, res: Response) {
   const images = []
   if (post.images && post.images.length != 0) {
     for (const img of post.images) {
-      const url = await getObject(img)
+      const url = await getObject(img.key)
       images.push(url)
     }
   }
@@ -103,7 +103,7 @@ export async function myPostGet(req: Request, res: Response) {
     const images = []
     if (closePost.posts[0].images && closePost.posts[0].images.length != 0) {
       for (const img of closePost.posts[0].images) {
-        const url = await getObject(img)
+        const url = await getObject(img.key)
         images.push(url)
       }
     }
