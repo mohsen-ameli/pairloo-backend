@@ -53,24 +53,13 @@ export async function updateProfile(req: Request, res: Response) {
     }
 
     const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
+      .select(
+        "_id username firstName lastName phoneNumber country city state latitude longitude timezone locationId email picture"
+      )
+      .lean()
     if (!updatedUser) return res.status(404).json({ error: "User not found" })
 
-    res.json({
-      _id: updatedUser._id,
-      username: updatedUser.username,
-      firstName: updatedUser.firstName,
-      lastName: updatedUser.lastName,
-      phoneNumber: updatedUser.phoneNumber,
-      country: updatedUser.country,
-      city: updatedUser.city,
-      state: updatedUser.state,
-      latitude: updatedUser.latitude,
-      longitude: updatedUser.longitude,
-      timezone: updatedUser.timezone,
-      locationId: updatedUser.locationId,
-      email: updatedUser.email,
-      picture: updatedUser.picture,
-    })
+    res.json(updatedUser)
   } catch (err) {
     res.status(500).json({ error: "Server error" })
   }

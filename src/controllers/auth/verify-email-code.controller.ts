@@ -18,7 +18,27 @@ export async function verifyEmailCode(req: Request, res: Response) {
     }
 
     if (!isSignUp) {
-      const user = await User.findOne({ email: email.toLowerCase() })
+      const user = await User.findOne(
+        { email: email.toLowerCase() },
+        {
+          _id: 1,
+          username: 1,
+          firstName: 1,
+          lastName: 1,
+          picture: 1,
+          phoneNumber: 1,
+          country: 1,
+          city: 1,
+          state: 1,
+          latitude: 1,
+          longitude: 1,
+          timezone: 1,
+          locationId: 1,
+          email: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        }
+      ).lean()
       if (!user) {
         return res.status(400).json({
           errors: { general: "Invalid email. Please check your email address and try again." },
@@ -30,22 +50,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
       return res.status(200).json({
-        _id: user._id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        picture: user.picture,
-        phoneNumber: user.phoneNumber,
-        country: user.country,
-        city: user.city,
-        state: user.state,
-        latitude: user.latitude,
-        longitude: user.longitude,
-        timezone: user.timezone,
-        locationId: user.locationId,
-        email: user.email,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
+        ...user,
         accessToken,
         refreshToken,
       })

@@ -27,22 +27,7 @@ export async function signupPost(req: Request, res: Response) {
     const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
     res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      picture: user.picture,
-      phoneNumber: user.phoneNumber,
-      country: user.country,
-      city: user.city,
-      state: user.state,
-      latitude: user.latitude,
-      longitude: user.longitude,
-      timezone: user.timezone,
-      locationId: user.locationId,
-      email: user.email,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      ...user,
       accessToken,
       refreshToken,
     })

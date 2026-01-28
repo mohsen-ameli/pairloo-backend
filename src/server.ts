@@ -27,6 +27,10 @@ import { test } from "./controllers/test.controller"
 import { chatSocket } from "./sockets/chat.socket"
 import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
+import { FindOptions, MongoClient, ObjectId } from "mongodb"
+import { UserType } from "./models/user.model"
+import { ConversationType } from "./models/conversation.model"
+import { MessageType } from "./models/message.model"
 
 const app = express()
 
@@ -93,3 +97,32 @@ mongoose
     console.error("Connection error:", err)
     process.exit()
   })
+
+// const client = new MongoClient(DB_URI)
+// export const db = client.db("test")
+// export const User = db.collection<UserType>("users")
+// export const Conversation = db.collection<ConversationType>("conversations")
+// export const Message = db.collection<MessageType>("messages")
+
+// interface ProjectedDocument {
+//   posts: Array<{
+//     content: string
+//     createdAt: Date
+//   }>
+// }
+
+// const startServer = async () => {
+//   const username = "noob"
+
+//   const user = await User.findOne<ProjectedDocument>(
+//     { username },
+//     {
+//       projection: {
+//         "posts.content": 1,
+//         "posts.createdAt": 1,
+//       },
+//     }
+//   )
+//   console.log(user)
+// }
+// startServer()

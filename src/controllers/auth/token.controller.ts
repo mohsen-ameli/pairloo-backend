@@ -43,9 +43,29 @@ export async function tokenPost(req: Request, res: Response) {
   const userInfo = jose.decodeJwt(data.id_token) as any
 
   // Find user in DB
-  const user = await User.findOne({
-    email: userInfo.email,
-  })
+  const user = await User.findOne(
+    {
+      email: userInfo.email,
+    },
+    {
+      _id: 1,
+      username: 1,
+      firstName: 1,
+      lastName: 1,
+      picture: 1,
+      phoneNumber: 1,
+      country: 1,
+      city: 1,
+      state: 1,
+      latitude: 1,
+      longitude: 1,
+      timezone: 1,
+      locationId: 1,
+      email: 1,
+      createdAt: 1,
+      updatedAt: 1,
+    }
+  ).lean()
 
   if (!user) {
     return res.status(409).json({
@@ -98,24 +118,15 @@ export async function tokenPost(req: Request, res: Response) {
   //   });
   // }
 
+  console.log({
+    ...user,
+    accessToken,
+    refreshToken,
+  })
+
   // For native platforms, return both tokens in the response body
   return res.json({
-    _id: user._id,
-    username: user.username,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    picture: user.picture,
-    phoneNumber: user.phoneNumber,
-    country: user.country,
-    city: user.city,
-    state: user.state,
-    latitude: user.latitude,
-    longitude: user.longitude,
-    timezone: user.timezone,
-    locationId: user.locationId,
-    email: user.email,
-    createdAt: user.createdAt,
-    updatedAt: user.updatedAt,
+    ...user,
     accessToken,
     refreshToken,
   })
