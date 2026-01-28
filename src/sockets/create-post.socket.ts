@@ -6,6 +6,8 @@ import User from "../models/user.model"
 import { PostType } from "../models/post.model"
 import { PostSession, QnaType } from "../types/session.types"
 import { S3Object } from "../models/s3Object.model"
+import { ImageType, PostSession, QnaType } from "../types/session.types"
+import { sendObject } from "../utils/s3"
 
 const initialSession: PostSession = {
   initialPostText: "",
@@ -71,51 +73,54 @@ export function createPostSocket(
       }
     })
 
-    socket.on(
-      "submit",
-      async ({
-        numMatches,
-        publicPost,
-        images,
-      }: {
-        numMatches: number
-        publicPost: boolean
-        images: S3Object[]
-      }) => {
-        const { summary, embedding } = await callForSummaryAndEmbedding(session)
+    socket.on("submit", async (numMatches: number, publicPost: boolean, images: ImageType[]) => {
+      const { summary, embedding } = await callForSummaryAndEmbedding(session)
 
-        const post: Partial<PostType> = {
-          content: session.initialPostText,
-          images,
-          publicPost,
-          numMatches,
-          summary,
-          qna: session.context,
-          embedding,
-          closestPosts: null,
-          isDraft: false,
+      const fileNames: string[] = []
+      for (const img of images) {
+        const { file, mimeType } = img
+        let fileName: string | null = ""
+        if (file && mimeType) {
+          fileName = await sendObject("posts", file, mimeType)
+          if (!fileName) {
+            socket.emit("error", "Failed to upload attachment")
+            return
+          }
+          fileNames.push(fileName)
         }
-        const closestPosts = await getClosestPosts(userId, post, numMatches)
-        post.closestPosts = closestPosts
-
-        // Change the existing draft value to false
-        const user = await User.findById(userId)
-        if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
-          await User.updateOne(
-            { _id: userId, "posts._id": user.posts[user.posts.length - 1]._id },
-            { $set: { "posts.$": post } }
-          )
-        } else {
-          await User.updateOne({ _id: userId }, { $push: { posts: post } })
-        }
-
-        const updatedUser = await User.findById(userId)
-        const postId = updatedUser!.posts.slice(-1)[0]._id
-
-        socket.emit("success", postId)
-        session = structuredClone(initialSession)
       }
-    )
+
+      const post: Partial<PostType> = {
+        content: session.initialPostText,
+        images: fileNames,
+        publicPost,
+        numMatches,
+        summary,
+        qna: session.context,
+        embedding,
+        closestPosts: null,
+        isDraft: false,
+      }
+      const closestPosts = await getClosestPosts(userId, post, numMatches)
+      post.closestPosts = closestPosts
+
+      // Change the existing draft value to false
+      const user = await User.findById(userId)
+      if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
+        await User.updateOne(
+          { _id: userId, "posts._id": user.posts[user.posts.length - 1]._id },
+          { $set: { "posts.$": post } }
+        )
+      } else {
+        await User.updateOne({ _id: userId }, { $push: { posts: post } })
+      }
+
+      const updatedUser = await User.findById(userId)
+      const postId = updatedUser!.posts.slice(-1)[0]._id
+
+      socket.emit("success", postId)
+      session = structuredClone(initialSession)
+    })
 
     socket.on("disconnect", async () => {
       if (session && session.context.length > 0) {
@@ -139,15 +144,7 @@ export function createPostSocket(
 
     socket.on(
       "update-draft-settings",
-      async ({
-        images,
-        publicPost,
-        numMatches,
-      }: {
-        images: string[]
-        publicPost: boolean
-        numMatches: number
-      }) => {
+      async (images: ImageType[], publicPost: boolean, numMatches: number) => {
         const user = await User.findById(userId)
         if (!user || user.posts.length === 0) return
 
