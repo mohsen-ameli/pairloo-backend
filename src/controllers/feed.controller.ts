@@ -12,7 +12,6 @@ export async function feedGet(req: Request, res: Response) {
       "posts.username": 1,
       "posts.firstName": 1,
       "posts.lastName": 1,
-      "posts.picture": 1,
       "posts.content": 1,
       username: 1,
       firstName: 1,
@@ -20,6 +19,8 @@ export async function feedGet(req: Request, res: Response) {
       picture: 1,
     }
   )
+
+  await User.updateUserPicture(allUsers)
 
   for (const user of allUsers) {
     for (const post of user.posts) {

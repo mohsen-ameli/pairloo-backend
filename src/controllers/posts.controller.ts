@@ -2,7 +2,6 @@ import { Request, Response } from "express"
 import User from "../models/user.model"
 import { S3Object } from "../models/s3Object.model"
 import mongoose from "mongoose"
-import { getObject } from "../utils/s3"
 
 export async function postListGet(req: Request, res: Response) {
   interface ProjectedDocument {
@@ -30,8 +29,12 @@ export async function postListGet(req: Request, res: Response) {
 
 // Get a specific post belonging to the user
 export async function myPostGet(req: Request, res: Response) {
-  interface ProjectedDocument {
+  const postId = req.params.id as string
+  const userId = req.user!.sub
+
+  interface MyPostType {
     _id: string
+    postId: string
     username: string
     firstName: string
     lastName: string
@@ -54,10 +57,7 @@ export async function myPostGet(req: Request, res: Response) {
     }>
   }
 
-  const postId = req.params.id as string
-  const userId = req.user!.sub
-
-  const post = await User.aggregate<ProjectedDocument>([
+  const post = await User.aggregate<MyPostType>([
     { $match: { _id: new mongoose.Types.ObjectId(userId) } },
     { $unwind: "$posts" },
     { $match: { "posts._id": new mongoose.Types.ObjectId(postId) } },
@@ -68,6 +68,7 @@ export async function myPostGet(req: Request, res: Response) {
         firstName: 1,
         lastName: 1,
         picture: 1,
+        postId: "$posts._id",
         content: "$posts.content",
         summary: "$posts.summary",
         images: "$posts.images",
@@ -77,13 +78,11 @@ export async function myPostGet(req: Request, res: Response) {
     },
   ]).then(results => results[0])
 
-  const images = []
-  if (post.images && post.images.length != 0) {
-    for (const img of post.images) {
-      const url = await getObject(img.key)
-      images.push(url)
-    }
+  if (!post) {
+    return res.status(404).json({ message: "Post not found" })
   }
+
+  await User.updateUserPostImages(post as any)
 
   const closestPosts = []
 
@@ -100,13 +99,7 @@ export async function myPostGet(req: Request, res: Response) {
     )
     if (!closePost) continue
 
-    const images = []
-    if (closePost.posts[0].images && closePost.posts[0].images.length != 0) {
-      for (const img of closePost.posts[0].images) {
-        const url = await getObject(img.key)
-        images.push(url)
-      }
-    }
+    await User.updateUserPostImages(closePost.posts[0] as any)
 
     closestPosts.push({
       score: p.score,
@@ -117,13 +110,9 @@ export async function myPostGet(req: Request, res: Response) {
       picture: closePost.picture,
       content: closePost.posts[0].content,
       summary: closePost.posts[0].summary,
-      images,
+      images: closePost.posts[0].images,
       createdAt: closePost.posts[0].createdAt,
     })
-  }
-
-  if (!post) {
-    return res.status(404).json({ message: "Post not found" })
   }
 
   res.status(200).json({ ...post, closestPosts })
@@ -144,9 +133,10 @@ export async function postGet(req: Request, res: Response) {
   }
   const postId = req.params.id as string
 
-  const userPost = await User.aggregate<ProjectedDocument>([
+  const userPosts = await User.aggregate<ProjectedDocument>([
     { $match: { "posts._id": new mongoose.Types.ObjectId(postId) } },
     { $unwind: "$posts" },
+    { $match: { "posts._id": new mongoose.Types.ObjectId(postId) } },
     {
       $project: {
         _id: 1,
@@ -154,16 +144,19 @@ export async function postGet(req: Request, res: Response) {
         firstName: 1,
         lastName: 1,
         picture: 1,
+        postId: "$posts._id",
         content: "$posts.content",
         summary: "$posts.summary",
         images: "$posts.images",
         createdAt: "$posts.createdAt",
-        closestPosts: "$posts.closestPosts",
       },
     },
-  ]).then(results => results[0])
+  ])
 
-  res.status(200).json(userPost)
+  await User.updateUserPostImages(userPosts[0] as any)
+  await User.updateUserPicture(userPosts[0] as any)
+
+  res.status(200).json(userPosts[0])
 }
 
 export async function postDelete(req: Request, res: Response) {

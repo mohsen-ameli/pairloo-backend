@@ -53,9 +53,16 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
     return errors
   } else {
     // query for existing username, email, phoneNumber
-    const existingUser = await User.findOne({
-      $or: [{ username: user.username }, { email: user.email }, { phoneNumber: user.phoneNumber }],
-    })
+    const existingUser = await User.findOne(
+      {
+        $or: [
+          { username: user.username },
+          { email: user.email },
+          { phoneNumber: user.phoneNumber },
+        ],
+      },
+      { username: 1, email: 1, phoneNumber: 1 }
+    )
 
     if (existingUser) {
       if (existingUser.username === user.username) {

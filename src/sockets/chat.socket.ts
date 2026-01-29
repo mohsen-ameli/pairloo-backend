@@ -72,6 +72,8 @@ export function chatSocket(
         })
         .lean()
 
+      await User.updateUserPicture(conversations.flatMap(conv => conv.members as any))
+
       const formattedConversations = conversations.map(conv => {
         if (conv.lastMessage && conv.lastMessage.senderId) {
           return {
@@ -107,6 +109,7 @@ export function chatSocket(
           select: "username picture email",
         })
         .lean()
+
       if (existingConversation) {
         socket.emit("conversation", existingConversation)
         return
@@ -178,7 +181,6 @@ export function chatSocket(
           attachment: {
             key: fileName,
             url: url,
-            createdAt: new Date(),
           },
         })
 
@@ -235,6 +237,8 @@ export function chatSocket(
           select: "username picture",
         })
         .lean()
+
+      await Message.updateAttachmentUrls(messages as any)
 
       if (messages.length === 0) {
         socket.emit("messages", [])

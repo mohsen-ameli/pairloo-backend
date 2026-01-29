@@ -44,7 +44,6 @@ export async function updateProfile(req: Request, res: Response) {
           key,
           url,
           mimeType: updates.pictureMimeType,
-          createdAt: new Date(),
         }
       } catch (err) {
         console.error("Error uploading profile picture:", err)

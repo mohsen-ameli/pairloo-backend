@@ -42,18 +42,6 @@ export async function tokenPost(req: Request, res: Response) {
   // userInfo from Google
   const userInfo = jose.decodeJwt(data.id_token) as any
 
-  // Duplicate query to have an updated picture from the user hook
-  const userFound = await User.findOne({ email: userInfo.email }, { _id: 1 })
-  if (!userFound) {
-    return res.status(409).json({
-      email: userInfo.email,
-      firstName: userInfo.given_name,
-      lastName: userInfo.family_name,
-      picture: userInfo.picture,
-      emailVerified: userInfo.email_verified,
-    })
-  }
-
   // Find user in DB
   const user = await User.findOne(
     {
@@ -89,12 +77,13 @@ export async function tokenPost(req: Request, res: Response) {
     })
   }
 
+  await User.updateUserPicture(user)
+
   // Update user picture if not set
   if (!user.picture?.key) {
     user.set("picture", {
       key: "Google",
       url: userInfo.picture,
-      createdAt: new Date(),
     })
     await user.save()
   }

@@ -85,7 +85,7 @@ export function createPostSocket(
             socket.emit("error", "Failed to upload attachment")
             return
           }
-          postImages.push({ key: fileName, url: "", createdAt: new Date() })
+          postImages.push({ key: fileName, url: "" })
         }
       }
 

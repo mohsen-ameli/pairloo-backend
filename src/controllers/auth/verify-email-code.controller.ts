@@ -39,11 +39,14 @@ export async function verifyEmailCode(req: Request, res: Response) {
           updatedAt: 1,
         }
       ).lean()
+
       if (!user) {
         return res.status(400).json({
           errors: { general: "Invalid email. Please check your email address and try again." },
         })
       }
+
+      await User.updateUserPicture(user)
 
       await Verification.deleteMany({ email: email.toLowerCase() })
 
