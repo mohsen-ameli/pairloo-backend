@@ -8,7 +8,7 @@ export async function usernameAvailableGet(req: Request, res: Response) {
 
   const username = req.query.username.toString().trim().toLowerCase()
   try {
-    const user = await User.findOne({ username })
+    const user = await User.findOne({ username }, { _id: 1 })
     if (user == null) {
       return res.status(200).json({ message: `${req.query.username} is available.` })
     }

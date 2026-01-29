@@ -27,19 +27,7 @@ export async function signupPost(req: Request, res: Response) {
     const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
     res.status(201).json({
-      _id: user._id,
-      username: user.username,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      phoneNumber: user.phoneNumber,
-      country: user.country,
-      city: user.city,
-      state: user.state,
-      latitude: user.latitude,
-      longitude: user.longitude,
-      timezone: user.timezone,
-      locationId: user.locationId,
-      email: user.email,
+      ...user,
       accessToken,
       refreshToken,
     })
@@ -65,9 +53,16 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
     return errors
   } else {
     // query for existing username, email, phoneNumber
-    const existingUser = await User.findOne({
-      $or: [{ username: user.username }, { email: user.email }, { phoneNumber: user.phoneNumber }],
-    })
+    const existingUser = await User.findOne(
+      {
+        $or: [
+          { username: user.username },
+          { email: user.email },
+          { phoneNumber: user.phoneNumber },
+        ],
+      },
+      { username: 1, email: 1, phoneNumber: 1 }
+    )
 
     if (existingUser) {
       if (existingUser.username === user.username) {

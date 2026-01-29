@@ -13,37 +13,47 @@ export async function verifyEmailCode(req: Request, res: Response) {
     })
     if (!userVerify) {
       return res.status(400).json({
-        error: "Invalid verification code. Please check the code and try again.",
+        errors: { general: "Invalid verification code. Please check the code and try again." },
       })
     }
 
     if (!isSignUp) {
-      const user = await User.findOne({ email: email.toLowerCase() })
+      const user = await User.findOne(
+        { email: email.toLowerCase() },
+        {
+          _id: 1,
+          username: 1,
+          firstName: 1,
+          lastName: 1,
+          picture: 1,
+          phoneNumber: 1,
+          country: 1,
+          city: 1,
+          state: 1,
+          latitude: 1,
+          longitude: 1,
+          timezone: 1,
+          locationId: 1,
+          email: 1,
+          createdAt: 1,
+          updatedAt: 1,
+        }
+      ).lean()
+
       if (!user) {
         return res.status(400).json({
-          error: "Invalid email. Please check your email address and try again.",
+          errors: { general: "Invalid email. Please check your email address and try again." },
         })
       }
+
+      await User.updateUserPicture(user)
 
       await Verification.deleteMany({ email: email.toLowerCase() })
 
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
       return res.status(200).json({
-        _id: user._id,
-        username: user.username,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phoneNumber: user.phoneNumber,
-        country: user.country,
-        city: user.city,
-        state: user.state,
-        latitude: user.latitude,
-        longitude: user.longitude,
-        timezone: user.timezone,
-        locationId: user.locationId,
-        email: user.email,
-        picture: user.picture,
+        ...user,
         accessToken,
         refreshToken,
       })
@@ -52,7 +62,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
     return res.status(200).json({ message: "Email verified successfully." })
   } catch (err: any) {
     return res.status(500).json({
-      error: "Failed to connect. Please try again later.",
+      errors: { general: "Failed to connect. Please try again later." },
     })
   }
 }

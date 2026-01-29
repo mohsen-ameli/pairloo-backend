@@ -1,5 +1,5 @@
 import { Router } from "express"
-import { signupPost } from "../controllers/auth/auth.controller"
+import { signupPost } from "../controllers/auth/signup.controller"
 import { authorizeGet } from "../controllers/auth/authorize.controller"
 import { callbackGet } from "../controllers/auth/callback.controller"
 import { tokenPost } from "../controllers/auth/token.controller"

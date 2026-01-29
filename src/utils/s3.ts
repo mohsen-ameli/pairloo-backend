@@ -2,6 +2,7 @@ import { s3Client } from "../server"
 import { GetObjectCommand, PutObjectCommand, S3ServiceException } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import crypto from "crypto"
+import { S3_EXPIRES_IN_SECONDS } from "./constants"
 
 const bucketName = "pairalign"
 
@@ -46,11 +47,18 @@ or the multipart upload API (5TB max).`
   return null
 }
 
-export async function getObject(key: string) {
+export async function getObject(key: string | null | undefined) {
+  if (!key) return null
+  // This object is not part of s3
+  if (!key.startsWith("user-pictures") && !key.startsWith("chat") && !key.startsWith("posts")) {
+    return null
+  }
+
+  // return `${CDN_BASE_URL}/${key}`
   const command = new GetObjectCommand({
     Bucket: bucketName,
     Key: key,
   })
-  const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 })
+  const url = await getSignedUrl(s3Client, command, { expiresIn: S3_EXPIRES_IN_SECONDS })
   return url
 }

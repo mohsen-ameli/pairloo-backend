@@ -10,7 +10,7 @@ export async function requestPhoneVerification(req: Request, res: Response) {
   const fullNumber = "+" + callingCode.trim() + phoneNumber.trim().toLowerCase()
 
   try {
-    const user = await User.findOne({ phoneNumber: fullNumber })
+    const user = await User.findOne({ phoneNumber: fullNumber }, { _id: 1 })
     if (user) {
       return res.status(400).json({
         error: "Phone number already in use. Please use a different phone number.",

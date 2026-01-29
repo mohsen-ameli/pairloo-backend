@@ -5,7 +5,23 @@ export async function feedGet(req: Request, res: Response) {
   const userId = req.user!.sub
   const results = []
 
-  const allUsers = await User.find({ _id: { $ne: userId } })
+  const allUsers = await User.find(
+    { _id: { $ne: userId }, "posts.0": { $exists: true } },
+    {
+      "posts._id": 1,
+      "posts.username": 1,
+      "posts.firstName": 1,
+      "posts.lastName": 1,
+      "posts.content": 1,
+      username: 1,
+      firstName: 1,
+      lastName: 1,
+      picture: 1,
+    }
+  )
+
+  await User.updateUserPicture(allUsers)
+
   for (const user of allUsers) {
     for (const post of user.posts) {
       const data = {
@@ -14,11 +30,6 @@ export async function feedGet(req: Request, res: Response) {
         firstName: user.firstName,
         lastName: user.lastName,
         picture: user.picture,
-        state: user.state,
-        latitude: user.latitude,
-        longitude: user.longitude,
-        timezone: user.timezone,
-        locationId: user.locationId,
         content: post.content,
       }
       results.push(data)

@@ -24,6 +24,8 @@ export const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 export const REFRESH_BEFORE_EXPIRY_SEC = 60 // Refresh token 1 minute before expiry
 
 export const DB_URI = process.env.DB_URI!
+export const CDN_BASE_URL = process.env.CDN_BASE_URL
+export const S3_EXPIRES_IN_SECONDS = 60 * 60 // 1 hour
 
 // Google OAuth Constants
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!
