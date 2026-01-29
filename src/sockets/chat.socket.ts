@@ -10,6 +10,7 @@ export function chatSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
 ) {
   io.on("connection", async (socket: Socket) => {
+    let connected = false
     const userId = socket.user!.sub
     const user = await User.findById(userId)
 
@@ -264,9 +265,12 @@ export function chatSocket(
       socket.emit("messages", formattedMessages)
     })
 
-    socket.emit("connected", () => {
-      console.log("user connected: ", userId)
-      return "You are connected to chat namespace"
-    })
+    if (!connected) {
+      socket.emit("connected", () => {
+        console.log("user connected: ", userId)
+        return "You are connected to chat namespace"
+      })
+      connected = true
+    }
   })
 }
