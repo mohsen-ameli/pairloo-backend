@@ -5,6 +5,7 @@
 import { parseISO, addSeconds } from "date-fns"
 
 export function isSignedUrlExpired(signedUrl: string): boolean {
+  if (!signedUrl) return true
   // get the query params: https://stackoverflow.com/a/901144/9362404
   const params = new URLSearchParams(signedUrl)
   const creationDate = parseISO(params.get("X-Amz-Date")!)
