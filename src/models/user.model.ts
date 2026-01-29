@@ -116,6 +116,7 @@ userSchema.statics.updateUserPostImages = async function updateUserPostImages(po
 
     const url = await getObject(image.key)
     if (!url) continue
+    image.url = url
     await User.updateOne(
       { _id: post._id, "posts._id": post.postId },
       {
@@ -127,8 +128,6 @@ userSchema.statics.updateUserPostImages = async function updateUserPostImages(po
         arrayFilters: [{ "img.key": image.key }],
       }
     )
-
-    image.url = url
   }
 }
 
@@ -146,8 +145,8 @@ userSchema.statics.updateUserPicture = async function updateUserPicture(
 
     const url = await getObject(user.picture.key)
     if (!url) continue
-    await User.findByIdAndUpdate(user._id, { picture: { url } })
     user.picture.url = url
+    await User.findByIdAndUpdate(user._id, { picture: { url } })
   }
 }
 
