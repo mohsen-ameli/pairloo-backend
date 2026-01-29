@@ -97,32 +97,3 @@ mongoose
     console.error("Connection error:", err)
     process.exit()
   })
-
-// const client = new MongoClient(DB_URI)
-// export const db = client.db("test")
-// export const User = db.collection<UserType>("users")
-// export const Conversation = db.collection<ConversationType>("conversations")
-// export const Message = db.collection<MessageType>("messages")
-
-// interface ProjectedDocument {
-//   posts: Array<{
-//     content: string
-//     createdAt: Date
-//   }>
-// }
-
-// const startServer = async () => {
-//   const username = "noob"
-
-//   const user = await User.findOne<ProjectedDocument>(
-//     { username },
-//     {
-//       projection: {
-//         "posts.content": 1,
-//         "posts.createdAt": 1,
-//       },
-//     }
-//   )
-//   console.log(user)
-// }
-// startServer()

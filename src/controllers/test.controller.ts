@@ -16,6 +16,8 @@ export async function test(req: Request, res: Response) {
 
   // const svg = avatar.toString();
 
+  await User.findOne({ username: "noobmoe" })
+
   return res.json({ message: "Test route is working!" })
 
   // const postId = req.query.postId as string;
