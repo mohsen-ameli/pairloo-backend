@@ -44,6 +44,7 @@ export const messageSchema = new mongoose.Schema<MessageType, MessageModel>({
   },
 })
 
+// Update attachment URLs inside a chat with new signed URLs if expired
 messageSchema.statics.updateAttachmentUrls = async function updateAttachmentUrls(
   docs: MessageType[] | MessageType
 ) {
@@ -54,14 +55,12 @@ messageSchema.statics.updateAttachmentUrls = async function updateAttachmentUrls
   }
 
   for (const doc of docs) {
-    // If document doesn't have an attachment or the attachment signed URL is still valid, skip
     if (!doc.attachment || !doc.attachment.key || !isSignedUrlExpired(doc.attachment.url)) continue
 
     const url = await getObject(doc.attachment.key)
     if (!url) continue
     doc.attachment.url = url
     await Message.findByIdAndUpdate(doc._id, { attachment: doc.attachment })
-    doc.attachment.url = url
   }
 }
 

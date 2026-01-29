@@ -107,18 +107,12 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
   { timestamps: true }
 )
 
+// Update the user's post images with new signed URLs if expired
 userSchema.statics.updateUserPostImages = async function updateUserPostImages(post: PostType) {
   if (!post || !post.images || post.images.length === 0) return post
 
   for (const image of post.images) {
-    if (!image || !image.key || !isSignedUrlExpired(image.url)) {
-      continue
-    }
-
-    if (image.url) {
-      const res = await fetch(image.url, { method: "HEAD" })
-      if (res.ok) continue
-    }
+    if (!image || !image.key || !isSignedUrlExpired(image.url)) continue
 
     const url = await getObject(image.key)
     if (!url) continue
@@ -138,6 +132,7 @@ userSchema.statics.updateUserPostImages = async function updateUserPostImages(po
   }
 }
 
+// Update user's profile picture with new signed URL if expired
 userSchema.statics.updateUserPicture = async function updateUserPicture(
   users: UserType[] | UserType
 ) {
@@ -147,18 +142,11 @@ userSchema.statics.updateUserPicture = async function updateUserPicture(
   if (!users || users.length === 0) return
 
   for (const user of users) {
-    if (!user.picture || !user.picture.key || !isSignedUrlExpired(user.picture.url)) {
-      continue
-    }
+    if (!user.picture || !user.picture.key || !isSignedUrlExpired(user.picture.url)) continue
 
     const url = await getObject(user.picture.key)
     if (!url) continue
-    await User.findByIdAndUpdate(user._id, {
-      picture: {
-        key: user.picture.key,
-        url,
-      },
-    })
+    await User.findByIdAndUpdate(user._id, { picture: { url } })
     user.picture.url = url
   }
 }
