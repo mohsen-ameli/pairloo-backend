@@ -146,7 +146,7 @@ userSchema.statics.updateUserPicture = async function updateUserPicture(
     const url = await getObject(user.picture.key)
     if (!url) continue
     user.picture.url = url
-    await User.findByIdAndUpdate(user._id, { picture: { url } })
+    await User.findByIdAndUpdate(user._id, { "picture.url": url })
   }
 }
 

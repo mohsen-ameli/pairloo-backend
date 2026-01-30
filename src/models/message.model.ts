@@ -60,7 +60,7 @@ messageSchema.statics.updateAttachmentUrls = async function updateAttachmentUrls
     const url = await getObject(doc.attachment.key)
     if (!url) continue
     doc.attachment.url = url
-    await Message.findByIdAndUpdate(doc._id, { attachment: doc.attachment })
+    await Message.findByIdAndUpdate(doc._id, { "attachment.url": url })
   }
 }
 
