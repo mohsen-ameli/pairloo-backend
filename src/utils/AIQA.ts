@@ -8,6 +8,7 @@ export async function callForQuestion(session: PostSession) {
         1.  Based on the following context, generate the next relevant question to
             ask the user to specifically understand the contents of the post.
             The question should help in gathering more information to create a comprehensive post.
+            Ask the most important question first.
             You must ask ${maxQuestions} questions or less. You are currently on question ${step + 1}.
             The types of question you can ask are: short answer, multiple choice (including yes/no), multi select (users can select multiple options).
             If no further questions are needed, respond with "NO_QUESTION".

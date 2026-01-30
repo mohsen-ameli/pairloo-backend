@@ -129,8 +129,7 @@ export function createPostSocket(
     })
 
     socket.on("discard-draft", async () => {
-      const user = await User.findById(userId)
-      if (!user || user.posts.length === 0) return
+      if (user.posts.length === 0) return
 
       const lastPost = user.posts[user.posts.length - 1]
       if (lastPost.isDraft) {
