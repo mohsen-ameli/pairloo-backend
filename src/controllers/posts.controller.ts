@@ -10,13 +10,14 @@ export async function postListGet(req: Request, res: Response) {
       title: string
       content: string
       createdAt: Date
+      images?: S3Object[]
     }>
   }
 
   const userId = req.user!.sub
 
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.title posts.content posts.createdAt"
+    "posts._id posts.title posts.content posts.createdAt posts.images"
   )
 
   if (!posts) {
