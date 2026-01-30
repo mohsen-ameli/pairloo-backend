@@ -7,6 +7,7 @@ export async function postListGet(req: Request, res: Response) {
   interface ProjectedDocument {
     posts: Array<{
       _id: string
+      title: string
       content: string
       createdAt: Date
     }>
@@ -15,7 +16,7 @@ export async function postListGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.content posts.createdAt"
+    "posts._id posts.title posts.content posts.createdAt"
   )
 
   if (!posts) {

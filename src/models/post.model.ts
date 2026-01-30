@@ -6,6 +6,7 @@ import { S3Object, s3ObjectSchema } from "./s3Object.model"
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   postId: mongoose.Types.ObjectId
+  title: string
   content: string
   summary: string
   images?: S3Object[]
@@ -19,6 +20,10 @@ export interface PostType extends mongoose.Document {
 }
 
 const postSchema = new mongoose.Schema<PostType>({
+  title: {
+    type: String,
+    required: [true, "Post title is required"],
+  },
   content: {
     type: String,
     required: [true, "Post content is required"],
