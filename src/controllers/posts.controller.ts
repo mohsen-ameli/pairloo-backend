@@ -106,7 +106,7 @@ export async function myPostGet(req: Request, res: Response) {
 
     closestPosts.push({
       score: p.score,
-      _id: p._id,
+      _id: p.item,
       username: closePost.username,
       firstName: closePost.firstName,
       lastName: closePost.lastName,
