@@ -2,6 +2,7 @@ import { Request, Response } from "express"
 import User from "../models/user.model"
 import { S3Object } from "../models/s3Object.model"
 import mongoose from "mongoose"
+import { QnaType } from "../types/session.types"
 
 export async function postListGet(req: Request, res: Response) {
   interface ProjectedDocument {
@@ -46,6 +47,7 @@ export async function myPostGet(req: Request, res: Response) {
     images: S3Object[]
     content: string
     summary: string
+    qna: QnaType
     createdAt: Date
     closestPosts: Array<{
       item: string
@@ -76,6 +78,7 @@ export async function myPostGet(req: Request, res: Response) {
         content: "$posts.content",
         summary: "$posts.summary",
         images: "$posts.images",
+        qna: "$posts.qna",
         createdAt: "$posts.createdAt",
         closestPosts: "$posts.closestPosts",
       },
