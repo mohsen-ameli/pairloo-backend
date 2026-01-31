@@ -135,10 +135,10 @@ userSchema.statics.updateUserPostImages = async function updateUserPostImages(po
 userSchema.statics.updateUserPicture = async function updateUserPicture(
   users: UserType[] | UserType
 ) {
+  if (!users || (users instanceof Array && users.length === 0)) return
   if (!Array.isArray(users)) {
     users = [users]
   }
-  if (!users || users.length === 0) return
 
   for (const user of users) {
     if (!user.picture || !user.picture.key || !isSignedUrlExpired(user.picture.url)) continue
