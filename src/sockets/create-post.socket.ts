@@ -28,7 +28,6 @@ export function createPostSocket(
     }
 
     let session = structuredClone(initialSession)
-    let lastQuestionAsked = false // If gemini has asked the last question
 
     // Check if there's a draft and restore session
     if (user.posts.length > 0) {
@@ -37,14 +36,7 @@ export function createPostSocket(
       if (lastPost.isDraft) {
         session.context = lastPost.qna
         session.initialPostText = lastPost.content
-
-        socket.emit("draft-restored", {
-          qna: session.context,
-          initialPostText: session.initialPostText,
-          images: lastPost.images || [],
-          publicPost: lastPost.publicPost || false,
-          numMatches: lastPost.numMatches || 5,
-        })
+        socket.emit("draft-restored", session.context)
       }
     }
 
@@ -52,31 +44,20 @@ export function createPostSocket(
       if (!session) return
 
       // If answering the initial post
-      if (qna.length === 1 && session.initialPostText === "") {
+      if (qna.length === 1) {
         session.initialPostText = qna[0].answer[0]
       }
 
       session.context = qna
       // If the user is answering the very last gemini generated question
       // then this variable will be kept false and then we emit chat-finished
-      let askedQuestion = false
       if (session.context.length < session.maxQuestions) {
         const question = await callForQuestion(session)
         if (question) {
           session.context.push({ question, answer: [] })
           socket.emit("question", session.context)
-          askedQuestion = true
         }
-      }
-      await saveDraft(userId, session)
-
-      if (lastQuestionAsked) {
-        socket.emit("chat-finished")
-        lastQuestionAsked = false
-        return
-      }
-
-      if (!askedQuestion && session.context.length >= session.maxQuestions) {
+      } else if (session.context.length == session.maxQuestions) {
         session.context.push({
           question: {
             type: "short_answer",
@@ -85,8 +66,10 @@ export function createPostSocket(
           answer: [],
         })
         socket.emit("question", session.context)
-        lastQuestionAsked = true
+      } else {
+        socket.emit("chat-finished")
       }
+      await saveDraft(userId, session)
     })
 
     socket.on("submit", async (numMatches: number, publicPost: boolean, images: ImageType[]) => {
