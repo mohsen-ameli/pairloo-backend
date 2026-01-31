@@ -12,13 +12,14 @@ export async function postListGet(req: Request, res: Response) {
       createdAt: Date
       images?: S3Object[]
       isDraft?: boolean
+      closestPosts?: Array<{ score: number; item: string }>
     }>
   }
 
   const userId = req.user!.sub
 
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.title posts.content posts.createdAt posts.images posts.isDraft"
+    "posts._id posts.title posts.content posts.createdAt posts.images posts.isDraft posts.closestPosts"
   )
 
   if (!posts) {
