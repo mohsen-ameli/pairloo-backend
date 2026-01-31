@@ -28,6 +28,7 @@ export function createPostSocket(
     }
 
     let session = structuredClone(initialSession)
+    let lastQuestionAsked = false // If gemini has asked the last question
 
     // Check if there's a draft and restore session
     if (user.posts.length > 0) {
@@ -56,6 +57,8 @@ export function createPostSocket(
       }
 
       session.context = qna
+      // If the user is answering the very last gemini generated question
+      // then this variable will be kept false and then we emit chat-finished
       let askedQuestion = false
       if (session.context.length < session.maxQuestions) {
         const question = await callForQuestion(session)
@@ -67,8 +70,22 @@ export function createPostSocket(
       }
       await saveDraft(userId, session)
 
-      if (!askedQuestion && session.context.length >= session.maxQuestions) {
+      if (lastQuestionAsked) {
         socket.emit("chat-finished")
+        lastQuestionAsked = false
+        return
+      }
+
+      if (!askedQuestion && session.context.length >= session.maxQuestions) {
+        session.context.push({
+          question: {
+            type: "short_answer",
+            question: "Is there anything else you would like to add?",
+          },
+          answer: [],
+        })
+        socket.emit("question", session.context)
+        lastQuestionAsked = true
       }
     })
 
