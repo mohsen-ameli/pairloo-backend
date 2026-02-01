@@ -61,6 +61,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
 
     return res.status(200).json({ message: "Email verified successfully." })
   } catch (err: any) {
+    console.error("Error in verifyEmailCode:", err)
     return res.status(500).json({
       errors: { general: "Failed to connect. Please try again later." },
     })
