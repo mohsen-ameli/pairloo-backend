@@ -27,10 +27,6 @@ import { test } from "./controllers/test.controller"
 import { chatSocket } from "./sockets/chat.socket"
 import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
-import { FindOptions, MongoClient, ObjectId } from "mongodb"
-import { UserType } from "./models/user.model"
-import { ConversationType } from "./models/conversation.model"
-import { MessageType } from "./models/message.model"
 
 const app = express()
 
