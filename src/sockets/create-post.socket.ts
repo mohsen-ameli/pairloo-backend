@@ -76,8 +76,8 @@ export function createPostSocket(
       "submit",
       async (title: string, numMatches: number, publicPost: boolean, images: ImageType[]) => {
         const { summary, embedding } = await callForSummaryAndEmbedding(session)
-
         const postImages: Partial<S3Object>[] = []
+
         for (const img of images) {
           const { file, mimeType } = img
           let fileName: string | null = ""
