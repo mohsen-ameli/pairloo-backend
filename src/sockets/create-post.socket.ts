@@ -66,6 +66,7 @@ export function createPostSocket(
         }
       }
       await saveDraft(userId, session)
+      socket.emit("draft-saved")
 
       if (!askedQuestion && session.context.length >= session.maxQuestions) {
         socket.emit("chat-finished")
