@@ -75,6 +75,7 @@ export async function myPostGet(req: Request, res: Response) {
         lastName: 1,
         picture: 1,
         postId: "$posts._id",
+        title: "$posts.title",
         content: "$posts.content",
         summary: "$posts.summary",
         images: "$posts.images",
@@ -117,6 +118,7 @@ export async function myPostGet(req: Request, res: Response) {
       picture: closePost.picture,
       content: closePost.posts[0].content,
       summary: closePost.posts[0].summary,
+      title: closePost.posts[0].title,
       images: closePost.posts[0].images,
       createdAt: closePost.posts[0].createdAt,
     })
