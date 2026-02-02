@@ -2,20 +2,25 @@ import { Request, Response } from "express"
 import User from "../models/user.model"
 import { S3Object } from "../models/s3Object.model"
 import mongoose from "mongoose"
+import { QnaType } from "../types/session.types"
 
 export async function postListGet(req: Request, res: Response) {
   interface ProjectedDocument {
     posts: Array<{
       _id: string
+      title: string
       content: string
       createdAt: Date
+      images?: S3Object[]
+      isDraft?: boolean
+      closestPosts?: Array<{ score: number; item: string }>
     }>
   }
 
   const userId = req.user!.sub
 
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.content posts.createdAt"
+    "posts._id posts.title posts.content posts.createdAt posts.images posts.isDraft posts.closestPosts"
   )
 
   if (!posts) {
@@ -42,6 +47,7 @@ export async function myPostGet(req: Request, res: Response) {
     images: S3Object[]
     content: string
     summary: string
+    qna: QnaType
     createdAt: Date
     closestPosts: Array<{
       item: string
@@ -69,9 +75,11 @@ export async function myPostGet(req: Request, res: Response) {
         lastName: 1,
         picture: 1,
         postId: "$posts._id",
+        title: "$posts.title",
         content: "$posts.content",
         summary: "$posts.summary",
         images: "$posts.images",
+        qna: "$posts.qna",
         createdAt: "$posts.createdAt",
         closestPosts: "$posts.closestPosts",
       },
@@ -110,6 +118,7 @@ export async function myPostGet(req: Request, res: Response) {
       picture: closePost.picture,
       content: closePost.posts[0].content,
       summary: closePost.posts[0].summary,
+      title: closePost.posts[0].title,
       images: closePost.posts[0].images,
       createdAt: closePost.posts[0].createdAt,
     })

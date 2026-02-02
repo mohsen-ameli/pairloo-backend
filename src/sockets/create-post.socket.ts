@@ -70,57 +70,62 @@ export function createPostSocket(
         socket.emit("chat-finished")
       }
       await saveDraft(userId, session)
+      socket.emit("draft-saved")
     })
 
-    socket.on("submit", async (numMatches: number, publicPost: boolean, images: ImageType[]) => {
-      const { summary, embedding } = await callForSummaryAndEmbedding(session)
+    socket.on(
+      "submit",
+      async (title: string, numMatches: number, publicPost: boolean, images: ImageType[]) => {
+        const { summary, embedding } = await callForSummaryAndEmbedding(session)
+        const postImages: Partial<S3Object>[] = []
 
-      const postImages: Partial<S3Object>[] = []
-      for (const img of images) {
-        const { file, mimeType } = img
-        let fileName: string | null = ""
-        if (file && mimeType) {
-          fileName = await sendObject("posts", file, mimeType)
-          if (!fileName) {
-            socket.emit("error", "Failed to upload attachment")
-            return
+        for (const img of images) {
+          const { file, mimeType } = img
+          let fileName: string | null = ""
+          if (file && mimeType) {
+            fileName = await sendObject("posts", file, mimeType)
+            if (!fileName) {
+              socket.emit("error", "Failed to upload attachment")
+              return
+            }
+            postImages.push({ key: fileName, url: "" })
           }
-          postImages.push({ key: fileName, url: "" })
         }
+
+        const post: Partial<PostType> = {
+          title,
+          content: session.initialPostText,
+          // @ts-ignore
+          images: postImages,
+          publicPost,
+          numMatches,
+          summary,
+          qna: session.context,
+          embedding,
+          closestPosts: null,
+          isDraft: false,
+        }
+        const closestPosts = await getClosestPosts(userId, post, numMatches)
+        post.closestPosts = closestPosts
+
+        // Change the existing draft value to false
+        const user = await User.findById(userId)
+        if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
+          await User.updateOne(
+            { _id: userId, "posts._id": user.posts[user.posts.length - 1]._id },
+            { $set: { "posts.$": post } }
+          )
+        } else {
+          await User.updateOne({ _id: userId }, { $push: { posts: post } })
+        }
+
+        const updatedUser = await User.findById(userId)
+        const postId = updatedUser!.posts.slice(-1)[0]._id
+
+        socket.emit("success", postId)
+        session = structuredClone(initialSession)
       }
-
-      const post: Partial<PostType> = {
-        content: session.initialPostText,
-        // @ts-ignore
-        images: postImages,
-        publicPost,
-        numMatches,
-        summary,
-        qna: session.context,
-        embedding,
-        closestPosts: null,
-        isDraft: false,
-      }
-      const closestPosts = await getClosestPosts(userId, post, numMatches)
-      post.closestPosts = closestPosts
-
-      // Change the existing draft value to false
-      const user = await User.findById(userId)
-      if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
-        await User.updateOne(
-          { _id: userId, "posts._id": user.posts[user.posts.length - 1]._id },
-          { $set: { "posts.$": post } }
-        )
-      } else {
-        await User.updateOne({ _id: userId }, { $push: { posts: post } })
-      }
-
-      const updatedUser = await User.findById(userId)
-      const postId = updatedUser!.posts.slice(-1)[0]._id
-
-      socket.emit("success", postId)
-      session = structuredClone(initialSession)
-    })
+    )
 
     socket.on("disconnect", async () => {
       if (session && session.context.length > 0) {
