@@ -36,14 +36,7 @@ export function createPostSocket(
       if (lastPost.isDraft) {
         session.context = lastPost.qna
         session.initialPostText = lastPost.content
-
-        socket.emit("draft-restored", {
-          qna: session.context,
-          initialPostText: session.initialPostText,
-          images: lastPost.images || [],
-          publicPost: lastPost.publicPost || false,
-          numMatches: lastPost.numMatches || 5,
-        })
+        socket.emit("draft-restored", session.context)
       }
     }
 
@@ -51,26 +44,33 @@ export function createPostSocket(
       if (!session) return
 
       // If answering the initial post
-      if (qna.length === 1 && session.initialPostText === "") {
+      if (qna.length === 1) {
         session.initialPostText = qna[0].answer[0]
       }
 
       session.context = qna
-      let askedQuestion = false
+      // If the user is answering the very last gemini generated question
+      // then this variable will be kept false and then we emit chat-finished
       if (session.context.length < session.maxQuestions) {
         const question = await callForQuestion(session)
         if (question) {
           session.context.push({ question, answer: [] })
           socket.emit("question", session.context)
-          askedQuestion = true
         }
+      } else if (session.context.length == session.maxQuestions) {
+        session.context.push({
+          question: {
+            type: "short_answer",
+            question: "Is there anything else you would like to add?",
+          },
+          answer: [],
+        })
+        socket.emit("question", session.context)
+      } else {
+        socket.emit("chat-finished")
       }
       await saveDraft(userId, session)
       socket.emit("draft-saved")
-
-      if (!askedQuestion && session.context.length >= session.maxQuestions) {
-        socket.emit("chat-finished")
-      }
     })
 
     socket.on(
@@ -134,8 +134,7 @@ export function createPostSocket(
     })
 
     socket.on("discard-draft", async () => {
-      const user = await User.findById(userId)
-      if (!user || user.posts.length === 0) return
+      if (user.posts.length === 0) return
 
       const lastPost = user.posts[user.posts.length - 1]
       if (lastPost.isDraft) {
