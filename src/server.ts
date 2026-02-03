@@ -1,4 +1,6 @@
 import {
+  AWS_ACCESS_KEY_ID,
+  AWS_SECRET_ACCESS_KEY,
   DB_URI,
   EMAIL_HOST,
   EMAIL_PASS,
@@ -48,7 +50,12 @@ export const ai = new GoogleGenAI({})
 export const openai = new OpenAI({})
 
 export const snsClient = new SNSClient({})
-export const s3Client = new S3Client({})
+export const s3Client = new S3Client({
+  credentials: {
+    accessKeyId: AWS_ACCESS_KEY_ID,
+    secretAccessKey: AWS_SECRET_ACCESS_KEY,
+  },
+})
 
 app.use(cookieParser())
 app.use(cors(corsOptions))

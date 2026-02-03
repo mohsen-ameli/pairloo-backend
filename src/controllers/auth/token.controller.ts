@@ -80,7 +80,7 @@ export async function tokenPost(req: Request, res: Response) {
   await User.updateUserPicture(user)
 
   // Update user picture if not set
-  if (!user.picture?.key) {
+  if (!user.picture) {
     user.set("picture", {
       key: "Google",
       url: userInfo.picture,

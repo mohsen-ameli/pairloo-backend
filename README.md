@@ -66,6 +66,8 @@ Then do the following:
 aws configure set region "ca-central-1"
 ```
 
+Get your IAM access and secret keys and put them in .env (ask moe)
+
 5. Start the backend server
 
 ```bash

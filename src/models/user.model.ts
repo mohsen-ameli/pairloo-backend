@@ -2,8 +2,6 @@ import mongoose from "mongoose"
 import { isEmail } from "validator"
 import postSchema, { PostType } from "./post.model"
 import { getObject } from "../utils/s3"
-import { S3Object, s3ObjectSchema } from "./s3Object.model"
-import { isSignedUrlExpired } from "../utils/is-signed-url-expired"
 
 export interface UserType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
@@ -19,7 +17,7 @@ export interface UserType extends mongoose.Document {
   timezone: string
   locationId: number
   email: string
-  picture?: S3Object
+  picture?: string | null
   posts: mongoose.Types.DocumentArray<PostType>
   createdAt: Date
   updatedAt: Date
@@ -98,7 +96,7 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       validate: [isEmail, "Please enter a valid email"],
     },
     picture: {
-      type: s3ObjectSchema,
+      type: String,
       required: false,
       unique: false,
     },
@@ -111,24 +109,17 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
 userSchema.statics.updateUserPostImages = async function updateUserPostImages(post: PostType) {
   if (!post || !post.images || post.images.length === 0) return post
 
-  for (const image of post.images) {
-    if (!image || !image.key || !isSignedUrlExpired(image.url)) continue
+  const newImages = []
 
-    const url = await getObject(image.key)
+  for (let image of post.images) {
+    if (!image) continue
+
+    const url = await getObject(image)
     if (!url) continue
-    image.url = url
-    await User.updateOne(
-      { _id: post._id, "posts._id": post.postId },
-      {
-        $set: {
-          "posts.$.images.$[img].url": url,
-        },
-      },
-      {
-        arrayFilters: [{ "img.key": image.key }],
-      }
-    )
+    newImages.push(url)
   }
+
+  post.images = newImages
 }
 
 // Update user's profile picture with new signed URL if expired
@@ -141,12 +132,11 @@ userSchema.statics.updateUserPicture = async function updateUserPicture(
   }
 
   for (const user of users) {
-    if (!user.picture || !user.picture.key || !isSignedUrlExpired(user.picture.url)) continue
+    if (!user.picture) continue
 
-    const url = await getObject(user.picture.key)
+    const url = await getObject(user.picture)
     if (!url) continue
-    user.picture.url = url
-    await User.findByIdAndUpdate(user._id, { "picture.url": url })
+    user.picture = url
   }
 }
 

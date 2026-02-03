@@ -1,23 +1,16 @@
 import mongoose from "mongoose"
-import { S3Object, s3ObjectSchema } from "./s3Object.model"
-import { getObject } from "../utils/s3"
-import { isSignedUrlExpired } from "../utils/is-signed-url-expired"
 
 export interface MessageType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   conversationId: mongoose.Types.ObjectId
   senderId: mongoose.Types.ObjectId
   content: string
-  attachment?: S3Object | null
+  attachment?: string | null
   createdAt: Date
   updatedAt: Date
 }
 
-interface MessageModel extends mongoose.Model<MessageType> {
-  updateAttachmentUrls(docs: MessageType[] | MessageType): Promise<void>
-}
-
-export const messageSchema = new mongoose.Schema<MessageType, MessageModel>({
+export const messageSchema = new mongoose.Schema<MessageType>({
   conversationId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "conversation",
@@ -32,7 +25,7 @@ export const messageSchema = new mongoose.Schema<MessageType, MessageModel>({
     type: String,
   },
   attachment: {
-    type: s3ObjectSchema,
+    type: String,
   },
   createdAt: {
     type: Date,
@@ -44,29 +37,9 @@ export const messageSchema = new mongoose.Schema<MessageType, MessageModel>({
   },
 })
 
-// Update attachment URLs inside a chat with new signed URLs if expired
-messageSchema.statics.updateAttachmentUrls = async function updateAttachmentUrls(
-  docs: MessageType[] | MessageType
-) {
-  if (!docs || (docs instanceof Array && docs.length === 0)) return
-
-  if (!(docs instanceof Array)) {
-    docs = [docs]
-  }
-
-  for (const doc of docs) {
-    if (!doc.attachment || !doc.attachment.key || !isSignedUrlExpired(doc.attachment.url)) continue
-
-    const url = await getObject(doc.attachment.key)
-    if (!url) continue
-    doc.attachment.url = url
-    await Message.findByIdAndUpdate(doc._id, { "attachment.url": url })
-  }
-}
-
 messageSchema.pre("save", function () {
   this.updatedAt = new Date()
 })
 
-const Message = mongoose.model<MessageType, MessageModel>("message", messageSchema)
+const Message = mongoose.model<MessageType>("message", messageSchema)
 export default Message

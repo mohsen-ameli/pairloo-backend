@@ -1,6 +1,5 @@
 import { Request, Response } from "express"
 import User from "../models/user.model"
-import { S3Object } from "../models/s3Object.model"
 import mongoose from "mongoose"
 import { QnaType } from "../types/session.types"
 
@@ -11,7 +10,7 @@ export async function postListGet(req: Request, res: Response) {
       title: string
       content: string
       createdAt: Date
-      images?: S3Object[]
+      images?: string[]
       isDraft?: boolean
       closestPosts?: Array<{ score: number; item: string }>
     }>
@@ -22,6 +21,10 @@ export async function postListGet(req: Request, res: Response) {
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
     "posts._id posts.title posts.content posts.createdAt posts.images posts.isDraft posts.closestPosts"
   )
+
+  for (const post of posts?.posts || []) {
+    await User.updateUserPostImages(post as any)
+  }
 
   if (!posts) {
     return res.status(404).json({ message: "User not found" })
@@ -43,8 +46,8 @@ export async function myPostGet(req: Request, res: Response) {
     username: string
     firstName: string
     lastName: string
-    picture?: S3Object | null
-    images: S3Object[]
+    picture?: string | null
+    images: string[]
     content: string
     summary: string
     qna: QnaType
@@ -52,12 +55,12 @@ export async function myPostGet(req: Request, res: Response) {
     closestPosts: Array<{
       item: string
       _id: string
-      picture?: S3Object | null
+      picture?: string | null
       username: string
       firstName: string
       lastName: string
       content: string
-      images?: S3Object[] | null
+      images?: string[] | null
       score: number
       createdAt: Date
     }>
@@ -108,6 +111,7 @@ export async function myPostGet(req: Request, res: Response) {
     if (!closePost) continue
 
     await User.updateUserPostImages(closePost.posts[0] as any)
+    await User.updateUserPicture(closePost as any)
 
     closestPosts.push({
       score: p.score,
@@ -134,10 +138,10 @@ export async function postGet(req: Request, res: Response) {
     username: string
     firstName: string
     lastName: string
-    picture?: S3Object | null
+    picture?: string | null
     content: string
     summary: string
-    images: S3Object[]
+    images: string[]
     createdAt: Date
   }
   const postId = req.params.id as string

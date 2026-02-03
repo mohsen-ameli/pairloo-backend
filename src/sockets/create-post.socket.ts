@@ -6,7 +6,6 @@ import User from "../models/user.model"
 import { PostType } from "../models/post.model"
 import { ImageType, PostSession, QnaType } from "../types/session.types"
 import { sendObject } from "../utils/s3"
-import { S3Object } from "../models/s3Object.model"
 
 const initialSession: PostSession = {
   initialPostText: "",
@@ -77,7 +76,7 @@ export function createPostSocket(
       "submit",
       async (title: string, numMatches: number, publicPost: boolean, images: ImageType[]) => {
         const { summary, embedding } = await callForSummaryAndEmbedding(session)
-        const postImages: Partial<S3Object>[] = []
+        const postImages: string[] = []
 
         for (const img of images) {
           const { file, mimeType } = img
@@ -88,7 +87,7 @@ export function createPostSocket(
               socket.emit("error", "Failed to upload attachment")
               return
             }
-            postImages.push({ key: fileName, url: "" })
+            postImages.push(fileName)
           }
         }
 
