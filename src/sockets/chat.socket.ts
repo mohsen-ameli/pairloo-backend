@@ -4,7 +4,6 @@ import Conversation from "../models/conversation.model"
 import { Types } from "mongoose"
 import Message from "../models/message.model"
 import { getObject, sendObject } from "../utils/s3"
-import { S3Object } from "../models/s3Object.model"
 
 export function chatSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
@@ -46,7 +45,7 @@ export function chatSocket(
           members: {
             _id: Types.ObjectId
             username: string
-            picture: S3Object
+            picture: string
             email: string
           }[]
         }>({
@@ -102,7 +101,7 @@ export function chatSocket(
           members: {
             _id: Types.ObjectId
             username: string
-            picture: S3Object
+            picture: string
             email: string
           }[]
         }>({
@@ -179,10 +178,7 @@ export function chatSocket(
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
           content,
-          attachment: {
-            key: fileName,
-            url: url,
-          },
+          attachment: fileName,
         })
 
         const populatedMessage = await Message.findById(message._id).populate<{
@@ -207,7 +203,7 @@ export function chatSocket(
           sender: {
             _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
-            picture: populatedMessage.senderId.picture,
+            picture: await getObject(populatedMessage.senderId.picture),
           },
         }
 
@@ -231,7 +227,7 @@ export function chatSocket(
           senderId: {
             _id: Types.ObjectId
             username: string
-            picture?: S3Object
+            picture?: string
           }
         }>({
           path: "senderId",
@@ -239,15 +235,34 @@ export function chatSocket(
         })
         .lean()
 
-      await Message.updateAttachmentUrls(messages as any)
-
       if (messages.length === 0) {
         socket.emit("messages", [])
         return
       }
 
+      const map = new Map<string, string>()
+
       const formattedMessages = []
       for (const msg of messages) {
+        if (msg.attachment) {
+          const url = await getObject(msg.attachment)
+          if (url) {
+            msg.attachment = url
+          }
+        }
+
+        if (msg.senderId.picture) {
+          if (map.has(msg.senderId.picture)) {
+            msg.senderId.picture = map.get(msg.senderId.picture)!
+          } else {
+            const url = await getObject(msg.senderId.picture)
+            if (url) {
+              msg.senderId.picture = url
+              map.set(msg.senderId.picture, url)
+            }
+          }
+        }
+
         formattedMessages.push({
           _id: msg._id,
           conversationId: msg.conversationId,
@@ -256,6 +271,7 @@ export function chatSocket(
           updatedAt: msg.updatedAt,
           attachment: msg.attachment,
           sender: {
+            _id: msg.senderId._id,
             username: msg.senderId.username.toString(),
             picture: msg.senderId.picture,
           },

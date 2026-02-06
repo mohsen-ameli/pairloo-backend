@@ -59,6 +59,13 @@ export async function getObject(key: string | null | undefined) {
     Bucket: bucketName,
     Key: key,
   })
-  const url = await getSignedUrl(s3Client, command, { expiresIn: S3_EXPIRES_IN_SECONDS })
+
+  const roundTo = (S3_EXPIRES_IN_SECONDS - 300) * 1000 // 5 minutes less than expiry time
+
+  const url = await getSignedUrl(s3Client, command, {
+    signingDate: new Date(Math.floor(new Date().getTime() / roundTo) * roundTo),
+    expiresIn: S3_EXPIRES_IN_SECONDS,
+  })
+
   return url
 }

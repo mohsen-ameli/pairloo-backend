@@ -25,13 +25,17 @@ export const REFRESH_BEFORE_EXPIRY_SEC = 60 // Refresh token 1 minute before exp
 
 export const DB_URI = process.env.DB_URI!
 export const CDN_BASE_URL = process.env.CDN_BASE_URL
-export const S3_EXPIRES_IN_SECONDS = 60 * 60 // 1 hour
+export const S3_EXPIRES_IN_SECONDS = 2 * 60 * 60 // 2 hours
 
 // Google OAuth Constants
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!
 export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!
 export const GOOGLE_REDIRECT_URI = `${process.env.PUBLIC_BASE_URL}/api/auth/callback`
 export const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+
+// AWS
+export const AWS_ACCESS_KEY_ID = process.env.AWS_ACCESS_KEY_ID!
+export const AWS_SECRET_ACCESS_KEY = process.env.AWS_SECRET_ACCESS_KEY!
 
 // Environment Constants
 export const BASE_URL = process.env.PUBLIC_BASE_URL
