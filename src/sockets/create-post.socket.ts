@@ -1,5 +1,5 @@
 import { DefaultEventsMap, Namespace, Socket } from "socket.io"
-import { callForQuestion, callForSummaryAndEmbedding } from "../utils/AIQA"
+import { callForQuestion, callForSummaryAndEmbedding, callForTitle } from "../utils/AIQA"
 import { MAX_POST_QUESTIONS } from "../utils/constants"
 import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
@@ -71,6 +71,13 @@ export function createPostSocket(
       }
       await saveDraft(userId, session)
       socket.emit("draft-saved")
+    })
+
+    socket.on("ai-title", async () => {
+      if (!session) return
+
+      const title = await callForTitle(session)
+      socket.emit("ai-title-generated", title)
     })
 
     socket.on(

@@ -40,6 +40,19 @@ export async function callForSummaryAndEmbedding(session: {
   return { summary, embedding }
 }
 
+export async function callForTitle(session: PostSession): Promise<string> {
+  const { initialPostText, context } = session
+  const prompt = `Based on the following post information, generate a concise and engaging title (5-10 words
+      maximum) that captures the essence of the post.
+      Do not include any quotation marks or special formatting. Do not include phrases like "The user is looking for..." or "The post is about...".
+      Examples of good titles: "Looking for a Running Partner in NYC", "Offering Guitar Lessons for Beginners", "Seeking Advice on Home Gardening".
+      Examples of bad titles: "User needs help", "Post about selling bike", "Looking for something".
+      Context: ${JSON.stringify(context)} Initial Post Text: ${initialPostText}`
+
+  const title = await generateSummary(prompt)
+  return title
+}
+
 export async function callForIntention(session: {
   initialPostText: string
   context: { question: any; answer: any }[]
