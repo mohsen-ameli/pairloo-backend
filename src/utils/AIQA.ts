@@ -1,5 +1,5 @@
 import { PostSession } from "../types/session.types"
-import { generateSummary, generateQuestion, generateEmbedding } from "./AIModel"
+import { generateSummary, generateQuestion, generateEmbedding, generateTitle } from "./AIModel"
 
 export async function callForQuestion(session: PostSession) {
   const { initialPostText, context, maxQuestions } = session
@@ -49,7 +49,7 @@ export async function callForTitle(session: PostSession): Promise<string> {
       Examples of bad titles: "User needs help", "Post about selling bike", "Looking for something".
       Context: ${JSON.stringify(context)} Initial Post Text: ${initialPostText}`
 
-  const title = await generateSummary(prompt)
+  const title = await generateTitle(prompt)
   return title
 }
 
