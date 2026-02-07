@@ -29,7 +29,7 @@ export async function generateQuestion(contents: string): Promise<Question | nul
   return question.question === "NO_QUESTION" ? null : question
 }
 
-export async function generateSummary(contents: string): Promise<string> {
+export async function generateText(contents: string): Promise<string> {
   if (!AI_ON) {
     return "AI mode is disabled in the backend env file. Therefore, this is a placeholder summary. Enable AI mode to get actual summaries."
   }
