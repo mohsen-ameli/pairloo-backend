@@ -29,10 +29,7 @@ export async function generateQuestion(contents: string): Promise<Question | nul
   return question.question === "NO_QUESTION" ? null : question
 }
 
-// Todo: Remove summary from user model and remove this function
-// This function will no longer be used. I will remove it in my next pr, just to keep things prs when
-// when I redesign the specific posts page.
-export async function generateSummary(contents: string): Promise<string> {
+export async function generateText(contents: string): Promise<string> {
   if (!AI_ON) {
     return "AI mode is disabled in the backend env file. Therefore, this is a placeholder summary. Enable AI mode to get actual summaries."
   }
@@ -44,23 +41,6 @@ export async function generateSummary(contents: string): Promise<string> {
 
   if (!response || !response.text) {
     throw new Error("Could not generate summary for embedding")
-  }
-
-  return response.text
-}
-
-export async function generateTitle(contents: string): Promise<string> {
-  if (!AI_ON) {
-    return "AI mode is disabled in the backend env file. Therefore, this is a placeholder summary. Enable AI mode to get actual summaries."
-  }
-
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents,
-  })
-
-  if (!response || !response.text) {
-    throw new Error("Could not generate title for post")
   }
 
   return response.text

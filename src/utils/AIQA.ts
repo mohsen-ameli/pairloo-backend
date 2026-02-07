@@ -1,5 +1,5 @@
 import { PostSession } from "../types/session.types"
-import { generateSummary, generateQuestion, generateEmbedding, generateTitle } from "./AIModel"
+import { generateText, generateQuestion, generateEmbedding } from "./AIModel"
 
 export async function callForQuestion(session: PostSession) {
   const { initialPostText, context, maxQuestions } = session
@@ -35,7 +35,7 @@ export async function callForSummaryAndEmbedding(session: {
       This summary will be used to create a semantic embedding for matching similar posts, so focus only on the core topics and intent.
       Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
 
-  const summary = await generateSummary(prompt)
+  const summary = await generateText(prompt)
   const embedding = await generateEmbedding(summary)
   return { summary, embedding }
 }
@@ -49,7 +49,7 @@ export async function callForTitle(session: PostSession): Promise<string> {
       Examples of bad titles: "User needs help", "Post about selling bike", "Looking for something".
       Context: ${JSON.stringify(context)} Initial Post Text: ${initialPostText}`
 
-  const title = await generateTitle(prompt)
+  const title = await generateText(prompt)
   return title
 }
 
@@ -71,7 +71,7 @@ export async function callForIntention(session: {
       Your answer must be in a json format: { "my_intention": "need or provide", "matching_post_intention": "need or provide" }.
       Do not include any other formatting like bullet points or punctuation or **.
       Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
-  const intention = await generateSummary(prompt)
+  const intention = await generateText(prompt)
   if (!intention) {
     throw new Error("Could not generate intention for embedding")
   }
