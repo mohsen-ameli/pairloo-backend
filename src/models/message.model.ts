@@ -5,7 +5,7 @@ export interface MessageType extends mongoose.Document {
   conversationId: mongoose.Types.ObjectId
   senderId: mongoose.Types.ObjectId
   content: string
-  attachment?: string | null
+  attachments?: string[]
   createdAt: Date
   updatedAt: Date
 }
@@ -24,8 +24,8 @@ export const messageSchema = new mongoose.Schema<MessageType>({
   content: {
     type: String,
   },
-  attachment: {
-    type: String,
+  attachments: {
+    type: [String],
   },
   createdAt: {
     type: Date,
