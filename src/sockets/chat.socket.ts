@@ -4,6 +4,7 @@ import Conversation from "../models/conversation.model"
 import { Types } from "mongoose"
 import Message from "../models/message.model"
 import { getObject, sendObject } from "../utils/s3"
+import { Attachment } from "../types/attachment.type"
 
 export function chatSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
@@ -155,30 +156,32 @@ export function chatSocket(
       async ({
         conversationId,
         content,
-        file,
-        mimeType,
+        attachments,
       }: {
         conversationId: string
         content?: string
-        file?: Blob
-        mimeType?: string
+        attachments?: Attachment[]
       }) => {
-        let url: string | null | undefined = ""
-        let fileName: string | null = ""
-        if (file && mimeType) {
-          fileName = await sendObject("chat", file, mimeType)
-          if (!fileName) {
-            socket.emit("error", "Failed to upload attachment")
-            return
+        const urls = []
+        const keys = []
+        if (attachments && attachments.length > 0) {
+          for (const attachment of attachments) {
+            const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
+            if (!fileName) {
+              socket.emit("error", "Failed to upload attachment")
+              return
+            }
+            const url = await getObject(fileName)
+            urls.push(url)
+            keys.push(fileName)
           }
-          url = await getObject(fileName)
         }
 
         const message = await Message.create({
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
           content,
-          attachment: fileName,
+          attachments: keys,
         })
 
         const populatedMessage = await Message.findById(message._id).populate<{
@@ -199,7 +202,7 @@ export function chatSocket(
 
         const formattedMessage = {
           ...populatedMessage.toObject(),
-          attachmentUrl: url,
+          attachments: urls,
           sender: {
             _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
@@ -244,10 +247,11 @@ export function chatSocket(
 
       const formattedMessages = []
       for (const msg of messages) {
-        if (msg.attachment) {
-          const url = await getObject(msg.attachment)
+        const attachments = []
+        for (const key of msg.attachments || []) {
+          const url = await getObject(key)
           if (url) {
-            msg.attachment = url
+            attachments.push(url)
           }
         }
 
@@ -269,7 +273,7 @@ export function chatSocket(
           content: msg.content,
           createdAt: msg.createdAt,
           updatedAt: msg.updatedAt,
-          attachment: msg.attachment,
+          attachments,
           sender: {
             _id: msg.senderId._id,
             username: msg.senderId.username.toString(),
