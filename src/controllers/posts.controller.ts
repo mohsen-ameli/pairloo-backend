@@ -61,7 +61,7 @@ export async function myPostGet(req: Request, res: Response) {
 
     closestPosts.push({
       postId: p.postId,
-      userId: closePost._id.toString(),
+      userId: p.userId,
       score: p.score,
       username: closeUser.username,
       firstName: closeUser.firstName,
