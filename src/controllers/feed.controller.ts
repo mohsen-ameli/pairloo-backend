@@ -12,7 +12,7 @@ export async function feedGet(req: Request, res: Response) {
       "posts.username": 1,
       "posts.firstName": 1,
       "posts.lastName": 1,
-      "posts.content": 1,
+      "posts.initialPostText": 1,
       username: 1,
       firstName: 1,
       lastName: 1,
@@ -30,7 +30,7 @@ export async function feedGet(req: Request, res: Response) {
         firstName: user.firstName,
         lastName: user.lastName,
         picture: user.picture,
-        content: post.content,
+        initialPostText: post.initialPostText,
       }
       results.push(data)
     }

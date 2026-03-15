@@ -1,104 +1,61 @@
-import mongoose from "mongoose"
-import { PostType } from "../models/post.model"
 import User from "../models/user.model"
-import { cosineSimilarity } from "./embedding"
-import { ClosePost } from "../types/closePost.types"
+import { weaviateClient } from "../server"
+import { Filters } from "weaviate-client"
+import { LocationType } from "../types/location.type"
 
-export async function getClosestPosts(
-  userId: string,
-  newPost: Partial<PostType>,
-  K = 5
-): Promise<ClosePost[]> {
-  if (!newPost.embedding) {
-    throw new Error("Post must have an embedding")
+// Bread and butter of the app. How we get matches per post.
+// We match the provide embedding of our post, with need embeddings of others' posts.
+// Same with our need embedding getting matched with others' provide embedding.
+// We also apply a geo location filter, to only get matches for the user selected area.
+export async function getClosestPosts(params: {
+  userId: string
+  location: LocationType
+  distance: number
+  K: number
+  provideEmbedding: number[]
+  needEmbedding: number[]
+}) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
   }
 
-  // Unwind posts, exclude posts from the same user, and perform vector search on posts
-  const closePosts = await User.aggregate<{
-    _id: mongoose.Types.ObjectId
-    userId: mongoose.Types.ObjectId
-    score: number
-    content: string
-    embedding: number[]
-  }>([
+  const { userId, location, distance, K, provideEmbedding, needEmbedding } = params
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+
+  const results = await weaviatePosts.query.nearVector(
     {
-      $vectorSearch: {
-        index: "post_embedding",
-        exact: false,
-        limit: K,
-        numCandidates: K * 2,
-        path: "posts.embedding",
-        queryVector: newPost.embedding!,
-        filter: {
-          _id: {
-            $ne: new mongoose.Types.ObjectId(userId), // Exclude posts from the same user
-          },
-        },
-      },
+      needEmbedding: provideEmbedding,
+      provideEmbedding: needEmbedding,
     },
-    { $unwind: "$posts" },
     {
-      $project: {
-        _id: "$posts._id",
-        userId: "$_id",
-        score: { $meta: "vectorSearchScore" },
-        content: "$posts.content",
-        embedding: "$posts.embedding",
-      },
-    },
-  ])
-
-  // Step 2: For each result, calculate true cosine similarity
-  let results = closePosts.map(doc => {
-    const score = cosineSimilarity(newPost.embedding!, doc.embedding!)
-    return {
-      item: doc._id,
-      userId: doc.userId,
-      atlasScore: doc.score,
-      score,
-      content: doc.content,
+      filters: Filters.and(
+        weaviatePosts.filter.byProperty("userId").notEqual(userId),
+        weaviatePosts.filter.byProperty("location").withinGeoRange({
+          latitude: location.latitude,
+          longitude: location.longitude,
+          distance: distance,
+        })
+      ),
+      limit: K,
+      returnMetadata: ["distance"],
     }
-  })
+  )
 
-  // Sort results by score descending
-  results = results.sort((a, b) => b.score - a.score)
-  results = results.slice(0, K)
+  const res = []
 
-  // Add newPost to each of its closestPosts's closestPosts array
-  for (const doc of results) {
-    const postId = doc.item
-    // if newPost isn't already in closestPosts's array of each of newPosts's closestPosts, add it
-    const closeUser = await User.findById(doc.userId)
-    const closePost = closeUser?.posts.find(p => p._id === postId)
-    if (!closePost) continue
-
-    // If newPost is already in closestPosts, skip
-    if (!closePost.closestPosts || closePost.closestPosts.length == 0) continue
-    for (const cp of closePost.closestPosts) {
-      if (cp.item.toString() === (newPost as any).id?.toString()) {
-        continue
-      }
-    }
-
-    // Push, sort, and slice in one update
-    await User.updateOne(
-      { _id: doc.userId, "posts._id": postId },
-      {
-        $push: {
-          "posts.$.closestPosts": {
-            $each: [
-              {
-                item: (newPost as any)._id,
-                score: doc.score,
-              },
-            ],
-            $sort: { score: -1 },
-            $slice: closePost.numMatches,
-          },
-        },
-      }
-    )
+  for (const result of results.objects) {
+    const matchPostId = result.properties.postId!.toString()
+    const matchUserId = result.properties.userId!.toString()
+    const originalPost = await User.findById(matchUserId).then(user => user?.posts.id(matchPostId))
+    res.push({
+      postId: matchPostId,
+      userId: matchUserId,
+      title: originalPost?.title,
+      initialPostText: originalPost?.initialPostText,
+      score: -result.metadata!.distance!, // weaviate returns a negative value, so we negate that
+    })
   }
 
-  return results
+  return res
 }

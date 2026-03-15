@@ -1,39 +1,157 @@
 import { getClosestPosts } from "../utils/getClosestPosts"
-import { callForSummaryAndEmbedding, callForIntention } from "../utils/AIQA"
+import { callForSummaries, callForQuestion, callForEmbeddings } from "../utils/AIQA"
 import { cosineSimilarity } from "../utils/embedding"
 import mongoose from "mongoose"
 import { Request, Response } from "express"
-import User from "../models/user.model"
+// import User from "../models/user.model"
 import { createAvatar } from "@dicebear/core"
 import { adventurer, lorelei, thumbs } from "@dicebear/collection"
+import { PostSession } from "../types/session.types"
+import { ObjectId } from "mongodb"
+import User, { UserType } from "../models/user.model"
+import { weaviateClient } from "../server"
+import { generateEmbedding } from "../utils/AIModel"
+import { PostType } from "../models/post.model"
+import { generateUuid5 } from "weaviate-client"
+import { LocationType } from "../types/location.type"
+
+async function storePostsToWeaviate(posts: PostType[], user: UserType) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+
+  for (const post of posts) {
+    const needEmbedding = await generateEmbedding(post.needSummary)
+    const provideEmbedding = await generateEmbedding(post.provideSummary)
+    try {
+      await weaviatePosts.data.insert({
+        properties: {
+          userId: user._id.toString(),
+          postId: post._id.toString(),
+          location: {
+            latitude: post.location.latitude,
+            longitude: post.location.longitude,
+          },
+          distance: post.distance,
+        },
+        vectors: {
+          needEmbedding,
+          provideEmbedding,
+        },
+        id: generateUuid5(post._id.toString()),
+      })
+      console.log("inserted post with id", post._id.toString())
+      await new Promise(resolve => setTimeout(resolve, 100)) // add delay to avoid overwhelming the server
+    } catch (error) {
+      console.error("Error inserting post into Weaviate with id: ", post._id.toString())
+      console.log(error)
+    }
+  }
+}
+
+async function storeAllPostsToWeaviate() {
+  const users = await User.find()
+  for (const user of users) {
+    await storePostsToWeaviate(user.posts as PostType[], user)
+  }
+}
+
+async function getClosestPostsTesting(postId: string, username: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const user = await User.findOne({ username })
+  const post = user?.posts.id(postId)
+
+  if (!post || !user) {
+    throw new Error("Post or user not found")
+  }
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+  const wPost = await weaviatePosts.query.fetchObjectById(generateUuid5(postId), {
+    includeVector: true,
+  })
+
+  if (!wPost || !wPost.vectors) {
+    throw new Error("Post or user not found")
+  }
+
+  const results = await getClosestPosts({
+    userId: user._id.toString(),
+    K: post.numMatches,
+    location: wPost.properties.location as LocationType,
+    distance: wPost.properties.distance as number,
+    provideEmbedding: wPost.vectors.provideEmbedding as number[],
+    needEmbedding: wPost.vectors.needEmbedding as number[],
+  })
+
+  return {
+    searchFor: {
+      postId,
+      userId: user._id.toString(),
+      initialPostText: post.initialPostText,
+      title: post.title,
+    },
+    results,
+  }
+}
+
+async function addPostToUser(username: string, post: PostType) {
+  const user = await User.findOne({ username })
+  if (!user) {
+    throw new Error("User not found")
+  }
+  user.posts.push(post)
+  await user.save()
+}
+
+async function createUser() {
+  await User.create({
+    username: "test-user",
+    firstName: "John",
+    lastName: "Wick",
+    phoneNumber: "+1234567890",
+    country: "Australia",
+    city: "Sydney",
+    state: "New South Wales",
+    latitude: -33.696969,
+    longitude: 151.352146,
+    timezone: "America/Sydney",
+    locationId: 7408,
+    email: "test-user@email.com",
+  })
+}
+
+async function updateAllUserPostsClosestPosts() {
+  const users = await User.find()
+  for (const user of users) {
+    for (const post of user.posts) {
+      const results = await getClosestPostsTesting(post._id.toString(), user.username)
+      await User.updateOne(
+        { username: user.username, "posts._id": post._id },
+        { $set: { "posts.$.closestPosts": results.results } }
+      )
+    }
+  }
+}
 
 // Simple route for testing
 export async function test(req: Request, res: Response) {
-  // const avatar = createAvatar(adventurer, {
-  //   seed: Math.random().toString(36).substring(2, 20),
-  //   // ... other options
-  // });
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
 
-  // const svg = avatar.toString();
+  // const postId = "69b5e14bae667dfd9ddb809a"
+  // const username = "noobmoe"
+  // const results = await getClosestPostsTesting(postId, username)
+  // return res.json(results)
 
-  await User.findOne({ username: "noobmoe" })
+  // await updateAllUserPostsClosestPosts()
 
   return res.json({ message: "Test route is working!" })
-
-  // const postId = req.query.postId as string;
-  // const userId = req.query.userId as string;
-
-  // const user = await User.findById(userId);
-  // if (!user) {
-  //   return res.status(404).json({ message: "Sample post not found" });
-  // }
-  // const samplePost = user.posts.id(postId);
-  // if (!samplePost) {
-  //   return res.status(404).json({ message: "Sample post not found" });
-  // }
-
-  // const allPosts = await User.aggregate([{ $unwind: "$posts" }]);
-  // console.log(allPosts.length);
 
   /**
    * Generate embedding for 100 posts and update their embeddings

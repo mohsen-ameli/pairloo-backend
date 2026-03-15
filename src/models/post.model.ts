@@ -1,18 +1,22 @@
 import mongoose from "mongoose"
 import { ClosePost } from "../types/closePost.types"
 import { QnaType } from "../types/session.types"
+import { LocationType } from "../types/location.type"
 
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   postId: mongoose.Types.ObjectId
   title: string
-  content: string
+  initialPostText: string
   summary: string
+  needSummary: string
+  provideSummary: string
+  location: LocationType
+  distance: number
   images?: string[]
   publicPost: boolean
   numMatches: number
   qna: QnaType
-  embedding: number[]
   closestPosts?: ClosePost[] | null
   isDraft?: boolean
   createdAt: Date
@@ -23,12 +27,27 @@ const postSchema = new mongoose.Schema<PostType>({
     type: String,
     required: [true, "Post title is required"],
   },
-  content: {
+  initialPostText: {
     type: String,
-    required: [true, "Post content is required"],
+    required: [true, "Initial post text is required"],
   },
-  summary: {
+  needSummary: {
     type: String,
+    required: false,
+  },
+  provideSummary: {
+    type: String,
+    required: false,
+  },
+  location: {
+    type: {
+      longitude: { type: Number, required: true },
+      latitude: { type: Number, required: true },
+    },
+    required: true,
+  },
+  distance: {
+    type: Number,
     required: true,
   },
   images: {
@@ -60,19 +79,12 @@ const postSchema = new mongoose.Schema<PostType>({
     ],
     required: true,
   },
-  embedding: {
-    type: [Number],
-    required: true,
-  },
   closestPosts: {
     type: [
       {
         score: { type: Number, required: true },
-        item: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "post",
-          required: true,
-        },
+        userId: { type: String, required: true },
+        postId: { type: String, required: true },
       },
     ],
     required: false,

@@ -1,14 +1,15 @@
 import { Request, Response } from "express"
 import User from "../models/user.model"
 import mongoose from "mongoose"
-import { QnaType } from "../types/session.types"
+import { weaviateClient } from "../server"
+import { generateUuid5 } from "weaviate-client"
 
 export async function postListGet(req: Request, res: Response) {
   interface ProjectedDocument {
     posts: Array<{
       _id: string
       title: string
-      content: string
+      initialPostText: string
       createdAt: Date
       images?: string[]
       isDraft?: boolean
@@ -19,7 +20,7 @@ export async function postListGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.title posts.content posts.createdAt posts.images posts.isDraft posts.closestPosts"
+    "posts._id posts.title posts.initialPostText posts.createdAt posts.images posts.isDraft posts.closestPosts"
   )
 
   for (const post of posts?.posts || []) {
@@ -40,95 +41,50 @@ export async function myPostGet(req: Request, res: Response) {
   const postId = req.params.id as string
   const userId = req.user!.sub
 
-  interface MyPostType {
-    _id: string
-    postId: string
-    username: string
-    firstName: string
-    lastName: string
-    picture?: string | null
-    images: string[]
-    content: string
-    summary: string
-    qna: QnaType
-    createdAt: Date
-    closestPosts: Array<{
-      item: string
-      _id: string
-      picture?: string | null
-      username: string
-      firstName: string
-      lastName: string
-      content: string
-      images?: string[] | null
-      score: number
-      createdAt: Date
-    }>
-  }
-
-  const post = await User.aggregate<MyPostType>([
-    { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-    { $unwind: "$posts" },
-    { $match: { "posts._id": new mongoose.Types.ObjectId(postId) } },
-    {
-      $project: {
-        _id: 1,
-        username: 1,
-        firstName: 1,
-        lastName: 1,
-        picture: 1,
-        postId: "$posts._id",
-        title: "$posts.title",
-        content: "$posts.content",
-        summary: "$posts.summary",
-        images: "$posts.images",
-        qna: "$posts.qna",
-        createdAt: "$posts.createdAt",
-        closestPosts: "$posts.closestPosts",
-      },
-    },
-  ]).then(results => results[0])
+  const user = await User.findById(userId)
+  const post = user?.posts.id(postId)
 
   if (!post) {
     return res.status(404).json({ message: "Post not found" })
   }
 
-  await User.updateUserPostImages(post as any)
+  await User.updateUserPostImages(post)
 
   const closestPosts = []
 
   for (const p of post.closestPosts || []) {
-    const closePost = await User.findOne(
-      { "posts._id": p.item },
-      {
-        "posts.$": 1,
-        username: 1,
-        firstName: 1,
-        lastName: 1,
-        picture: 1,
-      }
-    )
-    if (!closePost) continue
+    const closeUser = (await User.findById(p.userId))!
+    const closePost = closeUser?.posts.id(p.postId)!
 
-    await User.updateUserPostImages(closePost.posts[0] as any)
-    await User.updateUserPicture(closePost as any)
+    await User.updateUserPostImages(closePost)
+    await User.updateUserPicture(closeUser)
 
     closestPosts.push({
+      postId: p.postId,
+      userId: closePost._id.toString(),
       score: p.score,
-      _id: p.item,
-      username: closePost.username,
-      firstName: closePost.firstName,
-      lastName: closePost.lastName,
-      picture: closePost.picture,
-      content: closePost.posts[0].content,
-      summary: closePost.posts[0].summary,
-      title: closePost.posts[0].title,
-      images: closePost.posts[0].images,
-      createdAt: closePost.posts[0].createdAt,
+      username: closeUser.username,
+      firstName: closeUser.firstName,
+      lastName: closeUser.lastName,
+      picture: closeUser.picture,
+      initialPostText: closePost.initialPostText,
+      title: closePost.title,
+      images: closePost.images,
+      createdAt: closePost.createdAt,
     })
   }
 
-  res.status(200).json({ ...post, closestPosts })
+  res.status(200).json({
+    _id: post._id.toString(),
+    images: post.images,
+    title: post.title,
+    publicPost: post.publicPost,
+    numMatches: post.numMatches,
+    initialPostText: post.initialPostText,
+    qna: post.qna,
+    createdAt: post.createdAt,
+    closestPosts,
+  })
 }
 
 // Get a post by ID (public)
@@ -139,8 +95,7 @@ export async function postGet(req: Request, res: Response) {
     firstName: string
     lastName: string
     picture?: string | null
-    content: string
-    summary: string
+    initialPostText: string
     images: string[]
     createdAt: Date
   }
@@ -158,8 +113,7 @@ export async function postGet(req: Request, res: Response) {
         lastName: 1,
         picture: 1,
         postId: "$posts._id",
-        content: "$posts.content",
-        summary: "$posts.summary",
+        initialPostText: "$posts.initialPostText",
         images: "$posts.images",
         createdAt: "$posts.createdAt",
       },
@@ -173,8 +127,12 @@ export async function postGet(req: Request, res: Response) {
 }
 
 export async function postDelete(req: Request, res: Response) {
-  const postId = req.params.id
+  const postId = req.params.id as string
   const userId = req.user!.sub
+
+  if (!weaviateClient) {
+    return res.status(500).json({ message: "Weaviate client not initialized" })
+  }
 
   const user = await User.findById(userId).select("posts")
   if (!user) {
@@ -182,5 +140,10 @@ export async function postDelete(req: Request, res: Response) {
   }
 
   await User.updateOne({ _id: userId }, { $pull: { posts: { _id: postId } } })
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+
+  await weaviatePosts.data.deleteById(generateUuid5(postId))
+
   res.status(200).json({ message: "Post deleted successfully" })
 }

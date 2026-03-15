@@ -1,5 +1,7 @@
+import { Summaries } from "../types/question.types"
 import { PostSession } from "../types/session.types"
-import { generateText, generateQuestion, generateEmbedding } from "./AIModel"
+import { generateText, generateQuestion, generateSummaries, generateEmbedding } from "./AIModel"
+import { EMBEDDING_DIMENSION } from "./constants"
 
 export async function callForQuestion(session: PostSession) {
   const { initialPostText, context, maxQuestions } = session
@@ -9,35 +11,30 @@ export async function callForQuestion(session: PostSession) {
             ask the user to specifically understand the contents of the post.
             The question should help in gathering more information to create a comprehensive post.
             Ask the most important questions first.
-            You must ask ${maxQuestions} questions or less. You are currently on question ${step}.
-            You may stop asking questions before reaching the maximum if you believe no further questions are necessary.
-            The types of question you can ask are: short answer, multiple choice (including yes/no), multi select (users can select multiple options).
-            If no further questions are needed, respond with "NO_QUESTION".
 
-        2.  Your answer must be a JSON format containing three fields:
+        2.  Every post is consisted of need and provide parts.
+            The need part indicates what the user is looking for,
+            while the provide part indicates what the user is offering.
+            Out of the maximum number of questions allowed, which is ${maxQuestions}
+            you should allocate however many questions you deem necessary to fully understand both the need and provide parts of the post.
+            You must ensure that both parts are adequately covered by your questions.
+            You are currently on question ${step}.
+            You must not exceed the maximum number of questions.
+            You may stop asking questions before reaching the maximum if you believe no further questions are necessary.
+
+        3.  Your answer must be a JSON format containing three fields:
+          - "intention": The intention of the question, either "need" or "provide".
           - "type": What type of question you will be asking next: Pick one of the following: short_answer, multiple_choice(including yes or no), multi_select.
           - "question": The next relevant question to ask the user.
           - "options": An array of options if the type is multiple_choice or multi_select; otherwise, an empty array if the type is short_answer.
+          - If no further questions are needed, respond with "NO_QUESTION".
 
-        3. If the type of question is multiple_choice or multi_select, ensure that there are no options such as "Other (please specify)". All options must be definitive choices.
+        4. If the type of question is multiple_choice or multi_select, ensure that there are no options such as "Other (please specify)". All options must be definitive choices.
 
-        4. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `
+        5. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `
 
   const response = await generateQuestion(prompt)
   return response
-}
-
-export async function callForSummaryAndEmbedding(session: {
-  initialPostText: string
-  context: { question: any; answer: any }[]
-}) {
-  const prompt = `Based on the following context, generate a summary of the post.
-      This summary will be used to create a semantic embedding for matching similar posts, so focus only on the core topics and intent.
-      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
-
-  const summary = await generateText(prompt)
-  const embedding = await generateEmbedding(summary)
-  return { summary, embedding }
 }
 
 export async function callForTitle(session: PostSession): Promise<string> {
@@ -53,28 +50,39 @@ export async function callForTitle(session: PostSession): Promise<string> {
   return title
 }
 
-export async function callForIntention(session: {
+export async function callForSummaries(session: {
   initialPostText: string
   context: { question: any; answer: any }[]
-}): Promise<string> {
-  // For example, if the post is about looking for a running partner, the intention would be "need".
-  // If the post is about selling a bike, the intention would be "provide".
-  // If the post is about asking for advice on programming, the intention would be "need".
-  // If the post is about someone losing their wallet, the intention would be "need".
-  // If the post is about offering tutoring, the intention would be "provide".
-  // If the post does not have a clear intention, respond with "general".
-  const prompt = `Strictly based on the following context, decide what the intention of the post is.
-      You have two possible intentions to choose from: need or provide.
-      Now consider a matching post scenario where users are either looking for something (need) or offering something (provide).
-      What would the ideal matching post's intention be?
-      Again you have only two possible intentions to choose from: need or provide.
-      Your answer must be in a json format: { "my_intention": "need or provide", "matching_post_intention": "need or provide" }.
-      Do not include any other formatting like bullet points or punctuation or **.
-      Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
-  const intention = await generateText(prompt)
-  if (!intention) {
-    throw new Error("Could not generate intention for embedding")
+}) {
+  const prompt = `
+  Strictly based on the following context and initial post text,
+  generate two summaries, one for the need part and one for the provide part of the post.
+  These summaries will then be used to generate embeddings for matching similar posts.
+  If the post does not have a need or provide part, generate an empty summary for that part.
+  Your answer must be in a JSON format: { "needSummary": "summary of the need part", "provideSummary": "summary of the provide part" }.
+  Do not include any other formatting like bullet points or punctuation or **.
+  Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
+
+  const summaries = await generateSummaries(prompt)
+  if (!summaries) {
+    throw new Error("Could not generate summaries")
   }
 
-  return intention
+  return summaries
+}
+
+export async function callForEmbeddings(summaries: Summaries) {
+  let needEmbedding
+  let provideEmbedding
+  if (summaries.needSummary === "") {
+    needEmbedding = Array(EMBEDDING_DIMENSION).fill(0)
+  } else {
+    needEmbedding = await generateEmbedding(summaries.needSummary)
+  }
+  if (summaries.provideSummary === "") {
+    provideEmbedding = Array(EMBEDDING_DIMENSION).fill(0)
+  } else {
+    provideEmbedding = await generateEmbedding(summaries.provideSummary)
+  }
+  return { needEmbedding, provideEmbedding }
 }
