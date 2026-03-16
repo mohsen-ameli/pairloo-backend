@@ -1,6 +1,6 @@
 import { DefaultEventsMap, Namespace, Socket } from "socket.io"
 import { callForQuestion, callForSummaries, callForTitle } from "../utils/AIQA"
-import { MAX_POST_QUESTIONS } from "../utils/constants"
+import { MAX_GENERATED_POST_QUESTIONS } from "../utils/constants"
 import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
 import { PostType } from "../models/post.model"
@@ -14,7 +14,7 @@ import { generateUuid5 } from "weaviate-client"
 const initialSession: PostSession = {
   initialPostText: "",
   context: [],
-  maxQuestions: MAX_POST_QUESTIONS,
+  maxQuestions: MAX_GENERATED_POST_QUESTIONS + 1, // +1 to count the initial question
 }
 
 export function createPostSocket(

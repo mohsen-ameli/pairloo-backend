@@ -7,6 +7,10 @@ export function cosineSimilarity(vecA: number[], vecB: number[]): number {
   return dot / (normA * normB)
 }
 
+export function dotProduct(vecA: number[], vecB: number[]): number {
+  return vecA.reduce((sum, a, i) => sum + a * vecB[i], 0)
+}
+
 // export async function getEmbedding(sentence: string) {
 //   // Create feature extraction pipeline
 //   const extractor = await pipeline(

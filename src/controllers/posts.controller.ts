@@ -53,8 +53,17 @@ export async function myPostGet(req: Request, res: Response) {
   const closestPosts = []
 
   for (const p of post.closestPosts || []) {
-    const closeUser = (await User.findById(p.userId))!
-    const closePost = closeUser?.posts.id(p.postId)!
+    const closeUser = await User.findById(p.userId)
+    const closePost = closeUser?.posts.id(p.postId)
+
+    // The matching post has been deleted, so we remove the reference to it from the closestPosts array
+    if (!closeUser || !closePost) {
+      await User.updateOne(
+        { _id: userId, "posts._id": postId },
+        { $pull: { "posts.$.closestPosts": { postId: p.postId, userId: p.userId } } }
+      )
+      continue
+    }
 
     await User.updateUserPostImages(closePost)
     await User.updateUserPicture(closeUser)
