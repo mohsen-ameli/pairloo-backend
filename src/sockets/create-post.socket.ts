@@ -1,16 +1,20 @@
 import { DefaultEventsMap, Namespace, Socket } from "socket.io"
-import { callForQuestion, callForSummaryAndEmbedding, callForTitle } from "../utils/AIQA"
-import { MAX_POST_QUESTIONS } from "../utils/constants"
+import { callForQuestion, callForSummaries, callForTitle } from "../utils/AIQA"
+import { MAX_GENERATED_POST_QUESTIONS } from "../utils/constants"
 import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
 import { PostType } from "../models/post.model"
 import { ImageType, PostSession, QnaType } from "../types/session.types"
 import { sendObject } from "../utils/s3"
+import { LocationType } from "../types/location.type"
+import { weaviateClient } from "../server"
+import { generateEmbedding } from "../utils/AIModel"
+import { generateUuid5 } from "weaviate-client"
 
 const initialSession: PostSession = {
   initialPostText: "",
   context: [],
-  maxQuestions: MAX_POST_QUESTIONS,
+  maxQuestions: MAX_GENERATED_POST_QUESTIONS + 1, // +1 to count the initial question
 }
 
 export function createPostSocket(
@@ -34,7 +38,7 @@ export function createPostSocket(
 
       if (lastPost.isDraft) {
         session.context = lastPost.qna
-        session.initialPostText = lastPost.content
+        session.initialPostText = lastPost.initialPostText
         socket.emit("draft-restored", session.context)
       }
     }
@@ -81,11 +85,24 @@ export function createPostSocket(
 
     socket.on(
       "submit",
-      async (title: string, numMatches: number, publicPost: boolean, images: ImageType[]) => {
-        const { summary, embedding } = await callForSummaryAndEmbedding(session)
-        const postImages: string[] = []
+      async (newPost: {
+        title: string
+        numMatches: number
+        publicPost: boolean
+        images: ImageType[] | undefined
+        location: LocationType
+        distance: number
+      }) => {
+        const { title, numMatches, publicPost, images, location, distance } = newPost
 
-        for (const img of images) {
+        if (!weaviateClient) {
+          socket.emit("error", "Weaviate client not initialized")
+          socket.disconnect(true)
+          return
+        }
+
+        const postImages: string[] = []
+        for (const img of images || []) {
           const { file, mimeType } = img
           let fileName: string | null = ""
           if (file && mimeType) {
@@ -98,23 +115,24 @@ export function createPostSocket(
           }
         }
 
+        const { needSummary, provideSummary } = await callForSummaries(session)
+        const needEmbedding = await generateEmbedding(needSummary)
+        const provideEmbedding = await generateEmbedding(provideSummary)
+
         const post: Partial<PostType> = {
           title,
-          content: session.initialPostText,
-          // @ts-ignore
-          images: postImages,
           publicPost,
           numMatches,
-          summary,
+          needSummary,
+          provideSummary,
+          initialPostText: session.initialPostText,
+          images: postImages,
           qna: session.context,
-          embedding,
           closestPosts: null,
           isDraft: false,
         }
-        const closestPosts = await getClosestPosts(userId, post, numMatches)
-        post.closestPosts = closestPosts
 
-        // Change the existing draft value to false
+        // Insert to MongoDB
         const user = await User.findById(userId)
         if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
           await User.updateOne(
@@ -124,9 +142,30 @@ export function createPostSocket(
         } else {
           await User.updateOne({ _id: userId }, { $push: { posts: post } })
         }
-
         const updatedUser = await User.findById(userId)
-        const postId = updatedUser!.posts.slice(-1)[0]._id
+        const postId = updatedUser?.posts[updatedUser.posts.length - 1]._id.toString()!
+
+        // Insert to weaviate
+        const weaviatePosts = weaviateClient.collections.use("Post")
+        await weaviatePosts.data.insert({
+          properties: { userId, postId, location, distance },
+          vectors: { needEmbedding, provideEmbedding },
+          id: generateUuid5(postId),
+        })
+
+        // Get closest posts
+        const closestPosts = await getClosestPosts({
+          userId,
+          K: numMatches,
+          location,
+          distance,
+          needEmbedding,
+          provideEmbedding,
+        })
+        await User.updateOne(
+          { _id: userId, "posts._id": postId },
+          { $set: { "posts.$.closestPosts": closestPosts } }
+        )
 
         socket.emit("success", postId)
         session = structuredClone(initialSession)
@@ -187,7 +226,7 @@ async function saveDraft(userId: string, session: PostSession) {
         { _id: userId, "posts._id": lastPost._id },
         {
           $set: {
-            "posts.$.content": session.initialPostText,
+            "posts.$.initialPostText": session.initialPostText,
             "posts.$.qna": session.context,
           },
         }
@@ -198,10 +237,9 @@ async function saveDraft(userId: string, session: PostSession) {
 
   // Create new draft post if no draft exists
   const draftPost: Partial<PostType> = {
-    content: session.initialPostText,
+    initialPostText: session.initialPostText,
     qna: session.context,
     summary: "",
-    embedding: [],
     publicPost: false,
     numMatches: 5,
     isDraft: true,

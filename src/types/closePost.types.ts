@@ -1,6 +1,5 @@
-import mongoose from "mongoose"
-
 export type ClosePost = {
-  item: mongoose.Types.ObjectId
+  postId: string
+  userId: string
   score: number
 }

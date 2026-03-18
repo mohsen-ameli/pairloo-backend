@@ -45,11 +45,12 @@ export const searchLocations = async (req: Request, res: Response) => {
           },
         },
       },
+      {
+        $sort: { population: -1 },
+      },
     ])
 
-    // sort by population descending
-    const locations = results.sort((a, b) => b.population - a.population)
-    res.json(locations)
+    res.json(results)
   } catch (error) {
     console.error("Error searching locations:", error)
     res.status(500).json({ error: "Failed to search locations" })

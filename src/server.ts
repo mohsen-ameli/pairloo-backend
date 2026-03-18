@@ -29,6 +29,7 @@ import { test } from "./controllers/test.controller"
 import { chatSocket } from "./sockets/chat.socket"
 import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
+import weaviate, { WeaviateClient, ApiKey } from "weaviate-client"
 
 const app = express()
 
@@ -87,6 +88,20 @@ const chatIo = io.of("/chat").use(authSocketMiddleware)
 // Sockets - Handlers
 createPostSocket(createPostIo)
 chatSocket(chatIo)
+
+export let weaviateClient: WeaviateClient | null = null
+async function getWeaviateClient() {
+  if (!weaviateClient) {
+    const weaviateUrl = process.env.WEAVIATE_URL!
+    const weaviateApiKey = process.env.WEAVIATE_API_KEY!
+
+    weaviateClient = await weaviate.connectToWeaviateCloud(weaviateUrl, {
+      authCredentials: new ApiKey(weaviateApiKey),
+    })
+  }
+}
+
+getWeaviateClient()
 
 // Connect to MongoDB and start the server
 mongoose
