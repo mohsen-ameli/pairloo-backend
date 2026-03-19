@@ -125,6 +125,8 @@ export async function postGet(req: Request, res: Response) {
         initialPostText: "$posts.initialPostText",
         images: "$posts.images",
         createdAt: "$posts.createdAt",
+        location: "$posts.location",
+        distance: "$posts.distance",
       },
     },
   ])
