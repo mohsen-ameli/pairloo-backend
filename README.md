@@ -96,3 +96,9 @@ If you want clear out the port forwards, run the following
 ```bash
 adb reverse --remove-all
 ```
+
+If android emulator is lagging, this might help:
+
+```bash
+echo "QuickbootFileBacked = off" >> ~/.android/advancedFeatures.ini
+```
