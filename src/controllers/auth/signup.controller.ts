@@ -26,7 +26,6 @@ export async function signupPost(req: Request, res: Response) {
     if (errors) return res.status(400).json({ errors })
     const userId = newUser._id.toString()
 
-    // let url: string | null = null
     if (req.file) {
       try {
         const key = await sendObject("user-pictures", req.file.buffer, req.file.mimetype, userId)
