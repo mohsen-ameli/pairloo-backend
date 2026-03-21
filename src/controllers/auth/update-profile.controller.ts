@@ -33,33 +33,26 @@ export async function updateProfile(req: Request, res: Response) {
 
     if (req.file) {
       try {
-        const key = await sendObject(
-          "user-pictures",
-          req.file.buffer,
-          updates.pictureMimeType,
-          userId
-        )
+        const key = await sendObject("user-pictures", req.file.buffer, req.file.mimetype, userId)
         url = await getObject(key)
-        updates.picture = {
-          key,
-          url,
-          mimeType: updates.pictureMimeType,
-        }
+        updates.picture = key
       } catch (err) {
         console.error("Error uploading profile picture:", err)
         return res.status(500).json({ error: "Failed to upload profile picture." })
       }
     }
 
-    const updatedUser = await User.findByIdAndUpdate(userId, updates, { new: true })
+    const updatedUser = await User.findByIdAndUpdate(userId, updates, { returnDocument: "after" })
       .select(
         "_id username firstName lastName phoneNumber country city state latitude longitude timezone locationId email picture"
       )
       .lean()
     if (!updatedUser) return res.status(404).json({ error: "User not found" })
 
-    res.json(updatedUser)
+    await User.updateUserPicture(updatedUser)
+
+    return res.json(updatedUser)
   } catch (err) {
-    res.status(500).json({ error: "Server error" })
+    return res.status(500).json({ error: "Server error" })
   }
 }

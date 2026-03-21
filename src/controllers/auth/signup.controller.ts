@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
 import createJWT from "../../utils/create-jwt"
+import { sendObject } from "../../utils/s3"
 
 export async function signupPost(req: Request, res: Response) {
   const userData = {
@@ -17,22 +18,65 @@ export async function signupPost(req: Request, res: Response) {
     locationId: req.body.locationId,
     email: req.body.email.toLowerCase(),
   }
+
   try {
-    const user = new User(userData)
-    const err = user.validateSync()
+    const newUser = new User(userData)
+    const err = newUser.validateSync()
     const errors = await handleSignupErrors(err, userData)
     if (errors) return res.status(400).json({ errors })
-    await user.save()
+    const userId = newUser._id.toString()
 
-    const { accessToken, refreshToken } = await createJWT(user._id.toString())
+    if (req.file) {
+      try {
+        const key = await sendObject("user-pictures", req.file.buffer, req.file.mimetype, userId)
+        newUser.picture = key
+      } catch (err) {
+        console.error("Error uploading profile picture:", err)
+        return res.status(500).json({ error: "Failed to upload profile picture." })
+      }
+    }
 
-    res.status(201).json({
+    await newUser.save()
+
+    const user = await User.findOne(
+      { _id: userId },
+      {
+        _id: 1,
+        username: 1,
+        firstName: 1,
+        lastName: 1,
+        picture: 1,
+        phoneNumber: 1,
+        country: 1,
+        city: 1,
+        state: 1,
+        latitude: 1,
+        longitude: 1,
+        timezone: 1,
+        locationId: 1,
+        email: 1,
+        createdAt: 1,
+        updatedAt: 1,
+      }
+    ).lean()
+
+    if (!user) {
+      return res.status(400).json({
+        errors: { general: "Invalid email. Please check your email address and try again." },
+      })
+    }
+
+    await User.updateUserPicture(user)
+
+    const { accessToken, refreshToken } = await createJWT(userId)
+
+    return res.status(201).json({
       ...user,
       accessToken,
       refreshToken,
     })
   } catch (err: any) {
-    res.status(500).json({ errors: { general: err.message } })
+    return res.status(500).json({ errors: { general: err.message } })
   }
 }
 
