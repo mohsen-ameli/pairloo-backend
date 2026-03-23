@@ -19,6 +19,13 @@ export interface UserType extends mongoose.Document {
   email: string
   picture?: string | null
   posts: mongoose.Types.DocumentArray<PostType>
+  followers: mongoose.Types.ObjectId[]
+  following: mongoose.Types.ObjectId[]
+  reviews: {
+    postId: mongoose.Types.ObjectId
+    rating: number
+    review: string
+  }[]
   createdAt: Date
   updatedAt: Date
 }
@@ -101,6 +108,36 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       unique: false,
     },
     posts: [postSchema],
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    reviews: [
+      {
+        postId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "post",
+        },
+        rating: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 5,
+        },
+        review: {
+          type: String,
+          required: false,
+        },
+      },
+    ],
   },
   { timestamps: true }
 )
