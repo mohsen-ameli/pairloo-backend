@@ -22,7 +22,7 @@ export interface UserType extends mongoose.Document {
   followers: mongoose.Types.ObjectId[]
   following: mongoose.Types.ObjectId[]
   reviews: {
-    postId: mongoose.Types.ObjectId
+    userId: mongoose.Types.ObjectId
     rating: number
     review: string
   }[]
@@ -122,9 +122,9 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
     ],
     reviews: [
       {
-        postId: {
+        userId: {
           type: mongoose.Schema.Types.ObjectId,
-          ref: "post",
+          ref: "user",
         },
         rating: {
           type: Number,
@@ -143,7 +143,7 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
 )
 
 // Update the user's post images with new signed URLs if expired
-userSchema.statics.updateUserPostImages = async function updateUserPostImages(post: PostType) {
+userSchema.statics.updateUserPostImages = async function (post: PostType) {
   if (!post || !post.images || post.images.length === 0) return post
 
   const newImages = []
@@ -160,9 +160,7 @@ userSchema.statics.updateUserPostImages = async function updateUserPostImages(po
 }
 
 // Update user's profile picture with new signed URL if expired
-userSchema.statics.updateUserPicture = async function updateUserPicture(
-  users: UserType[] | UserType
-) {
+userSchema.statics.updateUserPicture = async function (users: UserType[] | UserType) {
   if (!users || (users instanceof Array && users.length === 0)) return
   if (!Array.isArray(users)) {
     users = [users]

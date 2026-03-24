@@ -18,16 +18,22 @@ async function storePostsToWeaviate(posts: PostType[], user: UserType) {
     const needEmbedding = await generateEmbedding(post.needSummary)
     const provideEmbedding = await generateEmbedding(post.provideSummary)
     try {
+      let properties = {
+        userId: user._id.toString(),
+        postId: post._id.toString(),
+      }
+
+      if (post.location && post.distance) {
+        // @ts-ignore
+        properties.location = {
+          latitude: post.location.latitude,
+          longitude: post.location.longitude,
+        }
+        // @ts-ignore
+        properties.distance = post.distance
+      }
       await weaviatePosts.data.insert({
-        properties: {
-          userId: user._id.toString(),
-          postId: post._id.toString(),
-          location: {
-            latitude: post.location.latitude,
-            longitude: post.location.longitude,
-          },
-          distance: post.distance,
-        },
+        properties,
         vectors: {
           needEmbedding,
           provideEmbedding,

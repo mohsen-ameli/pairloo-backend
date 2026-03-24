@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import User from "../../models/user.model"
+import User, { UserType } from "../../models/user.model"
 import mongoose from "mongoose"
 
 export async function userProfileGet(req: Request, res: Response) {
@@ -13,7 +13,7 @@ export async function userProfileGet(req: Request, res: Response) {
     return res.status(400).json({ error: "Invalid user ID" })
   }
 
-  const user = await User.aggregate([
+  const userAggregate = await User.aggregate<UserType>([
     { $match: { _id: new mongoose.Types.ObjectId(userId) } },
     {
       $project: {
@@ -32,6 +32,7 @@ export async function userProfileGet(req: Request, res: Response) {
               title: "$$post.title",
               location: "$$post.location",
               images: "$$post.images",
+              createdAt: "$$post.createdAt",
             },
           },
         },
@@ -58,11 +59,17 @@ export async function userProfileGet(req: Request, res: Response) {
     },
   ])
 
+  const user = userAggregate[0]
+
   if (!user) {
     return res.status(404).json({ error: "User not found" })
   }
 
   await User.updateUserPicture(user)
 
-  return res.json(user[0])
+  for (const post of user.posts) {
+    await User.updateUserPostImages(post)
+  }
+
+  return res.json(user)
 }
