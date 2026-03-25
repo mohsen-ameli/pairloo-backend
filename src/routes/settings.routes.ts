@@ -4,8 +4,8 @@ import { Router } from "express"
 
 const upload = multer({ storage: multer.memoryStorage() })
 
-const router = Router()
+const settingsRoute = Router()
 
-router.post("/update-profile", upload.single("picture"), updateProfile)
+settingsRoute.post("/update-profile", upload.single("picture"), updateProfile)
 
-export default router
+export default settingsRoute

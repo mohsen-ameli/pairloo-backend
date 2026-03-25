@@ -11,8 +11,8 @@ export interface PostType extends mongoose.Document {
   summary: string
   needSummary: string
   provideSummary: string
-  location: LocationType
-  distance: number
+  location?: LocationType
+  distance?: number
   images?: string[]
   publicPost: boolean
   numMatches: number
@@ -44,11 +44,11 @@ const postSchema = new mongoose.Schema<PostType>({
       longitude: { type: Number, required: true },
       latitude: { type: Number, required: true },
     },
-    required: true,
+    required: false,
   },
   distance: {
     type: Number,
-    required: true,
+    required: false,
   },
   images: {
     type: [String],

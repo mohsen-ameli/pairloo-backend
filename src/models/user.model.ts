@@ -19,6 +19,13 @@ export interface UserType extends mongoose.Document {
   email: string
   picture?: string | null
   posts: mongoose.Types.DocumentArray<PostType>
+  followers: mongoose.Types.ObjectId[]
+  following: mongoose.Types.ObjectId[]
+  reviews: {
+    userId: mongoose.Types.ObjectId
+    rating: number
+    review: string
+  }[]
   createdAt: Date
   updatedAt: Date
 }
@@ -101,12 +108,42 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       unique: false,
     },
     posts: [postSchema],
+    followers: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    following: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+      },
+    ],
+    reviews: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "user",
+        },
+        rating: {
+          type: Number,
+          required: true,
+          min: 1,
+          max: 5,
+        },
+        review: {
+          type: String,
+          required: false,
+        },
+      },
+    ],
   },
   { timestamps: true }
 )
 
 // Update the user's post images with new signed URLs if expired
-userSchema.statics.updateUserPostImages = async function updateUserPostImages(post: PostType) {
+userSchema.statics.updateUserPostImages = async function (post: PostType) {
   if (!post || !post.images || post.images.length === 0) return post
 
   const newImages = []
@@ -123,9 +160,7 @@ userSchema.statics.updateUserPostImages = async function updateUserPostImages(po
 }
 
 // Update user's profile picture with new signed URL if expired
-userSchema.statics.updateUserPicture = async function updateUserPicture(
-  users: UserType[] | UserType
-) {
+userSchema.statics.updateUserPicture = async function (users: UserType[] | UserType) {
   if (!users || (users instanceof Array && users.length === 0)) return
   if (!Array.isArray(users)) {
     users = [users]
