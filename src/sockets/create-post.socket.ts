@@ -239,7 +239,6 @@ async function saveDraft(userId: string, session: PostSession) {
   const draftPost: Partial<PostType> = {
     initialPostText: session.initialPostText,
     qna: session.context,
-    summary: "",
     publicPost: false,
     numMatches: 5,
     isDraft: true,
