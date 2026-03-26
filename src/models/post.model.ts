@@ -8,7 +8,6 @@ export interface PostType extends mongoose.Document {
   postId: mongoose.Types.ObjectId
   title: string
   initialPostText: string
-  summary: string
   needSummary: string
   provideSummary: string
   location?: LocationType

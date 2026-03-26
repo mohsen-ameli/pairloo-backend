@@ -38,40 +38,10 @@ export async function signupPost(req: Request, res: Response) {
 
     await newUser.save()
 
-    const user = await User.findOne(
-      { _id: userId },
-      {
-        _id: 1,
-        username: 1,
-        firstName: 1,
-        lastName: 1,
-        picture: 1,
-        phoneNumber: 1,
-        country: 1,
-        city: 1,
-        state: 1,
-        latitude: 1,
-        longitude: 1,
-        timezone: 1,
-        locationId: 1,
-        email: 1,
-        createdAt: 1,
-        updatedAt: 1,
-      }
-    ).lean()
-
-    if (!user) {
-      return res.status(400).json({
-        errors: { general: "Invalid email. Please check your email address and try again." },
-      })
-    }
-
-    await User.updateUserPicture(user)
-
     const { accessToken, refreshToken } = await createJWT(userId)
 
     return res.status(201).json({
-      ...user,
+      _id: newUser._id,
       accessToken,
       refreshToken,
     })

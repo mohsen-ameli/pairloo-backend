@@ -43,29 +43,7 @@ export async function tokenPost(req: Request, res: Response) {
   const userInfo = jose.decodeJwt(data.id_token) as any
 
   // Find user in DB
-  const user = await User.findOne(
-    {
-      email: userInfo.email,
-    },
-    {
-      _id: 1,
-      username: 1,
-      firstName: 1,
-      lastName: 1,
-      picture: 1,
-      phoneNumber: 1,
-      country: 1,
-      city: 1,
-      state: 1,
-      latitude: 1,
-      longitude: 1,
-      timezone: 1,
-      locationId: 1,
-      email: 1,
-      createdAt: 1,
-      updatedAt: 1,
-    }
-  ).lean()
+  const user = await User.findOne({ email: userInfo.email }, { _id: 1, picture: 1 }).lean()
 
   if (!user) {
     return res.status(409).json({
@@ -77,14 +55,9 @@ export async function tokenPost(req: Request, res: Response) {
     })
   }
 
-  await User.updateUserPicture(user)
-
   // Update user picture if not set
   if (!user.picture) {
-    user.set("picture", {
-      key: "Google",
-      url: userInfo.picture,
-    })
+    user.set("picture", userInfo.picture)
     await user.save()
   }
 
@@ -121,7 +94,7 @@ export async function tokenPost(req: Request, res: Response) {
 
   // For native platforms, return both tokens in the response body
   return res.json({
-    ...user,
+    _id: user._id,
     accessToken,
     refreshToken,
   })

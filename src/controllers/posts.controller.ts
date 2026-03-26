@@ -20,7 +20,7 @@ export async function postListGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
   const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.title posts.initialPostText posts.createdAt posts.images posts.isDraft posts.closestPosts"
+    "posts._id posts.title posts.initialPostText posts.createdAt posts.images posts.isDraft posts.publicPost posts.closestPosts"
   )
 
   for (const post of posts?.posts || []) {
