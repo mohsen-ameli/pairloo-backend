@@ -43,7 +43,7 @@ export async function tokenPost(req: Request, res: Response) {
   const userInfo = jose.decodeJwt(data.id_token) as any
 
   // Find user in DB
-  const user = await User.findOne({ email: userInfo.email }, { _id: 1, picture: 1 }).lean()
+  const user = await User.findOne({ email: userInfo.email }, { _id: 1, picture: 1 })
 
   if (!user) {
     return res.status(409).json({

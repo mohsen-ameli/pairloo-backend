@@ -8,7 +8,7 @@ import { userGet } from "../controllers/users/user.controller"
 const userRoutes = Router()
 
 userRoutes.get("/profile/:id", userProfileGet)
-userRoutes.get("/user/:id", userGet)
+userRoutes.get("/user", userGet)
 userRoutes.post("/follow", followUser)
 userRoutes.post("/unfollow", unfollowUser)
 userRoutes.post("/review", reviewUser)

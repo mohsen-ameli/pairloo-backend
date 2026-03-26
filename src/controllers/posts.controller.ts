@@ -11,8 +11,9 @@ export async function postListGet(req: Request, res: Response) {
       title: string
       initialPostText: string
       createdAt: Date
-      images?: string[]
-      isDraft?: boolean
+      images: string[]
+      isDraft: boolean
+      publicPost: boolean
       closestPosts?: Array<{ score: number; item: string }>
     }>
   }
