@@ -4,39 +4,6 @@ import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 
-export async function postListGet(req: Request, res: Response) {
-  interface ProjectedDocument {
-    posts: Array<{
-      _id: string
-      title: string
-      initialPostText: string
-      createdAt: Date
-      images: string[]
-      isDraft: boolean
-      publicPost: boolean
-      closestPosts?: Array<{ score: number; item: string }>
-    }>
-  }
-
-  const userId = req.user!.sub
-
-  const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-    "posts._id posts.title posts.initialPostText posts.createdAt posts.images posts.isDraft posts.publicPost posts.closestPosts"
-  )
-
-  for (const post of posts?.posts || []) {
-    await User.updateUserPostImages(post as any)
-  }
-
-  if (!posts) {
-    return res.status(404).json({ message: "User not found" })
-  }
-
-  posts.posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-
-  res.status(200).json(posts.posts)
-}
-
 // Get a specific post belonging to the user
 export async function myPostGet(req: Request, res: Response) {
   const postId = req.params.id as string
