@@ -41,11 +41,11 @@ export async function myReviewsGet(req: Request, res: Response) {
     },
     {
       $project: {
-        ratingCount: { $size: { $ifNull: ["$ratings", []] } },
+        ratingCount: { $size: { $ifNull: ["$reviews", []] } },
         ratingAvg: {
           $cond: [
-            { $gt: [{ $size: { $ifNull: ["$ratings", []] } }, 0] },
-            { $avg: "$ratings.rating" },
+            { $gt: [{ $size: { $ifNull: ["$reviews", []] } }, 0] },
+            { $avg: "$reviews.rating" },
             0,
           ],
         },
