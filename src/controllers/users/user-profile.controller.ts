@@ -84,11 +84,11 @@ export async function userProfileGet(req: Request, res: Response) {
         createdAt: 1,
         followersCount: { $size: { $ifNull: ["$followers", []] } },
         followingCount: { $size: { $ifNull: ["$following", []] } },
-        ratingCount: { $size: { $ifNull: ["$ratings", []] } },
+        ratingCount: { $size: { $ifNull: ["$reviews", []] } },
         ratingAvg: {
           $cond: [
-            { $gt: [{ $size: { $ifNull: ["$ratings", []] } }, 0] },
-            { $avg: "$ratings.rating" },
+            { $gt: [{ $size: { $ifNull: ["$reviews", []] } }, 0] },
+            { $avg: "$reviews.rating" },
             0,
           ],
         },
