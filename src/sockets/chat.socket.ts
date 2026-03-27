@@ -157,10 +157,12 @@ export function chatSocket(
         conversationId,
         content,
         attachments,
+        replyTo,
       }: {
         conversationId: string
         content?: string
         attachments?: Attachment[]
+        replyTo?: string
       }) => {
         const urls = []
         const keys = []
@@ -177,32 +179,69 @@ export function chatSocket(
           }
         }
 
-        const message = await Message.create({
+        const messageData: any = {
           conversationId: new Types.ObjectId(conversationId),
           senderId: userId,
           content,
           attachments: keys,
-        })
+        }
 
-        const populatedMessage = await Message.findById(message._id).populate<{
-          senderId: {
-            _id: Types.ObjectId
-            username: string
-            picture: string
-          }
-        }>({
-          path: "senderId",
-          select: "username picture",
-        })
+        if (replyTo) {
+          messageData.replyTo = new Types.ObjectId(replyTo)
+        }
+
+        const message = await Message.create(messageData)
+
+        const populatedMessage = await Message.findById(message._id)
+          .populate<{
+            senderId: {
+              _id: Types.ObjectId
+              username: string
+              picture: string
+            }
+          }>({
+            path: "senderId",
+            select: "username picture",
+          })
+          .populate<{
+            replyTo: {
+              _id: Types.ObjectId
+              content: string
+              senderId: {
+                _id: Types.ObjectId
+                username: string
+              }
+            }
+          }>({
+            path: "replyTo",
+            select: "content senderId",
+            populate: {
+              path: "senderId",
+              select: "username",
+            },
+          })
 
         if (!populatedMessage) {
           socket.emit("error", "Message not found after creation")
           return
         }
 
+        const replyToData =
+          populatedMessage.replyTo && populatedMessage.replyTo._id
+            ? {
+                _id: populatedMessage.replyTo._id,
+                content: populatedMessage.replyTo.content,
+                sender: {
+                  _id: (populatedMessage.replyTo.senderId as any)._id,
+                  username: (populatedMessage.replyTo.senderId as any).username,
+                },
+              }
+            : undefined
+
         const formattedMessage = {
           ...populatedMessage.toObject(),
           attachments: urls,
+          replyTo: replyToData,
           sender: {
             _id: populatedMessage.senderId._id,
             username: populatedMessage.senderId.username,
@@ -236,6 +275,23 @@ export function chatSocket(
           path: "senderId",
           select: "username picture",
         })
+        .populate<{
+          replyTo: {
+            _id: Types.ObjectId
+            content: string
+            senderId: {
+              _id: Types.ObjectId
+              username: string
+            }
+          }
+        }>({
+          path: "replyTo",
+          select: "content senderId",
+          populate: {
+            path: "senderId",
+            select: "username",
+          },
+        })
         .lean()
 
       if (messages.length === 0) {
@@ -267,6 +323,18 @@ export function chatSocket(
           }
         }
 
+        const replyToData =
+          msg.replyTo && (msg.replyTo as any)._id
+            ? {
+                _id: (msg.replyTo as any)._id,
+                content: (msg.replyTo as any).content,
+                sender: {
+                  _id: (msg.replyTo as any).senderId._id,
+                  username: (msg.replyTo as any).senderId.username,
+                },
+              }
+            : undefined
+
         formattedMessages.push({
           _id: msg._id,
           conversationId: msg.conversationId,
@@ -274,6 +342,7 @@ export function chatSocket(
           createdAt: msg.createdAt,
           updatedAt: msg.updatedAt,
           attachments,
+          replyTo: replyToData,
           sender: {
             _id: msg.senderId._id,
             username: msg.senderId.username.toString(),

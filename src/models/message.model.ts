@@ -6,6 +6,7 @@ export interface MessageType extends mongoose.Document {
   senderId: mongoose.Types.ObjectId
   content: string
   attachments?: string[]
+  replyTo?: mongoose.Types.ObjectId
   createdAt: Date
   updatedAt: Date
 }
@@ -26,6 +27,10 @@ export const messageSchema = new mongoose.Schema<MessageType>({
   },
   attachments: {
     type: [String],
+  },
+  replyTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "message",
   },
   createdAt: {
     type: Date,
