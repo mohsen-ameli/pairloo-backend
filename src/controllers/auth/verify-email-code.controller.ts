@@ -18,27 +18,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
     }
 
     if (!isSignUp) {
-      const user = await User.findOne(
-        { email: email.toLowerCase() },
-        {
-          _id: 1,
-          username: 1,
-          firstName: 1,
-          lastName: 1,
-          picture: 1,
-          phoneNumber: 1,
-          country: 1,
-          city: 1,
-          state: 1,
-          latitude: 1,
-          longitude: 1,
-          timezone: 1,
-          locationId: 1,
-          email: 1,
-          createdAt: 1,
-          updatedAt: 1,
-        }
-      ).lean()
+      const user = await User.findOne({ email: email.toLowerCase() }, { _id: 1 }).lean()
 
       if (!user) {
         return res.status(400).json({
@@ -46,14 +26,12 @@ export async function verifyEmailCode(req: Request, res: Response) {
         })
       }
 
-      await User.updateUserPicture(user)
-
       await Verification.deleteMany({ email: email.toLowerCase() })
 
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
       return res.status(200).json({
-        ...user,
+        _id: user._id,
         accessToken,
         refreshToken,
       })

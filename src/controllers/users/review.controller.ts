@@ -21,16 +21,23 @@ export async function reviewUser(req: Request, res: Response) {
       // Update existing review
       userToReview.reviews[existingReviewIndex].rating = rating
       userToReview.reviews[existingReviewIndex].review = review
+      await userToReview.save()
     } else {
       // Add new review
-      userToReview.reviews.push({
-        userId: new mongoose.Types.ObjectId(myId),
-        rating,
-        review,
-      })
+      await User.updateOne(
+        { _id: userId },
+        {
+          $push: {
+            reviews: {
+              userId: new mongoose.Types.ObjectId(myId),
+              rating,
+              review,
+            },
+          },
+        }
+      )
     }
 
-    await userToReview.save()
     return res.status(200).json({ message: "Review submitted successfully" })
   } catch (error) {
     console.error("Error submitting review:", error)
