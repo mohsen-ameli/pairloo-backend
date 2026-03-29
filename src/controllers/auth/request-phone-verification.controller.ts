@@ -1,8 +1,8 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
-import Verification from "../../models/verification.model"
 import { snsClient } from "../../server"
 import { PublishCommand } from "@aws-sdk/client-sns"
+import PhoneVerification from "../../models/phone-verification.model"
 
 export async function requestPhoneVerification(req: Request, res: Response) {
   const { callingCode, phoneNumber }: { callingCode: string; phoneNumber: string } = req.body
@@ -17,7 +17,7 @@ export async function requestPhoneVerification(req: Request, res: Response) {
       })
     }
 
-    const existingVerification = await Verification.findOne({
+    const existingVerification = await PhoneVerification.findOne({
       phoneNumber: fullNumber,
     })
     let verificationCode: number
@@ -27,7 +27,7 @@ export async function requestPhoneVerification(req: Request, res: Response) {
     } else {
       verificationCode = Math.floor(100000 + Math.random() * 900000) // Generate a 6-digit code
       try {
-        await Verification.create({
+        await PhoneVerification.create({
           phoneNumber: fullNumber,
           code: verificationCode,
         })

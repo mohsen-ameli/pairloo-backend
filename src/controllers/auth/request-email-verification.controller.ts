@@ -2,7 +2,7 @@ import { Request, Response } from "express"
 import User from "../../models/user.model"
 import { EMAIL_USER } from "../../utils/constants"
 import { transporter } from "../../server"
-import Verification from "../../models/verification.model"
+import EmailVerification from "../../models/email-verification.model"
 
 export async function requestEmailVerification(req: Request, res: Response) {
   let { email, isSignUp }: { email: string; isSignUp: boolean } = req.body
@@ -16,11 +16,11 @@ export async function requestEmailVerification(req: Request, res: Response) {
       })
     } else if (!user && !isSignUp) {
       return res.status(400).json({
-        error: "Invalid email. Please check your email address again and try again.",
+        error: "Email not found. Please check your email address and try again.",
       })
     }
 
-    const existingVerification = await Verification.findOne({ email })
+    const existingVerification = await EmailVerification.findOne({ email })
     let verificationCode: number
 
     if (existingVerification) {
@@ -28,12 +28,11 @@ export async function requestEmailVerification(req: Request, res: Response) {
     } else {
       verificationCode = Math.floor(100000 + Math.random() * 900000) // 6-digit code
       try {
-        await Verification.create({
+        await EmailVerification.create({
           email,
           code: verificationCode,
         })
       } catch (err) {
-        console.log(err)
         throw new Error("Failed to create verification record. Please try again.")
       }
     }
