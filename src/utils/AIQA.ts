@@ -22,7 +22,7 @@ export async function callForQuestion(session: PostSession) {
             You must not exceed the maximum number of questions.
             You may stop asking questions before reaching the maximum if you believe no further questions are necessary.
 
-        3.  Your answer must be a JSON format containing three fields:
+        3.  Your answer must be a JSON format containing four fields:
           - "intention": The intention of the question, either "need" or "provide".
           - "type": What type of question you will be asking next: Pick one of the following: short_answer, multiple_choice(including yes or no), multi_select.
           - "question": The next relevant question to ask the user.
