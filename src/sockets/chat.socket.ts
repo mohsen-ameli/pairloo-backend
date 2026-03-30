@@ -207,6 +207,7 @@ export function chatSocket(
             replyTo: {
               _id: Types.ObjectId
               content: string
+              attachments: string[]
               senderId: {
                 _id: Types.ObjectId
                 username: string
@@ -214,7 +215,7 @@ export function chatSocket(
             }
           }>({
             path: "replyTo",
-            select: "content senderId",
+            select: "content attachments senderId",
             populate: {
               path: "senderId",
               select: "username",
@@ -226,17 +227,23 @@ export function chatSocket(
           return
         }
 
-        const replyToData =
-          populatedMessage.replyTo && populatedMessage.replyTo._id
-            ? {
-                _id: populatedMessage.replyTo._id,
-                content: populatedMessage.replyTo.content,
-                sender: {
-                  _id: (populatedMessage.replyTo.senderId as any)._id,
-                  username: (populatedMessage.replyTo.senderId as any).username,
-                },
-              }
-            : undefined
+        let replyToData: any = undefined
+        if (populatedMessage.replyTo && populatedMessage.replyTo._id) {
+          const replyAttachments = []
+          for (const key of populatedMessage.replyTo.attachments || []) {
+            const url = await getObject(key)
+            if (url) replyAttachments.push(url)
+          }
+          replyToData = {
+            _id: populatedMessage.replyTo._id,
+            content: populatedMessage.replyTo.content,
+            attachments: replyAttachments,
+            sender: {
+              _id: (populatedMessage.replyTo.senderId as any)._id,
+              username: (populatedMessage.replyTo.senderId as any).username,
+            },
+          }
+        }
 
         const formattedMessage = {
           ...populatedMessage.toObject(),
@@ -279,6 +286,7 @@ export function chatSocket(
           replyTo: {
             _id: Types.ObjectId
             content: string
+            attachments: string[]
             senderId: {
               _id: Types.ObjectId
               username: string
@@ -286,7 +294,7 @@ export function chatSocket(
           }
         }>({
           path: "replyTo",
-          select: "content senderId",
+          select: "content attachments senderId",
           populate: {
             path: "senderId",
             select: "username",
@@ -323,17 +331,23 @@ export function chatSocket(
           }
         }
 
-        const replyToData =
-          msg.replyTo && (msg.replyTo as any)._id
-            ? {
-                _id: (msg.replyTo as any)._id,
-                content: (msg.replyTo as any).content,
-                sender: {
-                  _id: (msg.replyTo as any).senderId._id,
-                  username: (msg.replyTo as any).senderId.username,
-                },
-              }
-            : undefined
+        let replyToData: any = undefined
+        if (msg.replyTo && (msg.replyTo as any)._id) {
+          const replyAttachments = []
+          for (const key of (msg.replyTo as any).attachments || []) {
+            const url = await getObject(key)
+            if (url) replyAttachments.push(url)
+          }
+          replyToData = {
+            _id: (msg.replyTo as any)._id,
+            content: (msg.replyTo as any).content,
+            attachments: replyAttachments,
+            sender: {
+              _id: (msg.replyTo as any).senderId._id,
+              username: (msg.replyTo as any).senderId.username,
+            },
+          }
+        }
 
         formattedMessages.push({
           _id: msg._id,
