@@ -9,33 +9,20 @@ export async function requestEmailVerification(req: Request, res: Response) {
   email = email.trim().toLowerCase()
 
   try {
-    const user = await User.findOne({ email }, { _id: 1 })
-    if (isSignUp && user) {
-      return res.status(400).json({
-        error: "Email already in use. Please use a different email.",
-      })
-    } else if (!user && !isSignUp) {
-      return res.status(400).json({
-        error: "Email not found. Please check your email address and try again.",
-      })
-    }
+    if (isSignUp) {
+      const existingUser = await User.findOne({ email }, { _id: 1 })
 
-    const existingVerification = await EmailVerification.findOne({ email })
-    let verificationCode: number
-
-    if (existingVerification) {
-      verificationCode = existingVerification.code
-    } else {
-      verificationCode = Math.floor(100000 + Math.random() * 900000) // 6-digit code
-      try {
-        await EmailVerification.create({
-          email,
-          code: verificationCode,
+      if (existingUser) {
+        return res.status(400).json({
+          error: "Email already in use. Please use a different email.",
         })
-      } catch (err) {
-        throw new Error("Failed to create verification record. Please try again.")
       }
     }
+
+    await EmailVerification.deleteMany({ email })
+
+    const verificationCode = Math.floor(100000 + Math.random() * 900000) // 6-digit code
+    await EmailVerification.create({ email, code: verificationCode })
 
     const mailOptions = {
       from: EMAIL_USER,

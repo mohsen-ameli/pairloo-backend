@@ -10,31 +10,24 @@ export async function requestPhoneVerification(req: Request, res: Response) {
   const fullNumber = "+" + callingCode.trim() + phoneNumber.trim().toLowerCase()
 
   try {
-    const user = await User.findOne({ phoneNumber: fullNumber }, { _id: 1 })
-    if (user) {
+    const existingUser = await User.findOne({ phoneNumber: fullNumber }, { _id: 1 })
+    if (existingUser) {
       return res.status(400).json({
         error: "Phone number already in use. Please use a different phone number.",
       })
     }
 
-    const existingVerification = await PhoneVerification.findOne({
-      phoneNumber: fullNumber,
-    })
-    let verificationCode: number
+    await PhoneVerification.deleteMany({ phoneNumber: fullNumber })
 
-    if (existingVerification) {
-      verificationCode = existingVerification.code
-    } else {
-      verificationCode = Math.floor(100000 + Math.random() * 900000) // Generate a 6-digit code
-      try {
-        await PhoneVerification.create({
-          phoneNumber: fullNumber,
-          code: verificationCode,
-        })
-      } catch (err) {
-        console.log(err)
-        throw new Error("Failed to create verification record. Please try again.")
-      }
+    const verificationCode = Math.floor(100000 + Math.random() * 900000) // Generate a 6-digit code
+    try {
+      await PhoneVerification.create({
+        phoneNumber: fullNumber,
+        code: verificationCode,
+      })
+    } catch (err) {
+      console.log(err)
+      throw new Error("Failed to create verification record. Please try again.")
     }
 
     // Send SMS via AWS SNS
