@@ -7,7 +7,7 @@ export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   postId: mongoose.Types.ObjectId
   title: string
-  initialPostText: string
+  description: string
   needSummary: string
   provideSummary: string
   location?: LocationType
@@ -26,9 +26,9 @@ const postSchema = new mongoose.Schema<PostType>({
     type: String,
     required: [true, "Post title is required"],
   },
-  initialPostText: {
+  description: {
     type: String,
-    required: [true, "Initial post text is required"],
+    required: [true, "Post description is required"],
   },
   needSummary: {
     type: String,
@@ -72,6 +72,8 @@ const postSchema = new mongoose.Schema<PostType>({
           },
           question: { type: String, required: true },
           options: { type: [String], required: false },
+          optional: { type: Boolean, required: false },
+          intention: { type: String, required: false },
         },
         answer: { type: [String], required: true },
       },
