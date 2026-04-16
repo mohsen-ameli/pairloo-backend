@@ -171,6 +171,14 @@ export function chatSocket(
           await Conversation.findByIdAndUpdate(conversationId, {
             lastMessage: formattedMessage,
           })
+
+          if (otherUserPushToken) {
+            await sendPushNotification(
+              otherUserPushToken,
+              populatedMessage.senderId.username,
+              content ? content : "Sent an attachment"
+            )
+          }
         }
       )
     )
