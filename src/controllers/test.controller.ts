@@ -6,6 +6,7 @@ import { generateEmbedding } from "../utils/AIModel"
 import { PostType } from "../models/post.model"
 import { generateUuid5 } from "weaviate-client"
 import { LocationType } from "../types/location.type"
+import { sendPushNotification } from "../utils/send-push-notification"
 
 async function storePostsToWeaviate(posts: PostType[], user: UserType) {
   if (!weaviateClient) {
@@ -210,9 +211,23 @@ export async function test(req: Request, res: Response) {
     throw new Error("Weaviate client not initialized")
   }
 
-  const postId = "69b711b38a5c8924c4293d05"
-  // const username = "noobmoe"
-  const post = await findPost(postId)
-  // const results = await closestPosts(postId, username)
-  return res.json(post)
+  // const postId = "69b711b38a5c8924c4293d05"
+  // // const username = "noobmoe"
+  // const post = await findPost(postId)
+  // // const results = await closestPosts(postId, username)
+  // return res.json(post)
+
+  const myId = "6953259c89bfe6ca51b7e1d6" //req.user!.sub
+  const user = await User.findById(myId)
+
+  if (!user || !user.expoPushToken) {
+    return res.status(404).json({ error: "User not found" })
+  }
+
+  await sendPushNotification(
+    user.expoPushToken,
+    "Test Notification",
+    "This is a test push notification from the server!"
+  )
+  res.json({ message: "Test push notification sent!" })
 }

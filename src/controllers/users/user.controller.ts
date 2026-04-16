@@ -148,7 +148,7 @@ export async function myUserGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
   const user = await User.findById(userId).select(
-    "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email createdAt updatedAt"
+    "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email expoPushToken createdAt updatedAt"
   )
 
   if (!user) {

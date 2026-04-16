@@ -31,6 +31,7 @@ import { chatSocket } from "./sockets/chat.socket"
 import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
 import weaviate, { WeaviateClient, ApiKey } from "weaviate-client"
+import Expo from "expo-server-sdk"
 
 const app = express()
 
@@ -47,6 +48,8 @@ const io = new Server(server, {
   serveClient: false,
   maxHttpBufferSize: 1e8, // 100 MB
 })
+
+export const expo = new Expo()
 
 export const ai = new GoogleGenAI({})
 export const openai = new OpenAI({})

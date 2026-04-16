@@ -5,6 +5,7 @@ import { Types } from "mongoose"
 import Message from "../models/message.model"
 import { getObject, sendObject } from "../utils/s3"
 import { Attachment } from "../types/attachment.type"
+import { sendPushNotification } from "../utils/send-push-notification"
 
 export function chatSocket(
   io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
@@ -13,6 +14,7 @@ export function chatSocket(
     let connected = false
     const userId = socket.user!.sub
     const user = await User.findById(userId)
+    let otherUserPushToken: string | undefined
 
     if (!user) {
       socket.emit("error", "User not found")
@@ -264,6 +266,14 @@ export function chatSocket(
         })
 
         io.to(conversationId).emit("lastMessageUpdated", conversationId, formattedMessage)
+
+        if (otherUserPushToken) {
+          await sendPushNotification(
+            otherUserPushToken,
+            populatedMessage.senderId.username,
+            content ? content : "Sent an attachment"
+          )
+        }
       }
     )
 
@@ -301,6 +311,14 @@ export function chatSocket(
           },
         })
         .lean()
+
+      const conversation = await Conversation.findById(conversationId).select("members").lean()
+      const otherMemberId = conversation?.members.find(memberId => memberId.toString() !== userId)
+
+      if (otherMemberId) {
+        const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
+        otherUserPushToken = otherUser?.expoPushToken
+      }
 
       if (messages.length === 0) {
         socket.emit("messages", [])

@@ -9,6 +9,7 @@ import {
   mySocialGet,
   myUserGet,
 } from "../controllers/users/user.controller"
+import { updateExpoPushToken } from "../controllers/users/update-expo-push-token.controller"
 
 const userRoutes = Router()
 
@@ -22,5 +23,7 @@ userRoutes.get("/my-user", myUserGet)
 userRoutes.post("/follow", followUser)
 userRoutes.post("/unfollow", unfollowUser)
 userRoutes.post("/review", reviewUser)
+
+userRoutes.post("/update-expo-push-token", updateExpoPushToken)
 
 export default userRoutes

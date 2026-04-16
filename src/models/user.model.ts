@@ -17,6 +17,7 @@ export interface UserType extends mongoose.Document {
   timezone: string
   locationId: number
   email: string
+  expoPushToken?: string
   picture?: string | null
   posts: mongoose.Types.DocumentArray<PostType>
   followers: mongoose.Types.ObjectId[]
@@ -105,6 +106,11 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       trim: true,
       lowercase: true,
       validate: [isEmail, "Please enter a valid email"],
+    },
+    expoPushToken: {
+      type: String,
+      required: false,
+      unique: false,
     },
     picture: {
       type: String,
