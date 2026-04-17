@@ -19,6 +19,9 @@ export async function generateQuestion(contents: string): Promise<Question | nul
   const response = await ai.models.generateContent({
     model: MODEL,
     contents,
+    config: {
+      responseMimeType: "application/json",
+    },
   })
 
   if (!response || !response.text) {
@@ -85,7 +88,6 @@ export async function generateSummaries(contents: string) {
     contents,
     config: {
       responseMimeType: "application/json",
-      responseJsonSchema: summariesSchema,
     },
   })
 
