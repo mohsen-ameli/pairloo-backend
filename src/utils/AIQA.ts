@@ -4,7 +4,7 @@ import { generateText, generateQuestion, generateSummaries, generateEmbedding } 
 import { EMBEDDING_DIMENSION } from "./constants"
 
 export async function callForQuestion(session: PostSession) {
-  const { initialPostText, context, maxQuestions } = session
+  const { context, maxQuestions } = session
   const step = context.length
   const prompt = `Instructions on how to answer:
         1.  Based on the following context, generate the next relevant question to
@@ -22,7 +22,7 @@ export async function callForQuestion(session: PostSession) {
             You must not exceed the maximum number of questions.
             You may stop asking questions before reaching the maximum if you believe no further questions are necessary.
 
-        3.  Your answer must be a JSON format containing three fields:
+        3.  Your answer must be a JSON format containing four fields:
           - "intention": The intention of the question, either "need" or "provide".
           - "type": What type of question you will be asking next: Pick one of the following: short_answer, multiple_choice(including yes or no), multi_select.
           - "question": The next relevant question to ask the user.
@@ -31,37 +31,33 @@ export async function callForQuestion(session: PostSession) {
 
         4. If the type of question is multiple_choice or multi_select, ensure that there are no options such as "Other (please specify)". All options must be definitive choices.
 
-        5. Here is the context: ${JSON.stringify(context)}. And this is the initial Post Text: ${initialPostText}. `
+        5. Here is the context: ${JSON.stringify(context)}`
 
   const response = await generateQuestion(prompt)
   return response
 }
 
 export async function callForTitle(session: PostSession): Promise<string> {
-  const { initialPostText, context } = session
   const prompt = `Based on the following post information, generate a concise and engaging title (5-10 words
       maximum) that captures the essence of the post.
       Do not include any quotation marks or special formatting. Do not include phrases like "The user is looking for..." or "The post is about...".
       Examples of good titles: "Looking for a Running Partner in NYC", "Offering Guitar Lessons for Beginners", "Seeking Advice on Home Gardening".
       Examples of bad titles: "User needs help", "Post about selling bike", "Looking for something".
-      Context: ${JSON.stringify(context)} Initial Post Text: ${initialPostText}`
+      Context: ${JSON.stringify(session.context)}`
 
   const title = await generateText(prompt)
   return title
 }
 
-export async function callForSummaries(session: {
-  initialPostText: string
-  context: { question: any; answer: any }[]
-}) {
+export async function callForSummaries(session: { context: { question: any; answer: any }[] }) {
   const prompt = `
-  Strictly based on the following context and initial post text,
+  Strictly based on the following context,
   generate two summaries, one for the need part and one for the provide part of the post.
   These summaries will then be used to generate embeddings for matching similar posts.
   If the post does not have a need or provide part, generate an empty summary for that part.
   Your answer must be in a JSON format: { "needSummary": "summary of the need part", "provideSummary": "summary of the provide part" }.
   Do not include any other formatting like bullet points or punctuation or **.
-  Context: ${JSON.stringify(session.context)} Initial Post Text: ${session.initialPostText}`
+  Context: ${JSON.stringify(session.context)}`
 
   const summaries = await generateSummaries(prompt)
   if (!summaries) {

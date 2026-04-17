@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import Verification from "../../models/verification.model"
+import PhoneVerification from "../../models/phone-verification.model"
 
 export async function verifyPhoneCode(req: Request, res: Response) {
   const {
@@ -11,7 +11,7 @@ export async function verifyPhoneCode(req: Request, res: Response) {
   const fullNumber = "+" + callingCode.trim() + phoneNumber.trim().toLowerCase()
 
   try {
-    const userVerify = await Verification.findOne({
+    const userVerify = await PhoneVerification.findOne({
       phoneNumber: fullNumber,
       code: Number(code),
     })

@@ -1,13 +1,13 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
-import Verification from "../../models/verification.model"
 import createJWT from "../../utils/create-jwt"
+import EmailVerification from "../../models/email-verification.model"
 
 export async function verifyEmailCode(req: Request, res: Response) {
   const { email, code, isSignUp }: { email: string; code: string; isSignUp: boolean } = req.body
 
   try {
-    const userVerify = await Verification.findOne({
+    const userVerify = await EmailVerification.findOne({
       email: email.toLowerCase(),
       code: Number(code),
     })
@@ -26,7 +26,7 @@ export async function verifyEmailCode(req: Request, res: Response) {
         })
       }
 
-      await Verification.deleteMany({ email: email.toLowerCase() })
+      await EmailVerification.deleteMany({ email: email.toLowerCase() })
 
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
@@ -39,7 +39,6 @@ export async function verifyEmailCode(req: Request, res: Response) {
 
     return res.status(200).json({ message: "Email verified successfully." })
   } catch (err: any) {
-    console.error("Error in verifyEmailCode:", err)
     return res.status(500).json({
       errors: { general: "Failed to connect. Please try again later." },
     })
