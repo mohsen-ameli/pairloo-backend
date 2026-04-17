@@ -1,7 +1,8 @@
-import { ai, openai } from "../server"
+import { ai } from "../server"
 import { summariesSchema, Question, questionSchema } from "../types/question.types"
 import { AI_ON, EMBEDDING_DIMENSION } from "./constants"
 
+const MODEL = "gemini-3.1-flash-lite-preview"
 const AI_OFF_MESSAGE =
   "AI mode is disabled in the backend env file. Therefore, this is a placeholder value. Enable AI mode to get actual results."
 
@@ -16,11 +17,10 @@ export async function generateQuestion(contents: string): Promise<Question | nul
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: MODEL,
     contents,
     config: {
       responseMimeType: "application/json",
-      responseJsonSchema: questionSchema,
     },
   })
 
@@ -28,8 +28,12 @@ export async function generateQuestion(contents: string): Promise<Question | nul
     throw new Error("No response from AI model")
   }
 
+  if (response.text.trim() === "NO_QUESTION") {
+    return null
+  }
+
   const question = questionSchema.parse(JSON.parse(response.text))
-  return question.question === "NO_QUESTION" ? null : question
+  return question
 }
 
 export async function generateText(contents: string): Promise<string> {
@@ -38,7 +42,7 @@ export async function generateText(contents: string): Promise<string> {
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: MODEL,
     contents,
   })
 
@@ -80,11 +84,10 @@ export async function generateSummaries(contents: string) {
   }
 
   const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
+    model: MODEL,
     contents,
     config: {
       responseMimeType: "application/json",
-      responseJsonSchema: summariesSchema,
     },
   })
 

@@ -2,41 +2,31 @@ import { Request, Response } from "express"
 import User from "../../models/user.model"
 import { EMAIL_USER } from "../../utils/constants"
 import { transporter } from "../../server"
-import Verification from "../../models/verification.model"
+import EmailVerification from "../../models/email-verification.model"
 
 export async function requestEmailVerification(req: Request, res: Response) {
   let { email, isSignUp }: { email: string; isSignUp: boolean } = req.body
   email = email.trim().toLowerCase()
 
   try {
-    const user = await User.findOne({ email }, { _id: 1 })
-    if (isSignUp && user) {
+    const existingUser = await User.findOne({ email }, { _id: 1 })
+
+    if (isSignUp && existingUser) {
       return res.status(400).json({
         error: "Email already in use. Please use a different email.",
       })
-    } else if (!user && !isSignUp) {
+    }
+
+    if (!isSignUp && !existingUser) {
       return res.status(400).json({
-        error: "Invalid email. Please check your email address again and try again.",
+        error: "No account found with that email. Please sign up first.",
       })
     }
 
-    const existingVerification = await Verification.findOne({ email })
-    let verificationCode: number
+    await EmailVerification.deleteMany({ email })
 
-    if (existingVerification) {
-      verificationCode = existingVerification.code
-    } else {
-      verificationCode = Math.floor(100000 + Math.random() * 900000) // 6-digit code
-      try {
-        await Verification.create({
-          email,
-          code: verificationCode,
-        })
-      } catch (err) {
-        console.log(err)
-        throw new Error("Failed to create verification record. Please try again.")
-      }
-    }
+    const verificationCode = Math.floor(100000 + Math.random() * 900000) // 6-digit code
+    await EmailVerification.create({ email, code: verificationCode })
 
     const mailOptions = {
       from: EMAIL_USER,

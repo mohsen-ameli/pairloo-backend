@@ -91,7 +91,6 @@ async function closestPosts(postId: string, username: string) {
     searchFor: {
       postId,
       userId: user._id.toString(),
-      initialPostText: post.initialPostText,
       title: post.title,
     },
     results,
