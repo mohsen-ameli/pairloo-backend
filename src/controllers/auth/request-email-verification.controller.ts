@@ -9,14 +9,18 @@ export async function requestEmailVerification(req: Request, res: Response) {
   email = email.trim().toLowerCase()
 
   try {
-    if (isSignUp) {
-      const existingUser = await User.findOne({ email }, { _id: 1 })
+    const existingUser = await User.findOne({ email }, { _id: 1 })
 
-      if (existingUser) {
-        return res.status(400).json({
-          error: "Email already in use. Please use a different email.",
-        })
-      }
+    if (isSignUp && existingUser) {
+      return res.status(400).json({
+        error: "Email already in use. Please use a different email.",
+      })
+    }
+
+    if (!isSignUp && !existingUser) {
+      return res.status(400).json({
+        error: "No account found with that email. Please sign up first.",
+      })
     }
 
     await EmailVerification.deleteMany({ email })
