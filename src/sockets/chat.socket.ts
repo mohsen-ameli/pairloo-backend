@@ -85,15 +85,12 @@ export function chatSocket(
             }
           }
 
-          const messageData: any = {
+          const messageData = {
             conversationId: new Types.ObjectId(conversationId),
             senderId: userId,
             content,
             attachments: keys,
-          }
-
-          if (replyTo) {
-            messageData.replyTo = new Types.ObjectId(replyTo)
+            replyTo: replyTo ? new Types.ObjectId(replyTo) : undefined,
           }
 
           const message = await Message.create(messageData)
@@ -133,20 +130,20 @@ export function chatSocket(
             return
           }
 
-          let replyToData: any = undefined
-          if (populatedMessage.replyTo && (populatedMessage.replyTo as any)._id) {
+          let replyToData
+          if (populatedMessage.replyTo) {
             const replyAttachments = []
-            for (const key of (populatedMessage.replyTo as any).attachments || []) {
+            for (const key of populatedMessage.replyTo.attachments) {
               const url = await getObject(key)
               if (url) replyAttachments.push(url)
             }
             replyToData = {
-              _id: (populatedMessage.replyTo as any)._id,
-              content: (populatedMessage.replyTo as any).content,
+              _id: populatedMessage.replyTo._id,
+              content: populatedMessage.replyTo.content,
               attachments: replyAttachments,
               sender: {
-                _id: (populatedMessage.replyTo as any).senderId._id,
-                username: (populatedMessage.replyTo as any).senderId.username,
+                _id: populatedMessage.replyTo.senderId._id,
+                username: populatedMessage.replyTo.senderId.username,
               },
             }
           }
@@ -213,7 +210,7 @@ export function chatSocket(
           })
           .lean()
 
-        await User.updateUserPicture(conversations.flatMap(conv => conv.members as any))
+        await User.updateUserPicture(conversations.flatMap(conv => conv.members))
 
         const formattedConversations = conversations.map(conv => {
           if (conv.lastMessage && conv.lastMessage.senderId) {
@@ -360,20 +357,20 @@ export function chatSocket(
             }
           }
 
-          let replyToData: any = undefined
-          if ((msg.replyTo as any) && (msg.replyTo as any)._id) {
+          let replyToData
+          if (msg.replyTo) {
             const replyAttachments = []
-            for (const key of (msg.replyTo as any).attachments || []) {
+            for (const key of msg.replyTo.attachments) {
               const url = await getObject(key)
               if (url) replyAttachments.push(url)
             }
             replyToData = {
-              _id: (msg.replyTo as any)._id,
-              content: (msg.replyTo as any).content,
+              _id: msg.replyTo._id,
+              content: msg.replyTo.content,
               attachments: replyAttachments,
               sender: {
-                _id: (msg.replyTo as any).senderId._id,
-                username: (msg.replyTo as any).senderId.username,
+                _id: msg.replyTo.senderId._id,
+                username: msg.replyTo.senderId.username,
               },
             }
           }
