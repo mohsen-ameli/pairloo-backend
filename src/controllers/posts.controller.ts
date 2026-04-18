@@ -108,8 +108,8 @@ export async function postGet(req: Request, res: Response) {
     },
   ])
 
-  await User.updateUserPostImages(userPosts[0] as any)
-  await User.updateUserPicture(userPosts[0] as any)
+  await User.updateUserPostImages(userPosts[0])
+  await User.updateUserPicture(userPosts[0])
 
   res.status(200).json(userPosts[0])
 }

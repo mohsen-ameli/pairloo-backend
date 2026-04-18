@@ -56,6 +56,124 @@ export function chatSocket(
     )
 
     socket.on(
+      "newMessage",
+      handleSocketEvent(
+        "newMessage",
+        async ({
+          conversationId,
+          content,
+          attachments,
+          replyTo,
+        }: {
+          conversationId: string
+          content?: string
+          attachments?: Attachment[]
+          replyTo?: string
+        }) => {
+          const urls = []
+          const keys = []
+          if (attachments && attachments.length > 0) {
+            for (const attachment of attachments) {
+              const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
+              if (!fileName) {
+                socket.emit("error", "Failed to upload attachment")
+                return
+              }
+              const url = await getObject(fileName)
+              urls.push(url)
+              keys.push(fileName)
+            }
+          }
+
+          const messageData = {
+            conversationId: new Types.ObjectId(conversationId),
+            senderId: userId,
+            content,
+            attachments: keys,
+            replyTo: replyTo ? new Types.ObjectId(replyTo) : undefined,
+          }
+
+          const message = await Message.create(messageData)
+
+          const populatedMessage = await Message.findById(message._id)
+            .populate<{
+              senderId: {
+                _id: Types.ObjectId
+                username: string
+                picture: string
+              }
+            }>({
+              path: "senderId",
+              select: "username picture",
+            })
+            .populate<{
+              replyTo: {
+                _id: Types.ObjectId
+                content: string
+                attachments: string[]
+                senderId: {
+                  _id: Types.ObjectId
+                  username: string
+                }
+              }
+            }>({
+              path: "replyTo",
+              select: "content attachments senderId",
+              populate: {
+                path: "senderId",
+                select: "username",
+              },
+            })
+
+          if (!populatedMessage) {
+            socket.emit("error", "Message not found after creation")
+            return
+          }
+
+          let replyToData
+          if (populatedMessage.replyTo) {
+            const replyAttachments = []
+            for (const key of populatedMessage.replyTo.attachments) {
+              const url = await getObject(key)
+              if (url) replyAttachments.push(url)
+            }
+            replyToData = {
+              _id: populatedMessage.replyTo._id,
+              content: populatedMessage.replyTo.content,
+              attachments: replyAttachments,
+              sender: {
+                _id: populatedMessage.replyTo.senderId._id,
+                username: populatedMessage.replyTo.senderId.username,
+              },
+            }
+          }
+
+          const formattedMessage = {
+            _id: populatedMessage._id,
+            conversationId: populatedMessage.conversationId,
+            content: populatedMessage.content,
+            createdAt: populatedMessage.createdAt,
+            updatedAt: populatedMessage.updatedAt,
+            attachments: urls,
+            replyTo: replyToData,
+            sender: {
+              _id: populatedMessage.senderId._id,
+              username: populatedMessage.senderId.username,
+              picture: await getObject(populatedMessage.senderId.picture),
+            },
+          }
+
+          io.to(conversationId).emit("message", formattedMessage)
+
+          // Update lastMessage in Conversation
+          await Conversation.findByIdAndUpdate(conversationId, {
+            lastMessage: formattedMessage,
+          })
+        }
+      )
+    )
+
+    socket.on(
       "getConversations",
       handleSocketEvent("getConversations", async () => {
         const conversations = await Conversation.find({
@@ -92,7 +210,7 @@ export function chatSocket(
           })
           .lean()
 
-        await User.updateUserPicture(conversations.flatMap(conv => conv.members as any))
+        await User.updateUserPicture(conversations.flatMap(conv => conv.members))
 
         const formattedConversations = conversations.map(conv => {
           if (conv.lastMessage && conv.lastMessage.senderId) {
@@ -140,7 +258,6 @@ export function chatSocket(
 
         const conversation = await Conversation.create({
           members: memberIds,
-          createdBy: userId,
         })
 
         const connectedSockets = Array.from(io.sockets.values()).filter(s =>
@@ -175,79 +292,6 @@ export function chatSocket(
     )
 
     socket.on(
-      "newMessage",
-      handleSocketEvent(
-        "newMessage",
-        async ({
-          conversationId,
-          content,
-          attachments,
-        }: {
-          conversationId: string
-          content?: string
-          attachments?: Attachment[]
-        }) => {
-          const urls = []
-          const keys = []
-          if (attachments && attachments.length > 0) {
-            for (const attachment of attachments) {
-              const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
-              if (!fileName) {
-                socket.emit("error", "Failed to upload attachment")
-                return
-              }
-              const url = await getObject(fileName)
-              urls.push(url)
-              keys.push(fileName)
-            }
-          }
-
-          const message = await Message.create({
-            conversationId: new Types.ObjectId(conversationId),
-            senderId: userId,
-            content,
-            attachments: keys,
-          })
-
-          const populatedMessage = await Message.findById(message._id).populate<{
-            senderId: {
-              _id: Types.ObjectId
-              username: string
-              picture: string
-            }
-          }>({
-            path: "senderId",
-            select: "username picture",
-          })
-
-          if (!populatedMessage) {
-            socket.emit("error", "Message not found after creation")
-            return
-          }
-
-          const formattedMessage = {
-            ...populatedMessage.toObject(),
-            attachments: urls,
-            sender: {
-              _id: populatedMessage.senderId._id,
-              username: populatedMessage.senderId.username,
-              picture: await getObject(populatedMessage.senderId.picture),
-            },
-          }
-
-          io.to(conversationId).emit("message", formattedMessage)
-
-          // Update lastMessage in Conversation
-          await Conversation.findByIdAndUpdate(conversationId, {
-            lastMessage: formattedMessage,
-          })
-
-          io.to(conversationId).emit("lastMessageUpdated", conversationId, formattedMessage)
-        }
-      )
-    )
-
-    socket.on(
       "getMessages",
       handleSocketEvent("getMessages", async (conversationId: string) => {
         const messages = await Message.find({ conversationId })
@@ -263,6 +307,24 @@ export function chatSocket(
           }>({
             path: "senderId",
             select: "username picture",
+          })
+          .populate<{
+            replyTo: {
+              _id: Types.ObjectId
+              content: string
+              attachments: string[]
+              senderId: {
+                _id: Types.ObjectId
+                username: string
+              }
+            }
+          }>({
+            path: "replyTo",
+            select: "content attachments senderId",
+            populate: {
+              path: "senderId",
+              select: "username",
+            },
           })
           .lean()
 
@@ -295,6 +357,24 @@ export function chatSocket(
             }
           }
 
+          let replyToData
+          if (msg.replyTo) {
+            const replyAttachments = []
+            for (const key of msg.replyTo.attachments) {
+              const url = await getObject(key)
+              if (url) replyAttachments.push(url)
+            }
+            replyToData = {
+              _id: msg.replyTo._id,
+              content: msg.replyTo.content,
+              attachments: replyAttachments,
+              sender: {
+                _id: msg.replyTo.senderId._id,
+                username: msg.replyTo.senderId.username,
+              },
+            }
+          }
+
           formattedMessages.push({
             _id: msg._id,
             conversationId: msg.conversationId,
@@ -302,6 +382,7 @@ export function chatSocket(
             createdAt: msg.createdAt,
             updatedAt: msg.updatedAt,
             attachments,
+            replyTo: replyToData,
             sender: {
               _id: msg.senderId._id,
               username: msg.senderId.username.toString(),
