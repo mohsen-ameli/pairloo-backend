@@ -40,7 +40,8 @@ export async function requestEmailVerification(req: Request, res: Response) {
     return res.status(200).json({
       message: "Verification code sent to email.",
     })
-  } catch (err: any) {
+  } catch (err) {
+    console.error("Error in requestEmailVerification:", err)
     return res.status(400).json({
       error: "Failed to connect. Please try again later.",
     })
