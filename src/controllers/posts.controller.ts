@@ -4,7 +4,7 @@ import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 
-// Get a specific post belonging to the user
+// Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
   const postId = req.params.id as string
   const userId = req.user!.sub
@@ -44,8 +44,8 @@ export async function myPostGet(req: Request, res: Response) {
       firstName: closeUser.firstName,
       lastName: closeUser.lastName,
       picture: closeUser.picture,
-      initialPostText: closePost.initialPostText,
       title: closePost.title,
+      description: closePost.description,
       images: closePost.images,
       createdAt: closePost.createdAt,
     })
@@ -55,11 +55,13 @@ export async function myPostGet(req: Request, res: Response) {
     _id: post._id.toString(),
     images: post.images,
     title: post.title,
+    description: post.description,
     publicPost: post.publicPost,
     numMatches: post.numMatches,
-    initialPostText: post.initialPostText,
     qna: post.qna,
     createdAt: post.createdAt,
+    location: post.location,
+    distance: post.distance,
     closestPosts,
   })
 }
@@ -72,7 +74,13 @@ export async function postGet(req: Request, res: Response) {
     firstName: string
     lastName: string
     picture?: string | null
-    initialPostText: string
+    title: string
+    description: string
+    location?: {
+      type: string
+      coordinates: [number, number]
+    }
+    distance?: number
     images: string[]
     createdAt: Date
   }
@@ -90,7 +98,8 @@ export async function postGet(req: Request, res: Response) {
         lastName: 1,
         picture: 1,
         postId: "$posts._id",
-        initialPostText: "$posts.initialPostText",
+        title: "$posts.title",
+        description: "$posts.description",
         images: "$posts.images",
         createdAt: "$posts.createdAt",
         location: "$posts.location",
@@ -99,8 +108,8 @@ export async function postGet(req: Request, res: Response) {
     },
   ])
 
-  await User.updateUserPostImages(userPosts[0] as any)
-  await User.updateUserPicture(userPosts[0] as any)
+  await User.updateUserPostImages(userPosts[0])
+  await User.updateUserPicture(userPosts[0])
 
   res.status(200).json(userPosts[0])
 }

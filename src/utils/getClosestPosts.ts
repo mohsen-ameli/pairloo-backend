@@ -73,7 +73,6 @@ export async function getClosestPosts(params: {
       postId: matchPostId,
       userId: matchUserId,
       title: originalPost?.title,
-      initialPostText: originalPost?.initialPostText,
       distance: -result.metadata!.distance!, // weaviate returns a negative value, so we negate that
       score: result.score,
     })
