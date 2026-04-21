@@ -26,7 +26,7 @@ export async function requestPhoneVerification(req: Request, res: Response) {
         code: verificationCode,
       })
     } catch (err) {
-      console.log(err)
+      console.error(err)
       throw new Error("Failed to create verification record. Please try again.")
     }
 
@@ -40,9 +40,11 @@ export async function requestPhoneVerification(req: Request, res: Response) {
         })
       )
       if (!response.MessageId) {
+        console.error("Failed to send SMS:", response)
         throw new Error("Failed to send verification code. Please try again.")
       }
     } catch (err) {
+      console.error("Error sending SMS:", err)
       throw new Error("Failed to send verification code. Please try again.")
     }
 

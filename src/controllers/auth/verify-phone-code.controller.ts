@@ -22,7 +22,8 @@ export async function verifyPhoneCode(req: Request, res: Response) {
     }
 
     return res.status(200).json({ message: "Phone Number verified successfully." })
-  } catch (err: any) {
+  } catch (err) {
+    console.error("Error in verifyPhoneCode:", err)
     return res.status(500).json({
       error: "Failed to connect. Please try again later.",
     })
