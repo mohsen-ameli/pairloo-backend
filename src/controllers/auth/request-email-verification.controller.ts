@@ -42,7 +42,7 @@ export async function requestEmailVerification(req: Request, res: Response) {
     })
   } catch (err) {
     console.error("Error in requestEmailVerification:", err)
-    return res.status(400).json({
+    return res.status(500).json({
       error: "Failed to connect. Please try again later.",
     })
   }
