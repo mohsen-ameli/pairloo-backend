@@ -9,7 +9,7 @@ export async function updateExpoPushToken(req: Request, res: Response) {
   if (!expoPushToken) {
     return res.status(400).json({ error: "Expo push token is required" })
   } else if (!Expo.isExpoPushToken(expoPushToken)) {
-    throw new Error("Push token is not valid!")
+    return res.status(400).json({ error: "Push token is not valid!" })
   }
 
   try {
