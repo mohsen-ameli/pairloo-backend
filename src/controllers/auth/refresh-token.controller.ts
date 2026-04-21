@@ -11,23 +11,28 @@ export async function refreshTokenPost(req: Request, res: Response) {
     return res.status(400).json({ error: "Missing refresh token" })
   }
 
-  let payload: jose.JWTVerifyResult
   try {
-    payload = await jose.jwtVerify(refreshToken, new TextEncoder().encode(JWT_SECRET))
+    let payload: jose.JWTVerifyResult
+    try {
+      payload = await jose.jwtVerify(refreshToken, new TextEncoder().encode(JWT_SECRET))
+    } catch (err) {
+      return res.status(401).json({ error: "Invalid or expired refresh token" })
+    }
+
+    if (payload.payload.type !== "refresh") {
+      return res.status(401).json({ error: "Invalid token type" })
+    }
+
+    const user = await User.findById(payload.payload.sub)
+    if (!user) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    const { accessToken } = await createJWT(user._id.toString())
+
+    return res.json({ accessToken })
   } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired refresh token" })
+    console.error("Error refreshing token:", err)
+    return res.status(500).json({ error: "Internal server error" })
   }
-
-  if (payload.payload.type !== "refresh") {
-    return res.status(401).json({ error: "Invalid token type" })
-  }
-
-  const user = await User.findById(payload.payload.sub)
-  if (!user) {
-    return res.status(404).json({ error: "User not found" })
-  }
-
-  const { accessToken } = await createJWT(user._id.toString())
-
-  return res.json({ accessToken })
 }
