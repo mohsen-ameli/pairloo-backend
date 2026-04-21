@@ -343,76 +343,25 @@ export function chatSocket(
           return
         }
 
+        const conversation = await Conversation.findById(conversationId).select("members").lean()
+        const otherMemberId = conversation?.members.find(memberId => memberId.toString() !== userId)
+
+        if (otherMemberId) {
+          const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
+          otherUserPushToken = otherUser?.expoPushToken
+        }
+
         const map = new Map<string, string>()
 
-        io.to(conversationId).emit("message", formattedMessage)
-
-        // Update lastMessage in Conversation
-        await Conversation.findByIdAndUpdate(conversationId, {
-          lastMessage: formattedMessage,
-        })
-
-        io.to(conversationId).emit("lastMessageUpdated", conversationId, formattedMessage)
-
-        if (otherUserPushToken) {
-          await sendPushNotification(
-            otherUserPushToken,
-            populatedMessage.senderId.username,
-            content ? content : "Sent an attachment"
-          )
-        }
-      }
-    )
-
-    socket.on("getMessages", async (conversationId: string) => {
-      const messages = await Message.find({ conversationId })
-        .sort({
-          createdAt: 1,
-        })
-        .populate<{
-          senderId: {
-            _id: Types.ObjectId
-            username: string
-            picture?: string
-          }
-        }>({
-          path: "senderId",
-          select: "username picture",
-        })
-        .populate<{
-          replyTo: {
-            _id: Types.ObjectId
-            content: string
-            attachments: string[]
-            senderId: {
-              _id: Types.ObjectId
-              username: string
+        const formattedMessages = []
+        for (const msg of messages) {
+          const attachments = []
+          for (const key of msg.attachments || []) {
+            const url = await getObject(key)
+            if (url) {
+              attachments.push(url)
             }
           }
-        }>({
-          path: "replyTo",
-          select: "content attachments senderId",
-          populate: {
-            path: "senderId",
-            select: "username",
-          },
-        })
-        .lean()
-
-      const conversation = await Conversation.findById(conversationId).select("members").lean()
-      const otherMemberId = conversation?.members.find(memberId => memberId.toString() !== userId)
-
-      if (otherMemberId) {
-        const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
-        otherUserPushToken = otherUser?.expoPushToken
-      }
-
-      if (messages.length === 0) {
-        socket.emit("messages", [])
-        return
-      }
-
-      const map = new Map<string, string>()
 
           if (msg.senderId.picture) {
             if (map.has(msg.senderId.picture)) {
@@ -429,7 +378,7 @@ export function chatSocket(
           let replyToData
           if (msg.replyTo) {
             const replyAttachments = []
-            for (const key of msg.replyTo.attachments) {
+            for (const key of msg.replyTo.attachments || []) {
               const url = await getObject(key)
               if (url) replyAttachments.push(url)
             }
