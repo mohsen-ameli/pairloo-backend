@@ -300,116 +300,119 @@ export function chatSocket(
 
     socket.on(
       "getMessages",
-      handleSocketEvent("getMessages", async (conversationId: string, start: number, end) => {
-        const skip = Math.max(0, start)
-        const limit = Math.max(0, end - start)
+      handleSocketEvent(
+        "getMessages",
+        async (conversationId: string, start: number, end: number) => {
+          const skip = Math.max(0, start)
+          const limit = Math.max(0, end - start)
 
-        if (limit === 0) {
-          socket.emit("messages", [])
-          return
-        }
+          if (limit === 0) {
+            socket.emit("messages", [])
+            return
+          }
 
-        const messages = await Message.find({ conversationId })
-          .sort({
-            createdAt: -1,
-          })
-          .skip(skip)
-          .limit(limit)
-          .populate<{
-            senderId: {
-              _id: Types.ObjectId
-              username: string
-              picture?: string
-            }
-          }>({
-            path: "senderId",
-            select: "username picture",
-          })
-          .populate<{
-            replyTo: {
-              _id: Types.ObjectId
-              content: string
-              attachments: string[]
+          const messages = await Message.find({ conversationId })
+            .sort({
+              createdAt: -1,
+            })
+            .skip(skip)
+            .limit(limit)
+            .populate<{
               senderId: {
                 _id: Types.ObjectId
                 username: string
+                picture?: string
               }
-            }
-          }>({
-            path: "replyTo",
-            select: "content attachments senderId",
-            populate: {
+            }>({
               path: "senderId",
-              select: "username",
-            },
-          })
-          .lean()
+              select: "username picture",
+            })
+            .populate<{
+              replyTo: {
+                _id: Types.ObjectId
+                content: string
+                attachments: string[]
+                senderId: {
+                  _id: Types.ObjectId
+                  username: string
+                }
+              }
+            }>({
+              path: "replyTo",
+              select: "content attachments senderId",
+              populate: {
+                path: "senderId",
+                select: "username",
+              },
+            })
+            .lean()
 
-        if (messages.length === 0) {
-          socket.emit("messages", [])
-          return
-        }
-
-        const map = new Map<string, string>()
-
-        const formattedMessages = []
-        for (const msg of messages) {
-          const attachments = []
-          for (const key of msg.attachments || []) {
-            const url = await getObject(key)
-            if (url) {
-              attachments.push(url)
-            }
+          if (messages.length === 0) {
+            socket.emit("messages", [])
+            return
           }
 
-          if (msg.senderId.picture) {
-            if (map.has(msg.senderId.picture)) {
-              msg.senderId.picture = map.get(msg.senderId.picture)!
-            } else {
-              const url = await getObject(msg.senderId.picture)
+          const map = new Map<string, string>()
+
+          const formattedMessages = []
+          for (const msg of messages) {
+            const attachments = []
+            for (const key of msg.attachments || []) {
+              const url = await getObject(key)
               if (url) {
-                msg.senderId.picture = url
-                map.set(msg.senderId.picture, url)
+                attachments.push(url)
               }
             }
-          }
 
-          let replyToData
-          if (msg.replyTo) {
-            const replyAttachments = []
-            for (const key of msg.replyTo.attachments || []) {
-              const url = await getObject(key)
-              if (url) replyAttachments.push(url)
+            if (msg.senderId.picture) {
+              if (map.has(msg.senderId.picture)) {
+                msg.senderId.picture = map.get(msg.senderId.picture)!
+              } else {
+                const url = await getObject(msg.senderId.picture)
+                if (url) {
+                  msg.senderId.picture = url
+                  map.set(msg.senderId.picture, url)
+                }
+              }
             }
-            replyToData = {
-              _id: msg.replyTo._id,
-              content: msg.replyTo.content,
-              attachments: replyAttachments,
+
+            let replyToData
+            if (msg.replyTo) {
+              const replyAttachments = []
+              for (const key of msg.replyTo.attachments || []) {
+                const url = await getObject(key)
+                if (url) replyAttachments.push(url)
+              }
+              replyToData = {
+                _id: msg.replyTo._id,
+                content: msg.replyTo.content,
+                attachments: replyAttachments,
+                sender: {
+                  _id: msg.replyTo.senderId._id,
+                  username: msg.replyTo.senderId.username,
+                },
+              }
+            }
+
+            formattedMessages.push({
+              _id: msg._id,
+              conversationId: msg.conversationId,
+              content: msg.content,
+              createdAt: msg.createdAt,
+              updatedAt: msg.updatedAt,
+              attachments,
+              replyTo: replyToData,
               sender: {
-                _id: msg.replyTo.senderId._id,
-                username: msg.replyTo.senderId.username,
+                _id: msg.senderId._id,
+                username: msg.senderId.username.toString(),
+                picture: msg.senderId.picture,
               },
-            }
+            })
           }
 
-          formattedMessages.push({
-            _id: msg._id,
-            conversationId: msg.conversationId,
-            content: msg.content,
-            createdAt: msg.createdAt,
-            updatedAt: msg.updatedAt,
-            attachments,
-            replyTo: replyToData,
-            sender: {
-              _id: msg.senderId._id,
-              username: msg.senderId.username.toString(),
-              picture: msg.senderId.picture,
-            },
-          })
+          socket.emit("messages", formattedMessages)
         }
-
-        socket.emit("messages", formattedMessages)
-      })
+      )
     )
 
     if (!connected) {
