@@ -33,7 +33,13 @@ export async function updateProfile(req: Request, res: Response) {
 
     if (req.file) {
       try {
-        const key = await sendObject("user-pictures", req.file.buffer, req.file.mimetype, userId)
+        const versionedFileName = `${userId}-${Date.now()}`
+        const key = await sendObject(
+          "user-pictures",
+          req.file.buffer,
+          req.file.mimetype,
+          versionedFileName
+        )
         url = await getObject(key)
         updates.picture = key
       } catch (err) {
@@ -51,8 +57,9 @@ export async function updateProfile(req: Request, res: Response) {
 
     await User.updateUserPicture(updatedUser)
 
-    return res.json(updatedUser)
+    return res.status(200).json(updatedUser)
   } catch (err) {
+    console.error("Error updating profile:", err)
     return res.status(500).json({ error: "Server error" })
   }
 }
