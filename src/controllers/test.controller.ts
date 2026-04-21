@@ -15,9 +15,15 @@ async function storePostsToWeaviate(posts: PostType[], user: UserType) {
   const weaviatePosts = weaviateClient.collections.use("Post")
 
   for (const post of posts) {
-    const needEmbedding = await generateEmbedding(post.needSummary)
-    const provideEmbedding = await generateEmbedding(post.provideSummary)
     try {
+      const existing = await weaviatePosts.data.exists(generateUuid5(post._id.toString()))
+      if (existing) {
+        console.log("post with id", post._id.toString(), "already exists in Weaviate, skipping")
+        continue
+      }
+
+      const needEmbedding = await generateEmbedding(post.needSummary)
+      const provideEmbedding = await generateEmbedding(post.provideSummary)
       let properties = {
         userId: user._id.toString(),
         postId: post._id.toString(),
@@ -43,8 +49,9 @@ async function storePostsToWeaviate(posts: PostType[], user: UserType) {
       console.log("inserted post with id", post._id.toString())
       await new Promise(resolve => setTimeout(resolve, 100)) // add delay to avoid overwhelming the server
     } catch (error) {
-      console.error("Error inserting post into Weaviate with id: ", post._id.toString())
+      console.error("Error processing post with id: ", post._id.toString())
       console.log(error)
+      continue
     }
   }
 }
@@ -57,12 +64,12 @@ async function storeAllPostsToWeaviate() {
 }
 
 // get closest posts for a given post of a given user
-async function closestPosts(postId: string, username: string) {
+async function closestPosts(postId: string, userId: string) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
 
-  const user = await User.findOne({ username })
+  const user = await User.findById(userId)
   const post = user?.posts.id(postId)
 
   if (!post || !user) {
@@ -80,7 +87,6 @@ async function closestPosts(postId: string, username: string) {
 
   const results = await getClosestPosts({
     userId: user._id.toString(),
-    K: post.numMatches,
     location: wPost.properties.location as LocationType,
     distance: wPost.properties.distance as number,
     provideEmbedding: wPost.vectors.provideEmbedding as number[],
@@ -209,9 +215,13 @@ export async function test(req: Request, res: Response) {
     throw new Error("Weaviate client not initialized")
   }
 
-  const postId = "69b711b38a5c8924c4293d05"
-  // const username = "noobmoe"
-  const post = await findPost(postId)
-  // const results = await closestPosts(postId, username)
-  return res.json(post)
+  const postId = req.query.postId as string
+  const userId = req.query.userId as string
+  // // const username = "noobmoe"
+  // const post = await findPost(postId)
+  // // const results = await closestPosts(postId, username)
+  // return res.json(post)
+
+  const closePosts = await closestPosts(postId, userId)
+  return res.json(closePosts)
 }
