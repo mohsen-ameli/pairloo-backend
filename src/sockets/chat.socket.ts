@@ -167,7 +167,14 @@ export function chatSocket(
 
           // Update lastMessage in Conversation
           await Conversation.findByIdAndUpdate(conversationId, {
-            lastMessage: formattedMessage,
+            lastMessage: {
+              conversationId: populatedMessage.conversationId,
+              senderId: populatedMessage.senderId._id,
+              content: populatedMessage.content,
+              attachments: urls,
+              createdAt: populatedMessage.createdAt,
+              updatedAt: populatedMessage.updatedAt,
+            },
           })
         }
       )
@@ -293,11 +300,21 @@ export function chatSocket(
 
     socket.on(
       "getMessages",
-      handleSocketEvent("getMessages", async (conversationId: string) => {
+      handleSocketEvent("getMessages", async (conversationId: string, start: number, end) => {
+        const skip = Math.max(0, start)
+        const limit = Math.max(0, end - start)
+
+        if (limit === 0) {
+          socket.emit("messages", [])
+          return
+        }
+
         const messages = await Message.find({ conversationId })
           .sort({
-            createdAt: 1,
+            createdAt: -1,
           })
+          .skip(skip)
+          .limit(limit)
           .populate<{
             senderId: {
               _id: Types.ObjectId
@@ -360,7 +377,7 @@ export function chatSocket(
           let replyToData
           if (msg.replyTo) {
             const replyAttachments = []
-            for (const key of msg.replyTo.attachments) {
+            for (const key of msg.replyTo.attachments || []) {
               const url = await getObject(key)
               if (url) replyAttachments.push(url)
             }
