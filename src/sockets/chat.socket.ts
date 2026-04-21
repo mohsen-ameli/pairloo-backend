@@ -362,15 +362,17 @@ export function chatSocket(
             return
           }
 
-        const conversation = await Conversation.findById(conversationId).select("members").lean()
-        const otherMemberId = conversation?.members.find(memberId => memberId.toString() !== userId)
+          const conversation = await Conversation.findById(conversationId).select("members").lean()
+          const otherMemberId = conversation?.members.find(
+            memberId => memberId.toString() !== userId
+          )
 
-        if (otherMemberId) {
-          const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
-          otherUserPushToken = otherUser?.expoPushToken
-        }
+          if (otherMemberId) {
+            const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
+            otherUserPushToken = otherUser?.expoPushToken
+          }
 
-        const map = new Map<string, string>()
+          const map = new Map<string, string>()
 
           const formattedMessages = []
           for (const msg of messages) {
