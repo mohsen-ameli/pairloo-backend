@@ -160,9 +160,10 @@ export async function myPostsGet(req: Request, res: Response) {
 export async function myUserGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
-  const user = await User.findById(userId).select(
-    "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email expoPushToken createdAt updatedAt"
-  )
+  try {
+    const user = await User.findById(userId).select(
+      "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email expoPushToken createdAt updatedAt"
+    )
 
     if (!user) {
       return res.status(404).json({ error: "User not found" })
