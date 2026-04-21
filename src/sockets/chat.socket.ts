@@ -171,7 +171,7 @@ export function chatSocket(
               conversationId: populatedMessage.conversationId,
               senderId: populatedMessage.senderId._id,
               content: populatedMessage.content,
-              attachments: urls,
+              attachments: keys,
               createdAt: populatedMessage.createdAt,
               updatedAt: populatedMessage.updatedAt,
             },
