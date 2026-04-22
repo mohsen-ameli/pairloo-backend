@@ -175,6 +175,7 @@ export function createPostSocket(
           // Get closest posts
           const closestPosts = await getClosestPosts({
             userId,
+            postId,
             location,
             distance,
             needEmbedding,

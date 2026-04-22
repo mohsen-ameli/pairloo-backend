@@ -79,8 +79,8 @@ const postSchema = new mongoose.Schema<PostType>({
     type: [
       {
         score: { type: Number, required: true },
-        userId: { type: String, required: true },
-        postId: { type: String, required: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        postId: { type: mongoose.Schema.Types.ObjectId, required: true },
       },
     ],
     required: false,
