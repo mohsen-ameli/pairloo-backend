@@ -15,6 +15,8 @@ export const MAX_GENERATED_POST_QUESTIONS = IS_PRODUCTION
   : parseInt(process.env.MAX_GENERATED_POST_QUESTIONS!)
 export const AI_ON = IS_PRODUCTION ? true : process.env.AI_ON === "1"
 
+export const MAX_POST_MATCHES_PER_USER = 20
+
 // Authentication Constants
 export const COOKIE_NAME = "auth_token"
 export const REFRESH_COOKIE_NAME = "refresh_token"

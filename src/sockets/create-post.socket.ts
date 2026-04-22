@@ -106,13 +106,12 @@ export function createPostSocket(
         async (newPost: {
           title: string
           description: string
-          numMatches: number
           publicPost: boolean
           images: ImageType[] | undefined
           location: LocationType
           distance: number
         }) => {
-          const { title, description, numMatches, publicPost, images, location, distance } = newPost
+          const { title, description, publicPost, images, location, distance } = newPost
 
           if (!weaviateClient) {
             socket.emit("error", "Weaviate client not initialized")
@@ -144,7 +143,6 @@ export function createPostSocket(
             publicPost,
             location,
             distance,
-            numMatches,
             needSummary,
             provideSummary,
             images: postImages,
@@ -177,7 +175,7 @@ export function createPostSocket(
           // Get closest posts
           const closestPosts = await getClosestPosts({
             userId,
-            K: numMatches,
+            postId,
             location,
             distance,
             needEmbedding,
@@ -223,7 +221,7 @@ export function createPostSocket(
       "update-draft-settings",
       handleSocketEvent(
         "update-draft-settings",
-        async (images: ImageType[], publicPost: boolean, numMatches: number) => {
+        async (images: ImageType[], publicPost: boolean) => {
           const user = await User.findById(userId)
           if (!user || user.posts.length === 0) return
 
@@ -235,7 +233,6 @@ export function createPostSocket(
                 $set: {
                   "posts.$.images": images,
                   "posts.$.publicPost": publicPost,
-                  "posts.$.numMatches": numMatches,
                 },
               }
             )
@@ -269,7 +266,6 @@ async function saveDraft(userId: string, session: PostSession) {
   const draftPost: Partial<PostType> = {
     qna: session.context,
     publicPost: false,
-    numMatches: 5,
     isDraft: true,
   }
 
