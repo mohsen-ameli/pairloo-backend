@@ -84,7 +84,7 @@ export async function getClosestPosts(params: {
       score: result.score,
     })
 
-    // update the matchingPost's closestPosts to include this newly created post. Sort that list and then if the length exceeds K, remove the one with the lowest score (i.e. pop from list).
+    // Update matchingPost.closestPosts with this post, sort by score, and trim to MAX_POST_MATCHES_PER_USER by removing the lowest-scoring entry.
     const matchingPostClosestPosts = [...(matchingPost.closestPosts ?? [])]
 
     const existingIndex = matchingPostClosestPosts.findIndex(
