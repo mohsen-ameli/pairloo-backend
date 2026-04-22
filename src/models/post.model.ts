@@ -14,7 +14,6 @@ export interface PostType extends mongoose.Document {
   distance?: number
   images?: string[]
   publicPost: boolean
-  numMatches: number
   qna: QnaType
   closestPosts?: ClosePost[] | null
   isDraft?: boolean
@@ -57,10 +56,6 @@ const postSchema = new mongoose.Schema<PostType>({
     type: Boolean,
     default: false,
   },
-  numMatches: {
-    type: Number,
-    default: 5,
-  },
   qna: {
     type: [
       {
@@ -84,8 +79,8 @@ const postSchema = new mongoose.Schema<PostType>({
     type: [
       {
         score: { type: Number, required: true },
-        userId: { type: String, required: true },
-        postId: { type: String, required: true },
+        userId: { type: mongoose.Schema.Types.ObjectId, required: true },
+        postId: { type: mongoose.Schema.Types.ObjectId, required: true },
       },
     ],
     required: false,

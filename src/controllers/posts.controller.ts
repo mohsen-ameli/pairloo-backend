@@ -58,7 +58,6 @@ export async function myPostGet(req: Request, res: Response) {
       title: post.title,
       description: post.description,
       publicPost: post.publicPost,
-      numMatches: post.numMatches,
       qna: post.qna,
       createdAt: post.createdAt,
       location: post.location,
