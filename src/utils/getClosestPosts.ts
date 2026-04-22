@@ -4,6 +4,7 @@ import { Types } from "mongoose"
 import { Filters } from "weaviate-client"
 import { LocationType } from "../types/location.type"
 import { MAX_POST_MATCHES_PER_USER } from "./constants"
+import { sendPushNotification } from "./send-push-notification"
 
 // Bread and butter of the app. How we get matches per post.
 // We match the provide embedding of our post, with need embeddings of others' posts.
@@ -60,8 +61,12 @@ export async function getClosestPosts(params: {
     const matchUserId = closePost.properties.userId!.toString()
     const matchPostObjectId = new Types.ObjectId(matchPostId)
     const matchScore = -closePost.metadata!.distance! // weaviate returns a negative value, so we negate that
-    const matchingPost = await User.findById(matchUserId).then(user => user?.posts.id(matchPostId))
-    if (!matchingPost) continue
+    const matchingUser = await User.findById(matchUserId).select(
+      "expoPushToken posts._id posts.title posts.closestPosts"
+    )
+    const matchingPost = matchingUser?.posts.id(matchPostObjectId)
+    if (!matchingPost || !matchingUser) continue
+
     res.push({
       postId: matchPostId,
       userId: matchUserId,
@@ -69,39 +74,53 @@ export async function getClosestPosts(params: {
       score: matchScore,
     })
 
-    // update the matchingPost's closestPosts to include this newly created post. Sort that list and then if the length exceeds MAX_POST_MATCHES_PER_USER, remove the one with the lowest score (i.e. pop from list).
-    bulkUpdates.push({
-      updateOne: {
-        filter: { _id: matchUserId, "posts._id": matchPostObjectId },
-        update: {
-          $push: {
-            "posts.$[post].closestPosts": {
-              $each: [
-                {
-                  postId: currentPostId,
-                  userId: currentUserId,
-                  score: matchScore,
-                },
-              ],
-              $sort: { score: -1 },
-              $slice: MAX_POST_MATCHES_PER_USER,
-            },
-          },
-        },
-        arrayFilters: [
-          {
-            "post._id": matchPostObjectId,
-            "post.closestPosts": {
-              $not: {
-                $elemMatch: {
-                  postId: currentPostId,
-                },
+    // if this post is not already in their closestPosts
+    if (
+      !matchingPost.closestPosts?.some(
+        match => match.postId.toString() === currentPostId.toString()
+      )
+    ) {
+      // Send a notification to the matching user about the new match.
+      await sendPushNotification(
+        matchingUser.expoPushToken,
+        "New Match Found!",
+        `Your post "${matchingPost.title}" has a new match with a score of ${(matchScore * 100).toFixed(0)}%`
+      )
+
+      // update the matchingPost's closestPosts to include this newly created post. Sort that list and then if the length exceeds MAX_POST_MATCHES_PER_USER, remove the one with the lowest score (i.e. pop from list).
+      bulkUpdates.push({
+        updateOne: {
+          filter: { _id: matchUserId, "posts._id": matchPostObjectId },
+          update: {
+            $push: {
+              "posts.$[post].closestPosts": {
+                $each: [
+                  {
+                    postId: currentPostId,
+                    userId: currentUserId,
+                    score: matchScore,
+                  },
+                ],
+                $sort: { score: -1 },
+                $slice: MAX_POST_MATCHES_PER_USER,
               },
             },
           },
-        ],
-      },
-    })
+          arrayFilters: [
+            {
+              "post._id": matchPostObjectId,
+              "post.closestPosts": {
+                $not: {
+                  $elemMatch: {
+                    postId: currentPostId,
+                  },
+                },
+              },
+            },
+          ],
+        },
+      })
+    }
   }
 
   // Update the current post's closestPosts with the new matches. Again, sort and slice to ensure we only keep the top MAX_POST_MATCHES_PER_USER matches.
