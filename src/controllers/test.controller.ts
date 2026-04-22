@@ -242,12 +242,12 @@ export async function test(req: Request, res: Response) {
     return res.status(404).json({ error: "User not found" })
   }
 
-  await sendPushNotification(
-    user.expoPushToken,
-    "Test Notification",
-    "This is a test push notification from the server!"
-  )
-  res.json({ message: "Test push notification sent!" })
+  // await sendPushNotification(
+  //   user.expoPushToken,
+  //   "Test Notification",
+  //   "This is a test push notification from the server!"
+  // )
+
   const postId = req.query.postId as string
   const userId = req.query.userId as string
   // const post = await findPost(postId)

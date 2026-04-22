@@ -1,6 +1,13 @@
 import { expo } from "../server"
 
-export async function sendPushNotification(expoPushToken: string, title: string, body: string) {
+export async function sendPushNotification(
+  expoPushToken: string | undefined,
+  title: string,
+  body: string
+) {
+  if (!expoPushToken) {
+    return
+  }
   try {
     await expo.sendPushNotificationsAsync([
       {
