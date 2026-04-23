@@ -14,6 +14,9 @@ export async function feedGet(req: Request, res: Response) {
         "posts.firstName": 1,
         "posts.lastName": 1,
         "posts.title": 1,
+        "posts.description": 1,
+        "posts.images": 1,
+        "posts.createdAt": 1,
         username: 1,
         firstName: 1,
         lastName: 1,
@@ -25,6 +28,7 @@ export async function feedGet(req: Request, res: Response) {
 
     for (const user of allUsers) {
       for (const post of user.posts) {
+        await User.updateUserPostImages(post)
         const data = {
           _id: post._id,
           username: user.username,
@@ -32,6 +36,9 @@ export async function feedGet(req: Request, res: Response) {
           lastName: user.lastName,
           picture: user.picture,
           title: post.title,
+          description: post.description,
+          images: post.images,
+          createdAt: post.createdAt,
         }
         results.push(data)
       }
