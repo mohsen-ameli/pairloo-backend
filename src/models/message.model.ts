@@ -7,6 +7,8 @@ export interface MessageType extends mongoose.Document {
   content: string
   attachments?: string[]
   replyTo?: mongoose.Types.ObjectId
+  replyToDeleted?: boolean
+  isEdited?: boolean
   createdAt: Date
   updatedAt: Date
 }
@@ -31,6 +33,14 @@ export const messageSchema = new mongoose.Schema<MessageType>({
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "message",
+  },
+  replyToDeleted: {
+    type: Boolean,
+    default: false,
+  },
+  isEdited: {
+    type: Boolean,
+    default: false,
   },
   createdAt: {
     type: Date,
