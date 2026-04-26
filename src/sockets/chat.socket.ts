@@ -37,6 +37,33 @@ export function chatSocket(
       }
     }
 
+    const deleteMessageHandler = async (messageId: string, conversationId: string) => {
+      const deletedMessage = await Message.findByIdAndDelete(messageId)
+
+      if (!deletedMessage) {
+        socket.emit("error", "Message not found")
+        return
+      }
+
+      // Update all messages that reply to this deleted message in one query
+      await Message.updateMany(
+        {
+          replyTo: messageId,
+          conversationId,
+        },
+        {
+          replyTo: null,
+          replyToDeleted: true,
+        }
+      )
+
+      // Emit the deleted message event to all users in the conversation
+      io.to(conversationId).emit("messageDeleted", {
+        messageId,
+        conversationId,
+      })
+    }
+
     try {
       const conversations = await Conversation.find({
         members: userId,
@@ -158,6 +185,8 @@ export function chatSocket(
             updatedAt: populatedMessage.updatedAt,
             attachments: urls,
             replyTo: replyToData,
+            replyToDeleted: populatedMessage.replyToDeleted || false,
+            isEdited: populatedMessage.isEdited || false,
             sender: {
               _id: populatedMessage.senderId._id,
               username: populatedMessage.senderId.username,
@@ -422,6 +451,8 @@ export function chatSocket(
               updatedAt: msg.updatedAt,
               attachments,
               replyTo: replyToData,
+              replyToDeleted: msg.replyToDeleted || false,
+              isEdited: msg.isEdited || false,
               sender: {
                 _id: msg.senderId._id,
                 username: msg.senderId.username.toString(),
@@ -431,6 +462,58 @@ export function chatSocket(
           }
 
           socket.emit("messages", formattedMessages)
+        }
+      )
+    )
+
+    socket.on(
+      "editMessage",
+      handleSocketEvent(
+        "editMessage",
+        async ({
+          messageId,
+          conversationId,
+          newContent,
+        }: {
+          messageId: string
+          conversationId: string
+          newContent: string
+        }) => {
+          // If the new content is empty, use the delete message handler
+          if (!newContent || !newContent.trim()) {
+            await deleteMessageHandler(messageId, conversationId)
+            return
+          }
+
+          // Update the message
+          const updatedMessage = await Message.findByIdAndUpdate(
+            messageId,
+            { content: newContent, isEdited: true, updatedAt: new Date() },
+            { new: true }
+          )
+
+          if (!updatedMessage) {
+            socket.emit("error", "Message not found")
+            return
+          }
+
+          // Emit confirmation with the new content so replies can be updated
+          io.to(conversationId).emit("messageEdited", {
+            messageId: updatedMessage._id,
+            conversationId: updatedMessage.conversationId,
+            updatedAt: updatedMessage.updatedAt,
+            content: updatedMessage.content,
+          })
+        }
+      )
+    )
+
+    socket.on(
+      "deleteMessage",
+      handleSocketEvent(
+        "deleteMessage",
+        async ({ messageId, conversationId }: { messageId: string; conversationId: string }) => {
+          await deleteMessageHandler(messageId, conversationId)
         }
       )
     )
