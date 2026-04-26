@@ -45,75 +45,23 @@ export function chatSocket(
         return
       }
 
+      // Update all messages that reply to this deleted message in one query
+      await Message.updateMany(
+        {
+          replyTo: messageId,
+          conversationId,
+        },
+        {
+          replyTo: null,
+          replyToDeleted: true,
+        }
+      )
+
       // Emit the deleted message event to all users in the conversation
       io.to(conversationId).emit("messageDeleted", {
         messageId,
         conversationId,
       })
-
-      // Find any messages that have a replyTo pointing to this deleted message
-      const repliedMessages = await Message.find({
-        replyTo: messageId,
-        conversationId,
-      }).populate<{
-        senderId: {
-          _id: Types.ObjectId
-          username: string
-          picture: string
-        }
-      }>({
-        path: "senderId",
-        select: "username picture",
-      })
-
-      if (repliedMessages.length > 0) {
-        for (const msg of repliedMessages) {
-          // Clear the replyTo field to mark it as deleted
-          await Message.findByIdAndUpdate(msg._id, {
-            replyTo: null,
-            replyToDeleted: true,
-          })
-
-          // Fetch the updated message with all details
-          const updatedMessage = await Message.findById(msg._id).populate<{
-            senderId: {
-              _id: Types.ObjectId
-              username: string
-              picture: string
-            }
-          }>({
-            path: "senderId",
-            select: "username picture",
-          })
-
-          if (!updatedMessage) continue
-
-          const attachmentUrls = []
-          for (const key of updatedMessage.attachments || []) {
-            const url = await getObject(key)
-            if (url) attachmentUrls.push(url)
-          }
-
-          const formattedMessage = {
-            _id: updatedMessage._id,
-            conversationId: updatedMessage.conversationId,
-            content: updatedMessage.content,
-            createdAt: updatedMessage.createdAt,
-            updatedAt: updatedMessage.updatedAt,
-            attachments: attachmentUrls,
-            replyTo: null,
-            replyToDeleted: updatedMessage.replyToDeleted || false,
-            isEdited: updatedMessage.isEdited || false,
-            sender: {
-              _id: updatedMessage.senderId._id,
-              username: updatedMessage.senderId.username,
-              picture: await getObject(updatedMessage.senderId.picture),
-            },
-          }
-
-          io.to(conversationId).emit("messageUpdated", formattedMessage)
-        }
-      }
     }
 
     try {
