@@ -20,6 +20,7 @@ export interface UserType extends mongoose.Document {
   expoPushToken?: string
   picture?: string | null
   posts: mongoose.Types.DocumentArray<PostType>
+  savedPosts: mongoose.Types.ObjectId[]
   followers: mongoose.Types.ObjectId[]
   following: mongoose.Types.ObjectId[]
   reviews: {
@@ -118,6 +119,12 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       unique: false,
     },
     posts: [postSchema],
+    savedPosts: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "post",
+      },
+    ],
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,
