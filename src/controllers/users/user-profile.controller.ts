@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
 import mongoose from "mongoose"
-import { PostType } from "../../models/post.model"
+import Post, { PostType } from "../../models/post.model"
 
 type UserProfileType = {
   username: string
@@ -169,7 +169,7 @@ export async function userProfileGet(req: Request, res: Response) {
     }
 
     for (const post of user.posts) {
-      await User.updateUserPostImages(post)
+      await Post.updatePostImages(post)
     }
 
     return res.json(user)

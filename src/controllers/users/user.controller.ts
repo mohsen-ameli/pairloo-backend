@@ -1,6 +1,7 @@
 import { Request, Response } from "express"
 import User, { UserType } from "../../models/user.model"
 import mongoose from "mongoose"
+import Post from "../../models/post.model"
 
 // My user's social information (followers, following, and their corresponding counts)
 export async function mySocialGet(req: Request, res: Response) {
@@ -123,33 +124,17 @@ export async function myReviewsGet(req: Request, res: Response) {
 export async function myPostsGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
-  interface ProjectedDocument {
-    posts: Array<{
-      _id: string
-      title: string
-      createdAt: Date
-      images: string[]
-      isDraft: boolean
-      publicPost: boolean
-      closestPosts?: Array<{ score: number; item: string }>
-    }>
-  }
-
   try {
-    const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-      "posts._id posts.title posts.createdAt posts.images posts.isDraft posts.publicPost posts.closestPosts"
-    )
-
-    for (const post of posts?.posts || []) {
-      await User.updateUserPostImages(post as any)
-    }
-
+    const posts = await Post.find({ userId }).sort({ createdAt: -1 })
     if (!posts) {
-      return res.status(404).json({ message: "User not found" })
+      return res.status(404).json({ message: "Posts not found" })
     }
 
-    posts.posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    return res.status(200).json(posts.posts)
+    for (const post of posts) {
+      await Post.updatePostImages(post)
+    }
+
+    return res.status(200).json(posts)
   } catch (error) {
     console.error("Error fetching user posts:", error)
     return res.status(500).json({ message: "Internal server error" })

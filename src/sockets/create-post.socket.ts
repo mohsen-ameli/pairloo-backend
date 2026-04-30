@@ -3,13 +3,14 @@ import { callForQuestion, callForSummaries, callForTitle } from "../utils/AIQA"
 import { MAX_GENERATED_POST_QUESTIONS } from "../utils/constants"
 import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
-import { PostType } from "../models/post.model"
+import Post, { PostType } from "../models/post.model"
 import { ImageType, PostSession, QnaType } from "../types/session.types"
 import { sendObject } from "../utils/s3"
 import { LocationType } from "../types/location.type"
 import { weaviateClient } from "../server"
 import { generateEmbedding } from "../utils/AIModel"
 import { generateUuid5 } from "weaviate-client"
+import mongoose from "mongoose"
 
 const initialSession: PostSession = {
   context: [],
@@ -22,6 +23,8 @@ export function createPostSocket(
   io.on("connection", async (socket: Socket) => {
     const userId = (socket as any).user.sub as string
     const user = await User.findById(userId)
+    const posts = await Post.find({ userId }).sort({ createdAt: 1 })
+    let draftId = ""
 
     if (!user) {
       socket.emit("error", "User not found")
@@ -46,10 +49,11 @@ export function createPostSocket(
     }
 
     // Check if there's a draft and restore session
-    if (user.posts.length > 0) {
-      const lastPost = user.posts[user.posts.length - 1]
+    if (posts.length > 0) {
+      const lastPost = posts[posts.length - 1]
 
       if (lastPost.isDraft) {
+        draftId = lastPost._id.toString()
         session.context = lastPost.qna
         socket.emit("draft-restored", session.context)
       }
@@ -84,7 +88,7 @@ export function createPostSocket(
         } else {
           socket.emit("chat-finished")
         }
-        await saveDraft(userId, session)
+        draftId = await saveDraft(draftId, userId, session)
         socket.emit("draft-saved")
       })
     )
@@ -138,6 +142,7 @@ export function createPostSocket(
           const provideEmbedding = await generateEmbedding(provideSummary)
 
           const post: Partial<PostType> = {
+            userId: new mongoose.Types.ObjectId(userId),
             title,
             description,
             publicPost,
@@ -147,22 +152,21 @@ export function createPostSocket(
             provideSummary,
             images: postImages,
             qna: session.context,
-            closestPosts: null,
+            closestPosts: [],
             isDraft: false,
           }
 
           // Insert to MongoDB
           const user = await User.findById(userId)
-          if (user && user.posts.length > 0 && user.posts[user.posts.length - 1].isDraft) {
-            await User.updateOne(
-              { _id: userId, "posts._id": user.posts[user.posts.length - 1]._id },
-              { $set: { "posts.$": post } }
-            )
+          const posts = await Post.find({ userId })
+          let postId = ""
+          if (user && posts.length > 0 && posts[posts.length - 1].isDraft) {
+            await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
+            postId = posts[posts.length - 1]._id.toString()
           } else {
-            await User.updateOne({ _id: userId }, { $push: { posts: post } })
+            const newPost = await Post.create(post)
+            postId = newPost._id.toString()
           }
-          const updatedUser = await User.findById(userId)
-          const postId = updatedUser?.posts[updatedUser.posts.length - 1]._id.toString()!
 
           // Insert to weaviate
           const weaviatePosts = weaviateClient.collections.use("Post")
@@ -174,17 +178,14 @@ export function createPostSocket(
 
           // Get closest posts
           const closestPosts = await getClosestPosts({
-            userId,
-            postId,
+            userId: new mongoose.Types.ObjectId(userId),
+            postId: new mongoose.Types.ObjectId(postId),
             location,
             distance,
             needEmbedding,
             provideEmbedding,
           })
-          await User.updateOne(
-            { _id: userId, "posts._id": postId },
-            { $set: { "posts.$.closestPosts": closestPosts } }
-          )
+          await Post.findByIdAndUpdate(postId, { closestPosts })
 
           socket.emit("success", postId)
           session = structuredClone(initialSession)
@@ -196,7 +197,7 @@ export function createPostSocket(
       "disconnect",
       handleSocketEvent("disconnect", async () => {
         if (session && session.context.length > 0) {
-          await saveDraft(userId, session)
+          draftId = await saveDraft(draftId, userId, session)
         }
       })
     )
@@ -204,14 +205,7 @@ export function createPostSocket(
     socket.on(
       "discard-draft",
       handleSocketEvent("discard-draft", async () => {
-        if (user.posts.length === 0) return
-
-        const lastPost = user.posts[user.posts.length - 1]
-        if (lastPost.isDraft) {
-          await User.updateOne({ _id: userId }, { $pop: { posts: 1 } })
-        }
-
-        // Reset session
+        await Post.findByIdAndDelete(draftId)
         session = structuredClone(initialSession)
         socket.emit("draft-discarded")
       })
@@ -221,53 +215,31 @@ export function createPostSocket(
       "update-draft-settings",
       handleSocketEvent(
         "update-draft-settings",
-        async (images: ImageType[], publicPost: boolean) => {
-          const user = await User.findById(userId)
-          if (!user || user.posts.length === 0) return
-
-          const lastPost = user.posts[user.posts.length - 1]
-          if (lastPost.isDraft) {
-            await User.updateOne(
-              { _id: userId, "posts._id": lastPost._id },
-              {
-                $set: {
-                  "posts.$.images": images,
-                  "posts.$.publicPost": publicPost,
-                },
-              }
-            )
-          }
+        async (title: string, description: string, images: ImageType[], publicPost: boolean) => {
+          console.log("updating ", title, description, images, publicPost)
+          await Post.findByIdAndUpdate(draftId, { title, description, images, publicPost })
         }
       )
     )
   })
 }
 
-async function saveDraft(userId: string, session: PostSession) {
-  const user = await User.findById(userId)
-  if (!user) return
-
-  if (user.posts.length > 0) {
-    const lastPost = user.posts[user.posts.length - 1]
-    if (lastPost.isDraft) {
-      await User.updateOne(
-        { _id: userId, "posts._id": lastPost._id },
-        {
-          $set: {
-            "posts.$.qna": session.context,
-          },
-        }
-      )
-      return
-    }
+async function saveDraft(draftId: string, userId: string, session: PostSession) {
+  // No draft exists, so create one and send back the new id to be saved
+  if (!draftId) {
+    const draft = await Post.create({
+      userId,
+      title: "Draft",
+      description: "Draft description",
+      qna: session.context,
+      publicPost: false,
+      isDraft: true,
+    })
+    return draft._id.toString()
   }
 
-  // Create new draft post if no draft exists
-  const draftPost: Partial<PostType> = {
-    qna: session.context,
-    publicPost: false,
-    isDraft: true,
-  }
+  // Update existing draft
+  await Post.findByIdAndUpdate(draftId, { qna: session.context })
 
-  await User.updateOne({ _id: userId }, { $push: { posts: draftPost } })
+  return draftId
 }

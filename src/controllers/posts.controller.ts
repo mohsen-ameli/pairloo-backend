@@ -3,38 +3,36 @@ import User from "../models/user.model"
 import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
+import Post from "../models/post.model"
 
 // Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
   const postId = req.params.id as string
-  const userId = req.user!.sub
 
   try {
-    const user = await User.findById(userId)
-    const post = user?.posts.id(postId)
+    const post = await Post.findById(postId)
 
     if (!post) {
       return res.status(404).json({ message: "Post not found" })
     }
 
-    await User.updateUserPostImages(post)
+    await Post.updatePostImages(post)
 
     const closestPosts = []
 
     for (const p of post.closestPosts || []) {
       const closeUser = await User.findById(p.userId)
-      const closePost = closeUser?.posts.id(p.postId)
+      const closePost = await Post.findById(p.postId)
 
       // The matching post has been deleted, so we remove the reference to it from the closestPosts array
       if (!closeUser || !closePost) {
-        await User.updateOne(
-          { _id: userId, "posts._id": postId },
-          { $pull: { "posts.$.closestPosts": { postId: p.postId, userId: p.userId } } }
-        )
+        await Post.findByIdAndUpdate(postId, {
+          $pull: { closestPosts: { postId: p.postId } },
+        })
         continue
       }
 
-      await User.updateUserPostImages(closePost)
+      await Post.updatePostImages(closePost)
       await User.updateUserPicture(closeUser)
 
       closestPosts.push({
@@ -91,32 +89,44 @@ export async function postGet(req: Request, res: Response) {
   const postId = req.params.id as string
 
   try {
-    const userPosts = await User.aggregate<ProjectedDocument>([
-      { $match: { "posts._id": new mongoose.Types.ObjectId(postId) } },
-      { $unwind: "$posts" },
-      { $match: { "posts._id": new mongoose.Types.ObjectId(postId) } },
+    const posts = await Post.aggregate<ProjectedDocument>([
+      { $match: { _id: new mongoose.Types.ObjectId(postId) } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "userId",
+          foreignField: "_id",
+          as: "userDetails",
+        },
+      },
+      { $unwind: "$userDetails" },
       {
         $project: {
           _id: 1,
-          username: 1,
-          firstName: 1,
-          lastName: 1,
-          picture: 1,
-          postId: "$posts._id",
-          title: "$posts.title",
-          description: "$posts.description",
-          images: "$posts.images",
-          createdAt: "$posts.createdAt",
-          location: "$posts.location",
-          distance: "$posts.distance",
+          title: 1,
+          description: 1,
+          location: 1,
+          distance: 1,
+          images: 1,
+          createdAt: 1,
+          username: "$userDetails.username",
+          firstName: "$userDetails.firstName",
+          lastName: "$userDetails.lastName",
+          picture: "$userDetails.picture",
         },
       },
     ])
 
-    await User.updateUserPostImages(userPosts[0])
-    await User.updateUserPicture(userPosts[0])
+    if (posts.length === 0) {
+      return res.status(404).json({ message: "Post not found or not public" })
+    }
 
-    return res.status(200).json(userPosts[0])
+    const userPost = posts[0]
+
+    await Post.updatePostImages(userPost)
+    await User.updateUserPicture(userPost)
+
+    return res.status(200).json(userPost)
   } catch (error) {
     console.error("Error fetching post:", error)
     return res.status(500).json({ message: "An error occurred while fetching the post" })
@@ -125,19 +135,13 @@ export async function postGet(req: Request, res: Response) {
 
 export async function postDelete(req: Request, res: Response) {
   const postId = req.params.id as string
-  const userId = req.user!.sub
 
   try {
     if (!weaviateClient) {
       return res.status(500).json({ message: "Weaviate client not initialized" })
     }
 
-    const user = await User.findById(userId).select("posts")
-    if (!user) {
-      return res.status(404).json({ message: "User not found" })
-    }
-
-    await User.updateOne({ _id: userId }, { $pull: { posts: { _id: postId } } })
+    await Post.findByIdAndDelete(postId)
 
     const weaviatePosts = weaviateClient.collections.use("Post")
 
