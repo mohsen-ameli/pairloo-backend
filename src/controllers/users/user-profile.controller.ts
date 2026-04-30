@@ -19,6 +19,20 @@ type UserProfileType = {
   posts: PostType[]
   followersCount: number
   followingCount: number
+  followers: {
+    _id: string
+    picture: string
+    username: string
+    firstName: string
+    lastName: string
+  }[]
+  following: {
+    _id: string
+    picture: string
+    username: string
+    firstName: string
+    lastName: string
+  }[]
   ratingCount: number
   ratingAvg: number
   reviews: {
@@ -59,6 +73,22 @@ export async function userProfileGet(req: Request, res: Response) {
         },
       },
       {
+        $lookup: {
+          from: "users",
+          localField: "followers",
+          foreignField: "_id",
+          as: "followerUsers",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "following",
+          foreignField: "_id",
+          as: "followingUsers",
+        },
+      },
+      {
         $project: {
           posts: {
             $map: {
@@ -83,8 +113,34 @@ export async function userProfileGet(req: Request, res: Response) {
           lastName: 1,
           picture: 1,
           createdAt: 1,
-          followersCount: { $size: { $ifNull: ["$followers", []] } },
-          followingCount: { $size: { $ifNull: ["$following", []] } },
+          followersCount: { $size: { $ifNull: ["$followerUsers", []] } },
+          followingCount: { $size: { $ifNull: ["$followingUsers", []] } },
+          followers: {
+            $map: {
+              input: { $ifNull: ["$followerUsers", []] },
+              as: "user",
+              in: {
+                _id: "$$user._id",
+                picture: "$$user.picture",
+                username: "$$user.username",
+                firstName: "$$user.firstName",
+                lastName: "$$user.lastName",
+              },
+            },
+          },
+          following: {
+            $map: {
+              input: { $ifNull: ["$followingUsers", []] },
+              as: "user",
+              in: {
+                _id: "$$user._id",
+                picture: "$$user.picture",
+                username: "$$user.username",
+                firstName: "$$user.firstName",
+                lastName: "$$user.lastName",
+              },
+            },
+          },
           ratingCount: { $size: { $ifNull: ["$reviews", []] } },
           ratingAvg: {
             $cond: [
@@ -131,6 +187,8 @@ export async function userProfileGet(req: Request, res: Response) {
           createdAt: 1,
           followersCount: 1,
           followingCount: 1,
+          followers: 1,
+          following: 1,
           ratingCount: 1,
           ratingAvg: 1,
           reviews: {
@@ -161,6 +219,8 @@ export async function userProfileGet(req: Request, res: Response) {
     if (!user) {
       return res.status(404).json({ error: "User not found" })
     }
+
+    await User.updateUserPicture([...user.followers, ...user.following])
 
     await User.updateUserPicture(user)
 
