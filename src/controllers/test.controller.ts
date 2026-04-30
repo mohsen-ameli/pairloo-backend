@@ -344,6 +344,8 @@ export async function test(req: Request, res: Response) {
   // await weaviateTransfer("PostTemp", "Post")
 
   await Interaction.deleteMany({})
+  const post = await Post.findById(postId)
+  return res.json(post)
 
   // @ts-ignore
   // storePostsToWeaviate([post?.post], post?.user)
