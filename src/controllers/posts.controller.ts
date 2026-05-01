@@ -72,6 +72,7 @@ export async function myPostGet(req: Request, res: Response) {
 export async function postGet(req: Request, res: Response) {
   interface ProjectedDocument {
     _id: string
+    userId: string
     username: string
     firstName: string
     lastName: string
@@ -109,6 +110,7 @@ export async function postGet(req: Request, res: Response) {
           distance: 1,
           images: 1,
           createdAt: 1,
+          userId: "$userDetails._id",
           username: "$userDetails.username",
           firstName: "$userDetails.firstName",
           lastName: "$userDetails.lastName",
