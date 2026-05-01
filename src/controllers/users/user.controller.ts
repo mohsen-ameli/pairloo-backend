@@ -235,7 +235,7 @@ export async function myUserGet(req: Request, res: Response) {
 
   try {
     const user = await User.findById(userId).select(
-      "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email expoPushToken createdAt updatedAt"
+      "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email expoPushToken savedPosts createdAt updatedAt"
     )
 
     if (!user) {
@@ -247,6 +247,114 @@ export async function myUserGet(req: Request, res: Response) {
     return res.json(user)
   } catch (error) {
     console.error("Error fetching user information:", error)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+
+// Save a post
+export async function savePost(req: Request, res: Response) {
+  const userId = req.user!.sub
+  const postId = req.params.postId
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $push: { savedPosts: { $each: [postId], $position: 0 } } },
+      { new: true, select: "savedPosts" }
+    )
+
+    return res
+      .status(200)
+      .json({ message: "Post saved successfully", savedPosts: updatedUser?.savedPosts })
+  } catch (error) {
+    console.error("Error saving post:", error)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+
+// Get saved posts
+export async function getSavedPosts(req: Request, res: Response) {
+  const userId = req.user!.sub
+
+  interface SavedPostDocument {
+    _id: mongoose.Types.ObjectId
+    title: string
+    images?: string[]
+    createdAt: Date
+  }
+
+  try {
+    const savedIdsDoc = await User.findById(userId).select("savedPosts")
+
+    if (!savedIdsDoc) {
+      return res.status(404).json({ message: "User not found" })
+    }
+
+    const savedPostIds = Array.isArray(savedIdsDoc.savedPosts) ? savedIdsDoc.savedPosts : []
+
+    if (savedPostIds.length === 0) {
+      return res.status(200).json([])
+    }
+
+    const savedPosts = await User.aggregate<SavedPostDocument>([
+      { $match: { "posts._id": { $in: savedPostIds } } },
+      { $unwind: "$posts" },
+      { $match: { "posts._id": { $in: savedPostIds } } },
+      {
+        $project: {
+          _id: "$posts._id",
+          title: "$posts.title",
+          images: "$posts.images",
+          createdAt: "$posts.createdAt",
+        },
+      },
+    ])
+
+    const savedPostsById = new Map(savedPosts.map(post => [post._id.toString(), post]))
+    const orderedSavedPosts = savedPostIds
+      .map(postId => savedPostsById.get(postId.toString()))
+      .filter((post): post is SavedPostDocument => Boolean(post))
+
+    for (const post of orderedSavedPosts) {
+      await User.updateUserPostImages(post)
+    }
+
+    return res.status(200).json(orderedSavedPosts)
+  } catch (error) {
+    console.error("Error fetching saved posts:", error)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+
+// Unsave a post
+export async function unsavePost(req: Request, res: Response) {
+  const userId = req.user!.sub
+  const postId = Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId
+
+  try {
+    // Validate that postId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(postId)) {
+      return res.status(400).json({ error: "Invalid post ID" })
+    }
+
+    const postObjectId = new mongoose.Types.ObjectId(postId)
+
+    // Use findByIdAndUpdate to avoid validating entire document
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedPosts: postObjectId } },
+      { new: true, select: "savedPosts" }
+    )
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    return res
+      .status(200)
+      .json({ message: "Post unsaved successfully", savedPosts: updatedUser.savedPosts })
+  } catch (error) {
+    console.error("Error unsaving post:", error)
     return res.status(500).json({ message: "Internal server error" })
   }
 }

@@ -8,6 +8,9 @@ import {
   myReviewsGet,
   mySocialGet,
   myUserGet,
+  savePost,
+  unsavePost,
+  getSavedPosts,
 } from "../controllers/users/user.controller"
 import { updateExpoPushToken } from "../controllers/users/update-expo-push-token.controller"
 
@@ -19,10 +22,14 @@ userRoutes.get("/my-social", mySocialGet)
 userRoutes.get("/my-reviews", myReviewsGet)
 userRoutes.get("/my-posts", myPostsGet)
 userRoutes.get("/my-user", myUserGet)
+userRoutes.get("/my-saved-posts", getSavedPosts)
 
 userRoutes.post("/follow", followUser)
 userRoutes.post("/unfollow", unfollowUser)
 userRoutes.post("/review", reviewUser)
+
+userRoutes.post("/save-post/:postId", savePost)
+userRoutes.delete("/save-post/:postId", unsavePost)
 
 userRoutes.post("/update-expo-push-token", updateExpoPushToken)
 
