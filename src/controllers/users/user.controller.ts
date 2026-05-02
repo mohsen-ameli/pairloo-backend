@@ -1,18 +1,114 @@
 import { Request, Response } from "express"
-import User, { UserType } from "../../models/user.model"
+import User from "../../models/user.model"
 import mongoose from "mongoose"
 
-// My user's social information (followers, following, and their corresponding counts)
-export async function mySocialGet(req: Request, res: Response) {
-  const userId = req.user!.sub
+type SocialUserType = {
+  _id: string
+  username: string
+  firstName: string
+  lastName: string
+  picture?: string | null
+}
+
+type SocialUsersType = {
+  followersCount: number
+  followingCount: number
+  followers: SocialUserType[]
+  following: SocialUserType[]
+}
+
+type ReviewsType = {
+  ratingCount: number
+  ratingAvg: number
+  reviews: {
+    rating: number
+    review: string
+    createdAt: Date
+    reviewer: {
+      _id: string
+      picture: string
+      username: string
+      firstName: string
+      lastName: string
+    }
+  }[]
+}
+
+type MyUserType = {
+  username: string
+  firstName: string
+  lastName: string
+  picture: string
+  phoneNumber: string
+  country: string
+  city: string
+  state: string
+  latitude: number
+  longitude: number
+  timezone: string
+  locationId: number // reference to Location _id
+  email: string
+  expoPushToken?: string
+  savedPosts?: string[]
+  createdAt: Date
+  updatedAt: Date
+  followersCount: number
+  followingCount: number
+}
+
+// user's social information (followers, following, and their corresponding counts)
+export async function socialGet(req: Request, res: Response) {
+  const userId = req.params.id as string
 
   try {
-    const userAggregate = await User.aggregate<UserType>([
+    const userAggregate = await User.aggregate<SocialUsersType>([
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
       {
+        $lookup: {
+          from: "users",
+          localField: "followers",
+          foreignField: "_id",
+          as: "followerUsers",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "following",
+          foreignField: "_id",
+          as: "followingUsers",
+        },
+      },
+      {
         $project: {
-          followersCount: { $size: { $ifNull: ["$followers", []] } },
-          followingCount: { $size: { $ifNull: ["$following", []] } },
+          followersCount: { $size: { $ifNull: ["$followerUsers", []] } },
+          followingCount: { $size: { $ifNull: ["$followingUsers", []] } },
+          followers: {
+            $map: {
+              input: { $ifNull: ["$followerUsers", []] },
+              as: "user",
+              in: {
+                _id: "$$user._id",
+                username: "$$user.username",
+                firstName: "$$user.firstName",
+                lastName: "$$user.lastName",
+                picture: "$$user.picture",
+              },
+            },
+          },
+          following: {
+            $map: {
+              input: { $ifNull: ["$followingUsers", []] },
+              as: "user",
+              in: {
+                _id: "$$user._id",
+                username: "$$user.username",
+                firstName: "$$user.firstName",
+                lastName: "$$user.lastName",
+                picture: "$$user.picture",
+              },
+            },
+          },
         },
       },
     ])
@@ -23,6 +119,8 @@ export async function mySocialGet(req: Request, res: Response) {
       return res.status(404).json({ error: "User not found" })
     }
 
+    await User.updateUserPicture([...user.followers, ...user.following])
+
     return res.json(user)
   } catch (error) {
     console.error("Error fetching user social information:", error)
@@ -30,12 +128,12 @@ export async function mySocialGet(req: Request, res: Response) {
   }
 }
 
-// My user's reviews and ratings
-export async function myReviewsGet(req: Request, res: Response) {
-  const userId = req.user!.sub
+// user's reviews and ratings
+export async function reviewsGet(req: Request, res: Response) {
+  const userId = req.params.id as string
 
   try {
-    const userAggregate = await User.aggregate<UserType>([
+    const userAggregate = await User.aggregate<ReviewsType>([
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
       {
         $lookup: {
@@ -112,6 +210,10 @@ export async function myReviewsGet(req: Request, res: Response) {
       return res.status(404).json({ error: "User not found" })
     }
 
+    for (const review of user.reviews) {
+      await User.updateUserPicture(review.reviewer)
+    }
+
     return res.json(user)
   } catch (error) {
     console.error("Error fetching user reviews:", error)
@@ -161,9 +263,36 @@ export async function myUserGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
   try {
-    const user = await User.findById(userId).select(
-      "username firstName lastName picture phoneNumber country city state latitude longitude timezone locationId email expoPushToken savedPosts createdAt updatedAt"
-    )
+    const userAggregate = await User.aggregate<MyUserType>([
+      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+      {
+        $project: {
+          username: 1,
+          firstName: 1,
+          lastName: 1,
+          picture: 1,
+          phoneNumber: 1,
+          country: 1,
+          city: 1,
+          state: 1,
+          latitude: 1,
+          longitude: 1,
+          timezone: 1,
+          locationId: 1,
+          email: 1,
+          expoPushToken: 1,
+          savedPosts: 1,
+          followersCount: { $size: { $ifNull: ["$followers", []] } },
+          followingCount: { $size: { $ifNull: ["$following", []] } },
+          createdAt: 1,
+          updatedAt: 1,
+        },
+      },
+    ])
+
+    const user = userAggregate[0]
+
+    console.log(user)
 
     if (!user) {
       return res.status(404).json({ error: "User not found" })
@@ -178,7 +307,6 @@ export async function myUserGet(req: Request, res: Response) {
   }
 }
 
-// Save a post
 export async function savePost(req: Request, res: Response) {
   const userId = req.user!.sub
   const postId = req.params.postId
@@ -199,7 +327,6 @@ export async function savePost(req: Request, res: Response) {
   }
 }
 
-// Get saved posts
 export async function getSavedPosts(req: Request, res: Response) {
   const userId = req.user!.sub
 
@@ -253,7 +380,6 @@ export async function getSavedPosts(req: Request, res: Response) {
   }
 }
 
-// Unsave a post
 export async function unsavePost(req: Request, res: Response) {
   const userId = req.user!.sub
   const postId = Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId
