@@ -17,84 +17,70 @@ type SocialUsersType = {
   following: SocialUserType[]
 }
 
-async function getSocialUsers(userId: string) {
-  if (!mongoose.Types.ObjectId.isValid(userId)) {
-    return null
-  }
-
-  const userAggregate = await User.aggregate<SocialUsersType>([
-    { $match: { _id: new mongoose.Types.ObjectId(userId) } },
-    {
-      $lookup: {
-        from: "users",
-        localField: "followers",
-        foreignField: "_id",
-        as: "followerUsers",
-      },
-    },
-    {
-      $lookup: {
-        from: "users",
-        localField: "following",
-        foreignField: "_id",
-        as: "followingUsers",
-      },
-    },
-    {
-      $project: {
-        followersCount: { $size: { $ifNull: ["$followerUsers", []] } },
-        followingCount: { $size: { $ifNull: ["$followingUsers", []] } },
-        followers: {
-          $map: {
-            input: { $ifNull: ["$followerUsers", []] },
-            as: "user",
-            in: {
-              _id: "$$user._id",
-              username: "$$user.username",
-              firstName: "$$user.firstName",
-              lastName: "$$user.lastName",
-              picture: "$$user.picture",
-            },
-          },
-        },
-        following: {
-          $map: {
-            input: { $ifNull: ["$followingUsers", []] },
-            as: "user",
-            in: {
-              _id: "$$user._id",
-              username: "$$user.username",
-              firstName: "$$user.firstName",
-              lastName: "$$user.lastName",
-              picture: "$$user.picture",
-            },
-          },
-        },
-      },
-    },
-  ])
-
-  const user = userAggregate[0]
-
-  if (!user) {
-    return null
-  }
-
-  await User.updateUserPicture([...user.followers, ...user.following])
-
-  return user
-}
-
-// My user's social information (followers, following, and their corresponding counts)
-export async function mySocialGet(req: Request, res: Response) {
-  const userId = req.user!.sub
+// user's social information (followers, following, and their corresponding counts)
+export async function socialGet(req: Request, res: Response) {
+  const userId = req.params.id as string
 
   try {
-    const user = await getSocialUsers(userId)
+    const userAggregate = await User.aggregate<SocialUsersType>([
+      { $match: { _id: new mongoose.Types.ObjectId(userId) } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "followers",
+          foreignField: "_id",
+          as: "followerUsers",
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "following",
+          foreignField: "_id",
+          as: "followingUsers",
+        },
+      },
+      {
+        $project: {
+          followersCount: { $size: { $ifNull: ["$followerUsers", []] } },
+          followingCount: { $size: { $ifNull: ["$followingUsers", []] } },
+          followers: {
+            $map: {
+              input: { $ifNull: ["$followerUsers", []] },
+              as: "user",
+              in: {
+                _id: "$$user._id",
+                username: "$$user.username",
+                firstName: "$$user.firstName",
+                lastName: "$$user.lastName",
+                picture: "$$user.picture",
+              },
+            },
+          },
+          following: {
+            $map: {
+              input: { $ifNull: ["$followingUsers", []] },
+              as: "user",
+              in: {
+                _id: "$$user._id",
+                username: "$$user.username",
+                firstName: "$$user.firstName",
+                lastName: "$$user.lastName",
+                picture: "$$user.picture",
+              },
+            },
+          },
+        },
+      },
+    ])
+
+    const user = userAggregate[0]
 
     if (!user) {
       return res.status(404).json({ error: "User not found" })
     }
+
+    await User.updateUserPicture([...user.followers, ...user.following])
 
     return res.json(user)
   } catch (error) {

@@ -6,19 +6,19 @@ import { reviewUser } from "../controllers/users/review.controller"
 import {
   myPostsGet,
   myReviewsGet,
-  mySocialGet,
   myUserGet,
   savePost,
   unsavePost,
   getSavedPosts,
+  socialGet,
 } from "../controllers/users/user.controller"
 import { updateExpoPushToken } from "../controllers/users/update-expo-push-token.controller"
 
 const userRoutes = Router()
 
 userRoutes.get("/profile/:id", userProfileGet)
+userRoutes.get("/social/:id", socialGet)
 
-userRoutes.get("/my-social", mySocialGet)
 userRoutes.get("/my-reviews", myReviewsGet)
 userRoutes.get("/my-posts", myPostsGet)
 userRoutes.get("/my-user", myUserGet)
