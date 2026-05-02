@@ -73,22 +73,6 @@ export async function userProfileGet(req: Request, res: Response) {
         },
       },
       {
-        $lookup: {
-          from: "users",
-          localField: "followers",
-          foreignField: "_id",
-          as: "followerUsers",
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "following",
-          foreignField: "_id",
-          as: "followingUsers",
-        },
-      },
-      {
         $project: {
           posts: {
             $map: {
@@ -113,33 +97,10 @@ export async function userProfileGet(req: Request, res: Response) {
           lastName: 1,
           picture: 1,
           createdAt: 1,
-          followersCount: { $size: { $ifNull: ["$followerUsers", []] } },
-          followingCount: { $size: { $ifNull: ["$followingUsers", []] } },
-          followers: {
-            $map: {
-              input: { $ifNull: ["$followerUsers", []] },
-              as: "user",
-              in: {
-                _id: "$$user._id",
-                picture: "$$user.picture",
-                username: "$$user.username",
-                firstName: "$$user.firstName",
-                lastName: "$$user.lastName",
-              },
-            },
-          },
-          following: {
-            $map: {
-              input: { $ifNull: ["$followingUsers", []] },
-              as: "user",
-              in: {
-                _id: "$$user._id",
-                picture: "$$user.picture",
-                username: "$$user.username",
-                firstName: "$$user.firstName",
-                lastName: "$$user.lastName",
-              },
-            },
+          followersCount: { $size: { $ifNull: ["$followers", []] } },
+          followingCount: { $size: { $ifNull: ["$following", []] } },
+          isFollowing: {
+            $in: [new mongoose.Types.ObjectId(myId), "$followers"],
           },
           ratingCount: { $size: { $ifNull: ["$reviews", []] } },
           ratingAvg: {
@@ -172,9 +133,6 @@ export async function userProfileGet(req: Request, res: Response) {
               },
             },
           },
-          isFollowing: {
-            $in: [new mongoose.Types.ObjectId(myId), "$followers"],
-          },
         },
       },
       {
@@ -187,8 +145,7 @@ export async function userProfileGet(req: Request, res: Response) {
           createdAt: 1,
           followersCount: 1,
           followingCount: 1,
-          followers: 1,
-          following: 1,
+          isFollowing: 1,
           ratingCount: 1,
           ratingAvg: 1,
           reviews: {
@@ -209,7 +166,6 @@ export async function userProfileGet(req: Request, res: Response) {
               },
             },
           },
-          isFollowing: 1,
         },
       },
     ])
@@ -219,8 +175,6 @@ export async function userProfileGet(req: Request, res: Response) {
     if (!user) {
       return res.status(404).json({ error: "User not found" })
     }
-
-    await User.updateUserPicture([...user.followers, ...user.following])
 
     await User.updateUserPicture(user)
 
