@@ -5,7 +5,7 @@ import { unfollowUser } from "../controllers/users/unfollow.controller"
 import { reviewUser } from "../controllers/users/review.controller"
 import {
   myPostsGet,
-  myReviewsGet,
+  reviewsGet,
   myUserGet,
   savePost,
   unsavePost,
@@ -16,13 +16,17 @@ import { updateExpoPushToken } from "../controllers/users/update-expo-push-token
 
 const userRoutes = Router()
 
-userRoutes.get("/profile/:id", userProfileGet)
+// Shared between user profiles and my profile
 userRoutes.get("/social/:id", socialGet)
+userRoutes.get("/reviews/:id", reviewsGet)
 
-userRoutes.get("/my-reviews", myReviewsGet)
+// Only for my profile
 userRoutes.get("/my-posts", myPostsGet)
 userRoutes.get("/my-user", myUserGet)
 userRoutes.get("/my-saved-posts", getSavedPosts)
+
+// Only for other user profiles
+userRoutes.get("/profile/:id", userProfileGet)
 
 userRoutes.post("/follow", followUser)
 userRoutes.post("/unfollow", unfollowUser)
