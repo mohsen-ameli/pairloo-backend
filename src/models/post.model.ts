@@ -44,17 +44,15 @@ const postSchema = new mongoose.Schema<PostType>({
   },
   needSummary: {
     type: String,
-    required: true,
-    default: "",
+    required: false,
   },
   provideSummary: {
     type: String,
-    required: true,
-    default: "",
+    required: false,
   },
   generalSummary: {
     type: String,
-    required: true,
+    required: false,
   },
   location: {
     type: {

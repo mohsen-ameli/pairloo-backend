@@ -291,9 +291,19 @@ export async function myUserGet(req: Request, res: Response) {
   }
 }
 
+// Add or remove the "save" interaction whenever the user saves or unsaves a post
+async function saveInteraction(userId: string, postId: string) {
+  const existing = await Interaction.findOne({ userId, postId, type: "save" })
+  if (existing) {
+    await existing.deleteOne()
+  } else {
+    await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
+  }
+}
+
 export async function savePost(req: Request, res: Response) {
   const userId = req.user!.sub
-  const postId = req.params.postId
+  const postId = req.params.postId as string
 
   try {
     const updatedUser = await User.findByIdAndUpdate(
@@ -302,13 +312,7 @@ export async function savePost(req: Request, res: Response) {
       { new: true, select: "savedPosts" }
     )
 
-    // Add or remove the "save" interaction for the post
-    const existing = await Interaction.findOne({ userId, postId, type: "save" })
-    if (existing) {
-      await existing.deleteOne()
-    } else {
-      await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
-    }
+    await saveInteraction(userId, postId)
 
     return res
       .status(200)
@@ -322,50 +326,31 @@ export async function savePost(req: Request, res: Response) {
 export async function getSavedPosts(req: Request, res: Response) {
   const userId = req.user!.sub
 
-  interface SavedPostDocument {
-    _id: mongoose.Types.ObjectId
-    title: string
-    images?: string[]
-    createdAt: Date
-  }
-
   try {
-    const savedIdsDoc = await User.findById(userId).select("savedPosts")
+    const savedIdsDoc = await User.findById(userId).select("savedPosts").lean()
 
     if (!savedIdsDoc) {
       return res.status(404).json({ message: "User not found" })
     }
+    const savedPostIds = savedIdsDoc.savedPosts
 
-    const savedPostIds = Array.isArray(savedIdsDoc.savedPosts) ? savedIdsDoc.savedPosts : []
-
-    if (savedPostIds.length === 0) {
-      return res.status(200).json([])
-    }
-
-    const savedPosts = await User.aggregate<SavedPostDocument>([
-      { $match: { "posts._id": { $in: savedPostIds } } },
-      { $unwind: "$posts" },
-      { $match: { "posts._id": { $in: savedPostIds } } },
+    const savedPosts = await Post.find(
+      { _id: { $in: savedPostIds } },
       {
-        $project: {
-          _id: "$posts._id",
-          title: "$posts.title",
-          images: "$posts.images",
-          createdAt: "$posts.createdAt",
-        },
-      },
-    ])
+        _id: 1,
+        title: 1,
+        images: 1,
+        createdAt: 1,
+      }
+    )
+      .sort({ createdAt: -1 })
+      .lean()
 
-    const savedPostsById = new Map(savedPosts.map(post => [post._id.toString(), post]))
-    const orderedSavedPosts = savedPostIds
-      .map(postId => savedPostsById.get(postId.toString()))
-      .filter((post): post is SavedPostDocument => Boolean(post))
-
-    for (const post of orderedSavedPosts) {
+    for (const post of savedPosts) {
       await Post.updatePostImages(post)
     }
 
-    return res.status(200).json(orderedSavedPosts)
+    return res.status(200).json(savedPosts)
   } catch (error) {
     console.error("Error fetching saved posts:", error)
     return res.status(500).json({ message: "Internal server error" })
@@ -374,26 +359,20 @@ export async function getSavedPosts(req: Request, res: Response) {
 
 export async function unsavePost(req: Request, res: Response) {
   const userId = req.user!.sub
-  const postId = Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId
+  const postId = req.params.postId as string
 
   try {
-    // Validate that postId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return res.status(400).json({ error: "Invalid post ID" })
-    }
-
-    const postObjectId = new mongoose.Types.ObjectId(postId)
-
-    // Use findByIdAndUpdate to avoid validating entire document
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $pull: { savedPosts: postObjectId } },
+      { $pull: { savedPosts: postId } },
       { new: true, select: "savedPosts" }
     )
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found" })
     }
+
+    await saveInteraction(userId, postId)
 
     return res
       .status(200)

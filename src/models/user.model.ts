@@ -1,7 +1,6 @@
 import mongoose from "mongoose"
 import { isEmail } from "validator"
 import { getObject } from "../utils/s3"
-import { postSchema, PostType } from "./post.model"
 
 export interface UserType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
@@ -19,7 +18,6 @@ export interface UserType extends mongoose.Document {
   email: string
   expoPushToken?: string
   picture?: string | null
-  posts: mongoose.Types.DocumentArray<PostType>
   savedPosts: mongoose.Types.ObjectId[]
   followers: mongoose.Types.ObjectId[]
   following: mongoose.Types.ObjectId[]
@@ -116,7 +114,6 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       required: false,
       unique: false,
     },
-    posts: [postSchema],
     savedPosts: [
       {
         type: mongoose.Schema.Types.ObjectId,
