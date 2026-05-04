@@ -8,12 +8,12 @@ const AI_OFF_MESSAGE =
 
 export async function generateQuestion(contents: string): Promise<Question | null> {
   if (!AI_ON) {
-    return {
+    return questionSchema.parse({
       intention: "need",
       type: "short_answer",
       question: AI_OFF_MESSAGE,
       options: [],
-    }
+    })
   }
 
   const response = await ai.models.generateContent({
@@ -77,10 +77,11 @@ export async function generateEmbedding(contents: string): Promise<number[]> {
 
 export async function generateSummaries(contents: string) {
   if (!AI_ON) {
-    return {
+    return summariesSchema.parse({
       needSummary: AI_OFF_MESSAGE,
       provideSummary: AI_OFF_MESSAGE,
-    }
+      generalSummary: AI_OFF_MESSAGE,
+    })
   }
 
   const response = await ai.models.generateContent({

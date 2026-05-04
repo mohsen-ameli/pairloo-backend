@@ -13,6 +13,7 @@ export type Question = z.infer<typeof questionSchema>
 export const summariesSchema = z.object({
   needSummary: z.string(),
   provideSummary: z.string(),
+  generalSummary: z.string(),
 })
 
 export type Summaries = z.infer<typeof summariesSchema>

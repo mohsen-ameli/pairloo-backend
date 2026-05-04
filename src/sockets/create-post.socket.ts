@@ -137,9 +137,10 @@ export function createPostSocket(
             }
           }
 
-          const { needSummary, provideSummary } = await callForSummaries(session)
+          const { needSummary, provideSummary, generalSummary } = await callForSummaries(session)
           const needEmbedding = await generateEmbedding(needSummary)
           const provideEmbedding = await generateEmbedding(provideSummary)
+          const generalEmbedding = await generateEmbedding(generalSummary)
 
           const post: Partial<PostType> = {
             userId: new mongoose.Types.ObjectId(userId),
@@ -172,7 +173,7 @@ export function createPostSocket(
           const weaviatePosts = weaviateClient.collections.use("Post")
           await weaviatePosts.data.insert({
             properties: { userId, postId, location, distance },
-            vectors: { needEmbedding, provideEmbedding },
+            vectors: { needEmbedding, provideEmbedding, generalEmbedding },
             id: generateUuid5(postId),
           })
 

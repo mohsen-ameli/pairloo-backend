@@ -11,6 +11,7 @@ export interface PostType extends mongoose.Document {
   description: string
   needSummary: string
   provideSummary: string
+  generalSummary: string
   location?: LocationType
   distance?: number
   images?: string[]
@@ -43,11 +44,17 @@ const postSchema = new mongoose.Schema<PostType>({
   },
   needSummary: {
     type: String,
-    required: false,
+    required: true,
+    default: "",
   },
   provideSummary: {
     type: String,
-    required: false,
+    required: true,
+    default: "",
+  },
+  generalSummary: {
+    type: String,
+    required: true,
   },
   location: {
     type: {

@@ -4,10 +4,11 @@ import User, { UserType } from "../models/user.model"
 import { weaviateClient } from "../server"
 import { generateEmbedding, generateText } from "../utils/AIModel"
 import Post, { PostType } from "../models/post.model"
-import { generateUuid5 } from "weaviate-client"
+import { configure, dataType, generateUuid5, vectors } from "weaviate-client"
 import { LocationType } from "../types/location.type"
 import { sendPushNotification } from "../utils/send-push-notification"
-import { callForTitle } from "../utils/AIQA"
+import { callForEmbeddings, callForSummaries, callForTitle } from "../utils/AIQA"
+import Interaction from "../models/interaction.model"
 
 async function storePostsToWeaviate(posts: PostType[]) {
   if (!weaviateClient) {
@@ -154,6 +155,112 @@ async function updateAllUserPostsClosestPosts() {
   console.log("Updated closest posts for", count, "posts")
 }
 
+async function weaviateCreateCollection(coll: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  weaviateClient.collections.create({
+    name: coll,
+    properties: [
+      {
+        name: "userId",
+        dataType: dataType.TEXT,
+        indexFilterable: true,
+        indexSearchable: true,
+      },
+      {
+        name: "postId",
+        dataType: dataType.TEXT,
+        indexFilterable: true,
+        indexSearchable: true,
+      },
+      {
+        name: "location",
+        dataType: dataType.GEO_COORDINATES,
+      },
+      {
+        name: "distance",
+        dataType: dataType.NUMBER,
+      },
+    ],
+    vectorizers: [
+      vectors.selfProvided({
+        name: "needEmbedding",
+        vectorIndexConfig: configure.vectorIndex.hnsw({
+          distanceMetric: "dot",
+        }),
+      }),
+      vectors.selfProvided({
+        name: "provideEmbedding",
+        vectorIndexConfig: configure.vectorIndex.hnsw({
+          distanceMetric: "dot",
+        }),
+      }),
+      vectors.selfProvided({
+        name: "generalEmbedding",
+        vectorIndexConfig: configure.vectorIndex.hnsw({
+          distanceMetric: "dot",
+        }),
+      }),
+    ],
+  })
+}
+
+async function weaviateDeleteCollection(coll: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  await weaviateClient.collections.delete(coll)
+}
+
+async function weaviateDeleteObject(coll: string, id: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+  await weaviatePosts.data.deleteById(id)
+}
+
+// Moves all data from one collection to another
+async function weaviateTransfer(collA: string, collB: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const weaviatePosts = weaviateClient.collections.use(collA)
+  const weaviatePostsTemp = weaviateClient.collections.use(collB)
+
+  for await (let item of weaviatePosts.iterator({ includeVector: true })) {
+    const { postId, location, distance, userId } = item.properties
+    const post = await Post.findById(postId).select("qna")
+    if (!post || !postId) {
+      console.error("Post not found for id: ", postId)
+      continue
+    }
+
+    // const summaries = await callForSummaries({ context: post.qna })
+    // const embeddings = await callForEmbeddings(summaries)
+
+    await weaviatePostsTemp.data.insert({
+      id: generateUuid5(postId.toString()),
+      properties: {
+        postId,
+        location,
+        distance,
+        userId,
+      },
+      vectors: {
+        needEmbedding: item.vectors.needEmbedding,
+        provideEmbedding: item.vectors.provideEmbedding,
+        generalEmbedding: item.vectors.generalEmbedding,
+      },
+    })
+  }
+}
+
 /**
  * Compare every pair of posts using cosine similarity.
  * Track and log the minimum and maximum similarity across all pairs.
@@ -226,18 +333,24 @@ export async function test(req: Request, res: Response) {
   //   "This is a test push notification from the server!"
   // )
 
-  const postId = req.query.postId as string
+  const postId = "69ef0205d276eda74cab9d9a" //req.query.postId as string
   const userId = req.query.userId as string
 
-  const post = await Post.findById(postId)
-  return res.json(post)
+  // const post = await Post.findById(postId)
+  // return res.json(post)
+
+  // await weaviateDeleteCollection("PostTemp")
+  // await weaviateCreateCollection("Post")
+  // await weaviateTransfer("PostTemp", "Post")
+
+  await Interaction.deleteMany({})
 
   // @ts-ignore
   // storePostsToWeaviate([post?.post], post?.user)
 
   // await deleteAllUserClosestPosts()
   // await updateAllUserPostsClosestPosts()
-  // return res.json({ message: "Post stored to Weaviate, check server logs for details" })
+  return res.json({ message: "Post stored to Weaviate, check server logs for details" })
 
   // const closePosts = await closestPosts(postId)
   // return res.json(closePosts)

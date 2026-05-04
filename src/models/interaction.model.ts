@@ -1,10 +1,12 @@
 import mongoose from "mongoose"
 
+export type InteractionTypeEnum = "post_view" | "profile_view" | "contact" | "save"
+
 export interface InteractionType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   userId: mongoose.Types.ObjectId
   postId: mongoose.Types.ObjectId
-  type: "post_view" | "profile_view" | "contact" | "save"
+  type: InteractionTypeEnum
   count: number
   createdAt: Date
   updatedAt: Date
