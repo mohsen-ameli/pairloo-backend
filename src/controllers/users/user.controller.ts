@@ -2,6 +2,7 @@ import { Request, Response } from "express"
 import User from "../../models/user.model"
 import mongoose from "mongoose"
 import Post from "../../models/post.model"
+import Interaction from "../../models/interaction.model"
 
 type SocialUserType = {
   _id: string
@@ -277,8 +278,6 @@ export async function myUserGet(req: Request, res: Response) {
 
     const user = userAggregate[0]
 
-    console.log(user)
-
     if (!user) {
       return res.status(404).json({ error: "User not found" })
     }
@@ -302,6 +301,14 @@ export async function savePost(req: Request, res: Response) {
       { $push: { savedPosts: { $each: [postId], $position: 0 } } },
       { new: true, select: "savedPosts" }
     )
+
+    // Add or remove the "save" interaction for the post
+    const existing = await Interaction.findOne({ userId, postId, type: "save" })
+    if (existing) {
+      await existing.deleteOne()
+    } else {
+      await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
+    }
 
     return res
       .status(200)

@@ -12,18 +12,6 @@ export async function postInteraction(req: Request, res: Response) {
   }
 
   try {
-    if (type === "save") {
-      // Toggle save/unsave
-      const existing = await Interaction.findOne({ userId, postId, type })
-      if (existing) {
-        await existing.deleteOne()
-        return { saved: false }
-      } else {
-        await Interaction.create({ userId, postId, type, createdAt: new Date() })
-        return { saved: true }
-      }
-    }
-
     await Interaction.findOneAndUpdate(
       { userId, postId, type },
       {
