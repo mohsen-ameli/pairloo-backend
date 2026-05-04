@@ -121,6 +121,8 @@ export async function feedGet(req: Request, res: Response) {
 
     for (const post of fullPosts) {
       await User.updateUserPicture([post.userId])
+      await Post.updatePostImages(post)
+
       results.push({
         _id: post._id.toString(),
         title: post.title,

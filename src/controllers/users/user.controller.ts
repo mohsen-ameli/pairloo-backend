@@ -355,7 +355,7 @@ export async function getSavedPosts(req: Request, res: Response) {
       .filter((post): post is SavedPostDocument => Boolean(post))
 
     for (const post of orderedSavedPosts) {
-      await User.updateUserPostImages(post)
+      await Post.updatePostImages(post)
     }
 
     return res.status(200).json(orderedSavedPosts)
