@@ -105,7 +105,7 @@ export async function feedGet(req: Request, res: Response) {
     }
 
     const fullPosts = await Post.find({ _id: { $in: postIds } })
-      .select("_id title images createdAt")
+      .select("_id title description images createdAt")
       .populate<{
         userId: {
           _id: string

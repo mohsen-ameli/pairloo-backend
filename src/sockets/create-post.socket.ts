@@ -151,6 +151,7 @@ export function createPostSocket(
             distance,
             needSummary,
             provideSummary,
+            generalSummary,
             images: postImages,
             qna: session.context,
             closestPosts: [],
@@ -206,6 +207,8 @@ export function createPostSocket(
     socket.on(
       "discard-draft",
       handleSocketEvent("discard-draft", async () => {
+        if (!draftId) return
+
         await Post.findByIdAndDelete(draftId)
         session = structuredClone(initialSession)
         socket.emit("draft-discarded")

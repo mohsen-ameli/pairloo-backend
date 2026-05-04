@@ -27,6 +27,7 @@ async function storePostsToWeaviate(posts: PostType[]) {
 
       const needEmbedding = await generateEmbedding(post.needSummary)
       const provideEmbedding = await generateEmbedding(post.provideSummary)
+      const generalEmbedding = await generateEmbedding(post.generalSummary)
       let properties = {
         userId: post.userId.toString(),
         postId: post._id.toString(),
@@ -46,6 +47,7 @@ async function storePostsToWeaviate(posts: PostType[]) {
         vectors: {
           needEmbedding,
           provideEmbedding,
+          generalEmbedding,
         },
         id: generateUuid5(post._id.toString()),
       })

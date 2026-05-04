@@ -8,9 +8,14 @@ import Post from "../models/post.model"
 // Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
   const postId = req.params.id as string
+  const userId = req.user!.sub
 
   try {
-    const post = await Post.findById(postId)
+    const post = await Post.findOne({ _id: postId, userId })
+      .select(
+        "_id title description images publicPost qna createdAt location distance closestPosts"
+      )
+      .lean()
 
     if (!post) {
       return res.status(404).json({ message: "Post not found" })
@@ -20,7 +25,7 @@ export async function myPostGet(req: Request, res: Response) {
 
     const closestPosts = []
 
-    for (const p of post.closestPosts || []) {
+    for (const p of post.closestPosts) {
       const closeUser = await User.findById(p.userId)
       const closePost = await Post.findById(p.postId)
 
@@ -50,18 +55,7 @@ export async function myPostGet(req: Request, res: Response) {
       })
     }
 
-    return res.status(200).json({
-      _id: post._id.toString(),
-      images: post.images,
-      title: post.title,
-      description: post.description,
-      publicPost: post.publicPost,
-      qna: post.qna,
-      createdAt: post.createdAt,
-      location: post.location,
-      distance: post.distance,
-      closestPosts,
-    })
+    return res.status(200).json({ ...post, closestPosts })
   } catch (error) {
     console.error("Error fetching post:", error)
     return res.status(500).json({ message: "An error occurred while fetching the post" })
@@ -91,7 +85,13 @@ export async function postGet(req: Request, res: Response) {
 
   try {
     const posts = await Post.aggregate<ProjectedDocument>([
-      { $match: { _id: new mongoose.Types.ObjectId(postId) } },
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(postId),
+          publicPost: true,
+          isDraft: { $ne: true },
+        },
+      },
       {
         $lookup: {
           from: "users",
@@ -137,13 +137,14 @@ export async function postGet(req: Request, res: Response) {
 
 export async function postDelete(req: Request, res: Response) {
   const postId = req.params.id as string
+  const userId = req.user!.sub
 
   try {
     if (!weaviateClient) {
       return res.status(500).json({ message: "Weaviate client not initialized" })
     }
 
-    await Post.findByIdAndDelete(postId)
+    await Post.findOneAndDelete({ _id: postId, userId })
 
     const weaviatePosts = weaviateClient.collections.use("Post")
 

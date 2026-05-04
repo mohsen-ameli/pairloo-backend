@@ -329,12 +329,12 @@ export function chatSocket(
           })
           .lean()
 
-        await User.updateUserPicture(populatedConversation!.members)
-
         if (!populatedConversation) {
           socket.emit("error", "Conversation not found after creation")
           return
         }
+
+        await User.updateUserPicture(populatedConversation.members)
 
         io.to(conversation._id.toString()).emit("conversation", populatedConversation)
       })
