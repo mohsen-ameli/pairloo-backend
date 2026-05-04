@@ -44,7 +44,7 @@ export async function feedGet(req: Request, res: Response) {
       })
         .sort({ createdAt: -1 })
         .limit(20)
-        .select("_id title images createdAt")
+        .select("_id title description images createdAt")
         .populate<{
           userId: {
             _id: string
