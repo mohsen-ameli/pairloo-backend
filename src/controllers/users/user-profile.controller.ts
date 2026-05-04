@@ -73,7 +73,7 @@ export async function userProfileGet(req: Request, res: Response) {
 
     await User.updateUserPicture(user)
 
-    const posts = postAggregate
+    const posts = postAggregate[0]
     for (const post of posts) {
       await Post.updatePostImages(post)
     }
