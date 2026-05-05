@@ -41,6 +41,8 @@ export async function feedGet(req: Request, res: Response) {
     if (interactionCount < 5) {
       const recentPosts = await Post.find({
         userId: { $ne: userId },
+        publicPost: true,
+        isDraft: { $ne: true },
       })
         .sort({ createdAt: -1 })
         .limit(20)
@@ -57,6 +59,10 @@ export async function feedGet(req: Request, res: Response) {
         .lean()
 
       await User.updateUserPicture(recentPosts.map(p => p.userId))
+
+      for (const post of recentPosts) {
+        await Post.updatePostImages(post)
+      }
 
       const results = recentPosts.map(post => ({
         _id: post._id.toString(),
