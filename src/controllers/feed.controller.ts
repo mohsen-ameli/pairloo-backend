@@ -110,7 +110,11 @@ export async function feedGet(req: Request, res: Response) {
       postIds.push(obj.properties.postId as string)
     }
 
-    const fullPosts = await Post.find({ _id: { $in: postIds } })
+    const fullPosts = await Post.find({
+      _id: { $in: postIds },
+      publicPost: true,
+      isDraft: { $ne: true },
+    })
       .select("_id title description images createdAt")
       .populate<{
         userId: {
