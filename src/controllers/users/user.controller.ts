@@ -291,16 +291,6 @@ export async function myUserGet(req: Request, res: Response) {
   }
 }
 
-// Add or remove the "save" interaction whenever the user saves or unsaves a post
-async function saveInteraction(userId: string, postId: string) {
-  const existing = await Interaction.findOne({ userId, postId, type: "save" })
-  if (existing) {
-    await existing.deleteOne()
-  } else {
-    await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
-  }
-}
-
 export async function savePost(req: Request, res: Response) {
   const userId = req.user!.sub
   const postId = req.params.postId as string
@@ -312,13 +302,39 @@ export async function savePost(req: Request, res: Response) {
       { new: true, select: "savedPosts" }
     )
 
-    await saveInteraction(userId, postId)
+    await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
 
     return res
       .status(200)
       .json({ message: "Post saved successfully", savedPosts: updatedUser?.savedPosts })
   } catch (error) {
     console.error("Error saving post:", error)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+
+export async function unsavePost(req: Request, res: Response) {
+  const userId = req.user!.sub
+  const postId = req.params.postId as string
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $pull: { savedPosts: postId } },
+      { new: true, select: "savedPosts" }
+    )
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" })
+    }
+
+    await Interaction.deleteOne({ userId, postId, type: "save" })
+
+    return res
+      .status(200)
+      .json({ message: "Post unsaved successfully", savedPosts: updatedUser.savedPosts })
+  } catch (error) {
+    console.error("Error unsaving post:", error)
     return res.status(500).json({ message: "Internal server error" })
   }
 }
@@ -353,32 +369,6 @@ export async function getSavedPosts(req: Request, res: Response) {
     return res.status(200).json(savedPosts)
   } catch (error) {
     console.error("Error fetching saved posts:", error)
-    return res.status(500).json({ message: "Internal server error" })
-  }
-}
-
-export async function unsavePost(req: Request, res: Response) {
-  const userId = req.user!.sub
-  const postId = req.params.postId as string
-
-  try {
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $pull: { savedPosts: postId } },
-      { new: true, select: "savedPosts" }
-    )
-
-    if (!updatedUser) {
-      return res.status(404).json({ error: "User not found" })
-    }
-
-    await saveInteraction(userId, postId)
-
-    return res
-      .status(200)
-      .json({ message: "Post unsaved successfully", savedPosts: updatedUser.savedPosts })
-  } catch (error) {
-    console.error("Error unsaving post:", error)
     return res.status(500).json({ message: "Internal server error" })
   }
 }
