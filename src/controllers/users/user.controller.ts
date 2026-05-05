@@ -1,6 +1,8 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
 import mongoose from "mongoose"
+import Post from "../../models/post.model"
+import Interaction from "../../models/interaction.model"
 
 type SocialUserType = {
   _id: string
@@ -225,33 +227,17 @@ export async function reviewsGet(req: Request, res: Response) {
 export async function myPostsGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
-  interface ProjectedDocument {
-    posts: Array<{
-      _id: string
-      title: string
-      createdAt: Date
-      images: string[]
-      isDraft: boolean
-      publicPost: boolean
-      closestPosts?: Array<{ score: number; item: string }>
-    }>
-  }
-
   try {
-    const posts = await User.findOne<ProjectedDocument>({ _id: userId }).select(
-      "posts._id posts.title posts.createdAt posts.images posts.isDraft posts.publicPost posts.closestPosts"
-    )
-
-    for (const post of posts?.posts || []) {
-      await User.updateUserPostImages(post as any)
-    }
-
+    const posts = await Post.find({ userId }).sort({ createdAt: -1 })
     if (!posts) {
-      return res.status(404).json({ message: "User not found" })
+      return res.status(404).json({ message: "Posts not found" })
     }
 
-    posts.posts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-    return res.status(200).json(posts.posts)
+    for (const post of posts) {
+      await Post.updatePostImages(post)
+    }
+
+    return res.status(200).json(posts)
   } catch (error) {
     console.error("Error fetching user posts:", error)
     return res.status(500).json({ message: "Internal server error" })
@@ -292,8 +278,6 @@ export async function myUserGet(req: Request, res: Response) {
 
     const user = userAggregate[0]
 
-    console.log(user)
-
     if (!user) {
       return res.status(404).json({ error: "User not found" })
     }
@@ -309,7 +293,7 @@ export async function myUserGet(req: Request, res: Response) {
 
 export async function savePost(req: Request, res: Response) {
   const userId = req.user!.sub
-  const postId = req.params.postId
+  const postId = req.params.postId as string
 
   try {
     const updatedUser = await User.findByIdAndUpdate(
@@ -317,6 +301,8 @@ export async function savePost(req: Request, res: Response) {
       { $push: { savedPosts: { $each: [postId], $position: 0 } } },
       { new: true, select: "savedPosts" }
     )
+
+    await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
 
     return res
       .status(200)
@@ -327,75 +313,14 @@ export async function savePost(req: Request, res: Response) {
   }
 }
 
-export async function getSavedPosts(req: Request, res: Response) {
-  const userId = req.user!.sub
-
-  interface SavedPostDocument {
-    _id: mongoose.Types.ObjectId
-    title: string
-    images?: string[]
-    createdAt: Date
-  }
-
-  try {
-    const savedIdsDoc = await User.findById(userId).select("savedPosts")
-
-    if (!savedIdsDoc) {
-      return res.status(404).json({ message: "User not found" })
-    }
-
-    const savedPostIds = Array.isArray(savedIdsDoc.savedPosts) ? savedIdsDoc.savedPosts : []
-
-    if (savedPostIds.length === 0) {
-      return res.status(200).json([])
-    }
-
-    const savedPosts = await User.aggregate<SavedPostDocument>([
-      { $match: { "posts._id": { $in: savedPostIds } } },
-      { $unwind: "$posts" },
-      { $match: { "posts._id": { $in: savedPostIds } } },
-      {
-        $project: {
-          _id: "$posts._id",
-          title: "$posts.title",
-          images: "$posts.images",
-          createdAt: "$posts.createdAt",
-        },
-      },
-    ])
-
-    const savedPostsById = new Map(savedPosts.map(post => [post._id.toString(), post]))
-    const orderedSavedPosts = savedPostIds
-      .map(postId => savedPostsById.get(postId.toString()))
-      .filter((post): post is SavedPostDocument => Boolean(post))
-
-    for (const post of orderedSavedPosts) {
-      await User.updateUserPostImages(post)
-    }
-
-    return res.status(200).json(orderedSavedPosts)
-  } catch (error) {
-    console.error("Error fetching saved posts:", error)
-    return res.status(500).json({ message: "Internal server error" })
-  }
-}
-
 export async function unsavePost(req: Request, res: Response) {
   const userId = req.user!.sub
-  const postId = Array.isArray(req.params.postId) ? req.params.postId[0] : req.params.postId
+  const postId = req.params.postId as string
 
   try {
-    // Validate that postId is a valid ObjectId
-    if (!mongoose.Types.ObjectId.isValid(postId)) {
-      return res.status(400).json({ error: "Invalid post ID" })
-    }
-
-    const postObjectId = new mongoose.Types.ObjectId(postId)
-
-    // Use findByIdAndUpdate to avoid validating entire document
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $pull: { savedPosts: postObjectId } },
+      { $pull: { savedPosts: postId } },
       { new: true, select: "savedPosts" }
     )
 
@@ -403,11 +328,47 @@ export async function unsavePost(req: Request, res: Response) {
       return res.status(404).json({ error: "User not found" })
     }
 
+    await Interaction.deleteOne({ userId, postId, type: "save" })
+
     return res
       .status(200)
       .json({ message: "Post unsaved successfully", savedPosts: updatedUser.savedPosts })
   } catch (error) {
     console.error("Error unsaving post:", error)
+    return res.status(500).json({ message: "Internal server error" })
+  }
+}
+
+export async function getSavedPosts(req: Request, res: Response) {
+  const userId = req.user!.sub
+
+  try {
+    const savedIdsDoc = await User.findById(userId).select("savedPosts").lean()
+
+    if (!savedIdsDoc) {
+      return res.status(404).json({ message: "User not found" })
+    }
+    const savedPostIds = savedIdsDoc.savedPosts
+
+    const savedPosts = await Post.find(
+      { _id: { $in: savedPostIds } },
+      {
+        _id: 1,
+        title: 1,
+        images: 1,
+        createdAt: 1,
+      }
+    )
+      .sort({ createdAt: -1 })
+      .lean()
+
+    for (const post of savedPosts) {
+      await Post.updatePostImages(post)
+    }
+
+    return res.status(200).json(savedPosts)
+  } catch (error) {
+    console.error("Error fetching saved posts:", error)
     return res.status(500).json({ message: "Internal server error" })
   }
 }

@@ -1,6 +1,5 @@
 import mongoose from "mongoose"
 import { isEmail } from "validator"
-import postSchema, { PostType } from "./post.model"
 import { getObject } from "../utils/s3"
 
 export interface UserType extends mongoose.Document {
@@ -19,7 +18,6 @@ export interface UserType extends mongoose.Document {
   email: string
   expoPushToken?: string
   picture?: string | null
-  posts: mongoose.Types.DocumentArray<PostType>
   savedPosts: mongoose.Types.ObjectId[]
   followers: mongoose.Types.ObjectId[]
   following: mongoose.Types.ObjectId[]
@@ -33,11 +31,9 @@ export interface UserType extends mongoose.Document {
   updatedAt: Date
 }
 
-type PostImagesTarget = Pick<PostType, "images">
 type UserPictureTarget = Pick<UserType, "picture">
 
 interface UserModel extends mongoose.Model<UserType> {
-  updateUserPostImages(post: PostImagesTarget): Promise<void>
   updateUserPicture(users: UserPictureTarget[] | UserPictureTarget): Promise<void>
 }
 
@@ -118,7 +114,6 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       required: false,
       unique: false,
     },
-    posts: [postSchema],
     savedPosts: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -162,23 +157,6 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
   },
   { timestamps: true }
 )
-
-// Update the user's post images with new signed URLs if expired
-userSchema.statics.updateUserPostImages = async function (post: PostImagesTarget) {
-  if (!post || !post.images || post.images.length === 0) return post
-
-  const newImages = []
-
-  for (let image of post.images) {
-    if (!image) continue
-
-    const url = await getObject(image)
-    if (!url) continue
-    newImages.push(url)
-  }
-
-  post.images = newImages
-}
 
 // Update user's profile picture with new signed URL if expired
 userSchema.statics.updateUserPicture = async function (

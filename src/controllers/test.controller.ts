@@ -2,13 +2,15 @@ import { getClosestPosts } from "../utils/getClosestPosts"
 import { Request, Response } from "express"
 import User, { UserType } from "../models/user.model"
 import { weaviateClient } from "../server"
-import { generateEmbedding } from "../utils/AIModel"
-import { PostType } from "../models/post.model"
-import { generateUuid5 } from "weaviate-client"
+import { generateEmbedding, generateText } from "../utils/AIModel"
+import Post, { PostType } from "../models/post.model"
+import { configure, dataType, generateUuid5, vectors } from "weaviate-client"
 import { LocationType } from "../types/location.type"
 import { sendPushNotification } from "../utils/send-push-notification"
+import { callForEmbeddings, callForSummaries, callForTitle } from "../utils/AIQA"
+import Interaction from "../models/interaction.model"
 
-async function storePostsToWeaviate(posts: PostType[], user: UserType) {
+async function storePostsToWeaviate(posts: PostType[]) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
@@ -25,8 +27,9 @@ async function storePostsToWeaviate(posts: PostType[], user: UserType) {
 
       const needEmbedding = await generateEmbedding(post.needSummary)
       const provideEmbedding = await generateEmbedding(post.provideSummary)
+      const generalEmbedding = await generateEmbedding(post.generalSummary)
       let properties = {
-        userId: user._id.toString(),
+        userId: post.userId.toString(),
         postId: post._id.toString(),
       }
 
@@ -44,6 +47,7 @@ async function storePostsToWeaviate(posts: PostType[], user: UserType) {
         vectors: {
           needEmbedding,
           provideEmbedding,
+          generalEmbedding,
         },
         id: generateUuid5(post._id.toString()),
       })
@@ -58,22 +62,19 @@ async function storePostsToWeaviate(posts: PostType[], user: UserType) {
 }
 
 async function storeAllPostsToWeaviate() {
-  const users = await User.find()
-  for (const user of users) {
-    await storePostsToWeaviate(user.posts as PostType[], user)
-  }
+  const posts = await Post.find()
+  await storePostsToWeaviate(posts)
 }
 
 // get closest posts for a given post of a given user
-async function closestPosts(postId: string, userId: string) {
+async function closestPosts(postId: string) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
 
-  const user = await User.findById(userId)
-  const post = user?.posts.id(postId)
+  const post = await Post.findById(postId)
 
-  if (!post || !user) {
+  if (!post) {
     throw new Error("Post or user not found #1")
   }
 
@@ -87,8 +88,8 @@ async function closestPosts(postId: string, userId: string) {
   }
 
   const results = await getClosestPosts({
-    userId,
-    postId,
+    userId: post.userId,
+    postId: post._id,
     location: wPost.properties.location as LocationType,
     distance: wPost.properties.distance as number,
     provideEmbedding: wPost.vectors.provideEmbedding as number[],
@@ -98,7 +99,7 @@ async function closestPosts(postId: string, userId: string) {
   return {
     searchFor: {
       postId,
-      userId: user._id.toString(),
+      userId: post.userId.toString(),
       title: post.title,
     },
     results,
@@ -110,8 +111,9 @@ async function addPostToUser(userId: string, post: Partial<PostType>) {
   if (!user) {
     throw new Error("User not found")
   }
-  user.posts.push(post)
-  await user.save()
+  const newPost = await Post.create({ ...post, userId })
+  await storePostsToWeaviate([newPost])
+  return newPost
 }
 
 async function createUser() {
@@ -131,49 +133,134 @@ async function createUser() {
   })
 }
 
-async function deleteAllUserClosestPosts() {
-  const users = await User.find()
-  for (const user of users) {
-    for (const post of user.posts) {
-      await User.updateOne(
-        { _id: user._id, "posts._id": post._id },
-        { $set: { "posts.$.closestPosts": [] } }
-      )
-    }
+async function deleteAllPostClosestPosts() {
+  const posts = await Post.find()
+  for (const post of posts) {
+    await Post.updateOne({ _id: post._id }, { $set: { closestPosts: [] } })
   }
 }
 
 async function updateAllUserPostsClosestPosts() {
-  const users = await User.find()
+  const posts = await Post.find()
   let count = 0
-  for (const user of users) {
-    for (const post of user.posts) {
-      try {
-        const results = await closestPosts(post._id.toString(), user._id.toString())
-        await User.updateOne(
-          { _id: user._id, "posts._id": post._id },
-          { $set: { "posts.$.closestPosts": results.results } }
-        )
-        console.log("updated closest posts for post with id: ", post._id.toString())
-        count++
-      } catch (error) {
-        console.error("Error updating closest posts for post with id: ", post._id.toString())
-        console.log(error)
-      }
+  for (const post of posts) {
+    try {
+      const results = await closestPosts(post._id.toString())
+      await Post.updateOne({ _id: post._id }, { $set: { closestPosts: results.results } })
+      console.log("updated closest posts for post with id: ", post._id.toString())
+      count++
+    } catch (error) {
+      console.error("Error updating closest posts for post with id: ", post._id.toString())
+      console.log(error)
     }
   }
   console.log("Updated closest posts for", count, "posts")
 }
 
-async function findPost(postId: string) {
-  const users = await User.find()
-  for (const user of users) {
-    const post = user.posts.id(postId)
-    if (post) {
-      return { post, user }
-    }
+async function weaviateCreateCollection(coll: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
   }
-  return null
+
+  weaviateClient.collections.create({
+    name: coll,
+    properties: [
+      {
+        name: "userId",
+        dataType: dataType.TEXT,
+        indexFilterable: true,
+        indexSearchable: true,
+      },
+      {
+        name: "postId",
+        dataType: dataType.TEXT,
+        indexFilterable: true,
+        indexSearchable: true,
+      },
+      {
+        name: "location",
+        dataType: dataType.GEO_COORDINATES,
+      },
+      {
+        name: "distance",
+        dataType: dataType.NUMBER,
+      },
+    ],
+    vectorizers: [
+      vectors.selfProvided({
+        name: "needEmbedding",
+        vectorIndexConfig: configure.vectorIndex.hnsw({
+          distanceMetric: "dot",
+        }),
+      }),
+      vectors.selfProvided({
+        name: "provideEmbedding",
+        vectorIndexConfig: configure.vectorIndex.hnsw({
+          distanceMetric: "dot",
+        }),
+      }),
+      vectors.selfProvided({
+        name: "generalEmbedding",
+        vectorIndexConfig: configure.vectorIndex.hnsw({
+          distanceMetric: "dot",
+        }),
+      }),
+    ],
+  })
+}
+
+async function weaviateDeleteCollection(coll: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  await weaviateClient.collections.delete(coll)
+}
+
+async function weaviateDeleteObject(coll: string, id: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+  await weaviatePosts.data.deleteById(id)
+}
+
+// Moves all data from one collection to another
+async function weaviateTransfer(collA: string, collB: string) {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const weaviatePosts = weaviateClient.collections.use(collA)
+  const weaviatePostsTemp = weaviateClient.collections.use(collB)
+
+  for await (let item of weaviatePosts.iterator({ includeVector: true })) {
+    const { postId, location, distance, userId } = item.properties
+    const post = await Post.findById(postId).select("qna")
+    if (!post || !postId) {
+      console.error("Post not found for id: ", postId)
+      continue
+    }
+
+    // const summaries = await callForSummaries({ context: post.qna })
+    // const embeddings = await callForEmbeddings(summaries)
+
+    await weaviatePostsTemp.data.insert({
+      id: generateUuid5(postId.toString()),
+      properties: {
+        postId,
+        location,
+        distance,
+        userId,
+      },
+      vectors: {
+        needEmbedding: item.vectors.needEmbedding,
+        provideEmbedding: item.vectors.provideEmbedding,
+        generalEmbedding: item.vectors.generalEmbedding,
+      },
+    })
+  }
 }
 
 /**
@@ -235,12 +322,12 @@ export async function test(req: Request, res: Response) {
   // // const results = await closestPosts(postId, username)
   // return res.json(post)
 
-  const myId = "6953259c89bfe6ca51b7e1d6" //req.user!.sub
-  const user = await User.findById(myId)
+  // const myId = "6953259c89bfe6ca51b7e1d6" //req.user!.sub
+  // const user = await User.findById(myId)
 
-  if (!user || !user.expoPushToken) {
-    return res.status(404).json({ error: "User not found" })
-  }
+  // if (!user || !user.expoPushToken) {
+  //   return res.status(404).json({ error: "User not found" })
+  // }
 
   // await sendPushNotification(
   //   user.expoPushToken,
@@ -248,19 +335,29 @@ export async function test(req: Request, res: Response) {
   //   "This is a test push notification from the server!"
   // )
 
-  const postId = req.query.postId as string
+  const postId = "69ef0205d276eda74cab9d9a" //req.query.postId as string
   const userId = req.query.userId as string
-  // const post = await findPost(postId)
+
+  // const post = await Post.findById(postId)
+  // return res.json(post)
+
+  // await weaviateDeleteCollection("PostTemp")
+  // await weaviateCreateCollection("Post")
+  // await weaviateTransfer("PostTemp", "Post")
+
+  await Interaction.deleteMany({})
+  const post = await Post.findById(postId)
+  return res.json(post)
 
   // @ts-ignore
   // storePostsToWeaviate([post?.post], post?.user)
 
   // await deleteAllUserClosestPosts()
   // await updateAllUserPostsClosestPosts()
-  // return res.json({ message: "Post stored to Weaviate, check server logs for details" })
+  return res.json({ message: "Post stored to Weaviate, check server logs for details" })
 
-  const closePosts = await closestPosts(postId, userId)
-  return res.json(closePosts)
+  // const closePosts = await closestPosts(postId)
+  // return res.json(closePosts)
 }
 
 /**

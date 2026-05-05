@@ -1,52 +1,199 @@
 import { Request, Response } from "express"
+import Post from "../models/post.model"
+import Interaction, { InteractionTypeEnum } from "../models/interaction.model"
+import { weaviateClient } from "../server"
+import { generateUuid5 } from "weaviate-client"
 import User from "../models/user.model"
+
+const WEIGHTS: {
+  [key in InteractionTypeEnum]: number
+} = { contact: 1.0, save: 0.8, profile_view: 0.4, post_view: 0.1 }
+
+type GeneralPostType = {
+  _id: string // postId
+  userId: string
+  username: string
+  firstName: string
+  lastName: string
+  picture?: string | null
+  title: string
+  description: string
+  images?: string[] | null | undefined
+  createdAt: Date
+  location?: {
+    latitude: number
+    longitude: number
+  }
+  distance?: number
+  score: number
+}
 
 export async function feedGet(req: Request, res: Response) {
   const userId = req.user!.sub
-  const results = []
+  if (!weaviateClient) {
+    return res.status(500).json({ message: "Something went wrong!" })
+  }
 
   try {
-    const allUsers = await User.find(
-      { _id: { $ne: userId }, "posts.0": { $exists: true } },
+    const interactionCount = await Interaction.countDocuments({ userId })
+
+    // Cold start: return trending/recent posts
+    if (interactionCount < 5) {
+      const recentPosts = await Post.find({
+        userId: { $ne: userId },
+        publicPost: true,
+        isDraft: { $ne: true },
+      })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .select("_id title description images createdAt")
+        .populate<{
+          userId: {
+            _id: string
+            username: string
+            firstName: string
+            lastName: string
+            picture: string
+          }
+        }>("userId", "_id username firstName lastName picture")
+        .lean()
+
+      await User.updateUserPicture(recentPosts.map(p => p.userId))
+
+      for (const post of recentPosts) {
+        await Post.updatePostImages(post)
+      }
+
+      const results = recentPosts.map(post => ({
+        _id: post._id.toString(),
+        title: post.title,
+        description: post.description,
+        images: post.images,
+        createdAt: post.createdAt,
+        userId: post.userId._id,
+        username: post.userId.username,
+        firstName: post.userId.firstName,
+        lastName: post.userId.lastName,
+        picture: post.userId.picture,
+      }))
+
+      return res.status(200).json(results)
+    }
+
+    const interestVector = await buildUserInterestVector(userId)
+
+    // Get IDs of posts already seen (to exclude)
+    // const seenIds = await Interaction.distinct('postId', { userId, type: 'view' }).then(ids => ids.map(id => id.toString()));
+
+    const weaviatePosts = weaviateClient.collections.use("Post")
+
+    const result = await weaviatePosts.query.nearVector(
       {
-        "posts._id": 1,
-        "posts.username": 1,
-        "posts.firstName": 1,
-        "posts.lastName": 1,
-        "posts.title": 1,
-        "posts.description": 1,
-        "posts.images": 1,
-        "posts.createdAt": 1,
-        username: 1,
-        firstName: 1,
-        lastName: 1,
-        picture: 1,
+        generalEmbedding: interestVector,
+      },
+      {
+        returnMetadata: ["distance"],
+        // filters: weaviatePosts.filter.byId().notEqual(seenIds)
+        filters: weaviatePosts.filter.byProperty("userId").notEqual(userId),
+        limit: 20,
+        offset: 0,
       }
     )
 
-    await User.updateUserPicture(allUsers)
-
-    for (const user of allUsers) {
-      for (const post of user.posts) {
-        await User.updateUserPostImages(post)
-        const data = {
-          _id: post._id,
-          username: user.username,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          picture: user.picture,
-          title: post.title,
-          description: post.description,
-          images: post.images,
-          createdAt: post.createdAt,
-        }
-        results.push(data)
+    let posts: { [postId: string]: { score: number } } = {}
+    let postIds: string[] = []
+    for (const obj of result.objects) {
+      if (!obj.metadata) continue
+      posts[obj.properties.postId as string] = {
+        score: obj.metadata.distance!,
       }
+      postIds.push(obj.properties.postId as string)
     }
+
+    const fullPosts = await Post.find({
+      _id: { $in: postIds },
+      publicPost: true,
+      isDraft: { $ne: true },
+    })
+      .select("_id title description images createdAt")
+      .populate<{
+        userId: {
+          _id: string
+          username: string
+          firstName: string
+          lastName: string
+          picture: string
+        }
+      }>("userId", "_id username firstName lastName picture")
+      .lean()
+
+    let results: GeneralPostType[] = []
+
+    for (const post of fullPosts) {
+      await User.updateUserPicture([post.userId])
+      await Post.updatePostImages(post)
+
+      results.push({
+        _id: post._id.toString(),
+        title: post.title,
+        description: post.description,
+        images: post.images,
+        createdAt: post.createdAt,
+        userId: post.userId._id,
+        username: post.userId.username,
+        firstName: post.userId.firstName,
+        lastName: post.userId.lastName,
+        picture: post.userId.picture,
+        score: posts[post._id.toString()].score,
+      })
+    }
+
+    results.sort((a, b) => a.score - b.score)
 
     return res.status(200).json(results)
   } catch (error) {
     console.error("Error fetching feed:", error)
     return res.status(500).json({ message: "Internal server error" })
   }
+}
+
+async function buildUserInterestVector(userId: string) {
+  // 1. Fetch recent interactions from MongoDB (last N or last 30 days)
+  const interactions = await Interaction.find({ userId }).sort({ createdAt: -1 }).limit(100)
+
+  // 2. Fetch the Weaviate vector for each interacted post
+  const weightedVectors = await Promise.all(
+    interactions.map(async interaction => {
+      const weaviatePosts = weaviateClient!.collections.use("Post")
+
+      const result = await weaviatePosts.query.fetchObjectById(
+        generateUuid5(interaction.postId.toString()),
+        {
+          includeVector: true,
+        }
+      )
+      if (!result) return null
+
+      const freqMultiplier = Math.log1p(interaction.count)
+      return {
+        vector: result.vectors.generalEmbedding,
+        weight: WEIGHTS[interaction.type] * freqMultiplier,
+      }
+    })
+  )
+
+  // 3. Weighted average across all vectors
+  const validVectors = weightedVectors.filter(v => v !== null)
+  const dimension = validVectors[0].vector.length
+  const sumVec = new Array(dimension).fill(0)
+  let totalWeight = 0
+
+  for (const { vector, weight } of validVectors) {
+    for (let i = 0; i < dimension; i++) {
+      sumVec[i] += Number(vector[i]) * weight
+    }
+    totalWeight += weight
+  }
+
+  return sumVec.map(v => v / totalWeight) // normalized interest vector
 }

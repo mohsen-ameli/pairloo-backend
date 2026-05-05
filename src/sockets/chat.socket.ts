@@ -304,6 +304,7 @@ export function chatSocket(
 
         const conversation = await Conversation.create({
           members: memberIds,
+          createdBy: userId,
         })
 
         const connectedSockets = Array.from(io.sockets.values()).filter(s =>
@@ -332,6 +333,8 @@ export function chatSocket(
           socket.emit("error", "Conversation not found after creation")
           return
         }
+
+        await User.updateUserPicture(populatedConversation.members)
 
         io.to(conversation._id.toString()).emit("conversation", populatedConversation)
       })

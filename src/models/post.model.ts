@@ -2,25 +2,38 @@ import mongoose from "mongoose"
 import { ClosePost } from "../types/closePost.types"
 import { QnaType } from "../types/session.types"
 import { LocationType } from "../types/location.type"
+import { getObject } from "../utils/s3"
 
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
-  postId: mongoose.Types.ObjectId
+  userId: mongoose.Types.ObjectId
   title: string
   description: string
   needSummary: string
   provideSummary: string
+  generalSummary: string
   location?: LocationType
   distance?: number
   images?: string[]
   publicPost: boolean
   qna: QnaType
-  closestPosts?: ClosePost[] | null
+  closestPosts: ClosePost[]
   isDraft?: boolean
   createdAt: Date
 }
 
+type PostImagesTarget = Pick<PostType, "images">
+
+interface PostModel extends mongoose.Model<PostType> {
+  updatePostImages(post: PostImagesTarget): Promise<void>
+}
+
 const postSchema = new mongoose.Schema<PostType>({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "user",
+    required: true,
+  },
   title: {
     type: String,
     required: [true, "Post title is required"],
@@ -34,6 +47,10 @@ const postSchema = new mongoose.Schema<PostType>({
     required: false,
   },
   provideSummary: {
+    type: String,
+    required: false,
+  },
+  generalSummary: {
     type: String,
     required: false,
   },
@@ -84,6 +101,7 @@ const postSchema = new mongoose.Schema<PostType>({
       },
     ],
     required: false,
+    default: [],
   },
   isDraft: {
     type: Boolean,
@@ -95,4 +113,23 @@ const postSchema = new mongoose.Schema<PostType>({
   },
 })
 
-export default postSchema
+// Update the user's post images with new signed URLs if expired
+postSchema.statics.updatePostImages = async function (post: PostImagesTarget) {
+  if (!post || !post.images || post.images.length === 0) return post
+
+  const newImages = []
+
+  for (let image of post.images) {
+    if (!image) continue
+
+    const url = await getObject(image)
+    if (!url) continue
+    newImages.push(url)
+  }
+
+  post.images = newImages
+}
+
+const Post = mongoose.model<PostType, PostModel>("post", postSchema)
+export { postSchema }
+export default Post

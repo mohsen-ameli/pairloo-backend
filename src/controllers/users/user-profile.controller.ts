@@ -1,28 +1,20 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
 import mongoose from "mongoose"
-import { PostType } from "../../models/post.model"
+import Post, { PostType } from "../../models/post.model"
 
 type UserProfileType = {
   username: string
   firstName: string
   lastName: string
   picture: string
-  phoneNumber: string
-  country: string
-  city: string
-  state: string
-  latitude: number
-  longitude: number
-  timezone: string
-  email: string
-  posts: PostType[]
+  posts: Partial<PostType>[]
   followersCount: number
   followingCount: number
   createdAt: Date
-  updatedAt: Date
 }
 
+// Public user profile
 export async function userProfileGet(req: Request, res: Response) {
   const myId = req.user!.sub
   const userId = req.params.id as string
@@ -35,28 +27,19 @@ export async function userProfileGet(req: Request, res: Response) {
   }
 
   try {
-    const userAggregate = await User.aggregate([
+    const userAggregate = await User.aggregate<{
+      username: string
+      firstName: string
+      lastName: string
+      picture: string
+      createdAt: Date
+      followersCount: number
+      followingCount: number
+      isFollowing: boolean
+    }>([
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
       {
         $project: {
-          posts: {
-            $map: {
-              input: {
-                $filter: {
-                  input: "$posts",
-                  as: "post",
-                  cond: { $eq: ["$$post.publicPost", true] },
-                },
-              },
-              as: "post",
-              in: {
-                _id: "$$post._id",
-                title: "$$post.title",
-                images: "$$post.images",
-                createdAt: "$$post.createdAt",
-              },
-            },
-          },
           username: 1,
           firstName: 1,
           lastName: 1,
@@ -69,22 +52,20 @@ export async function userProfileGet(req: Request, res: Response) {
           },
         },
       },
-      {
-        $project: {
-          posts: 1,
-          username: 1,
-          firstName: 1,
-          lastName: 1,
-          picture: 1,
-          createdAt: 1,
-          followersCount: 1,
-          followingCount: 1,
-          isFollowing: 1,
-        },
-      },
     ])
 
-    const user = userAggregate[0] as UserProfileType
+    const posts = await Post.aggregate<{
+      title: string
+      description: string
+      images: string[]
+      createdAt: Date
+    }>([
+      { $match: { userId: new mongoose.Types.ObjectId(userId), publicPost: true } },
+      { $project: { title: 1, description: 1, images: 1, createdAt: 1 } },
+      { $sort: { createdAt: -1 } },
+    ])
+
+    const user = userAggregate[0]
 
     if (!user) {
       return res.status(404).json({ error: "User not found" })
@@ -92,11 +73,13 @@ export async function userProfileGet(req: Request, res: Response) {
 
     await User.updateUserPicture(user)
 
-    for (const post of user.posts) {
-      await User.updateUserPostImages(post)
+    for (const post of posts) {
+      await Post.updatePostImages(post)
     }
 
-    return res.json(user)
+    const results: UserProfileType = { ...user, posts }
+
+    return res.json(results)
   } catch (error) {
     console.error("Error in user profile:", error)
     return res.status(500).json({ error: "Internal server error" })
