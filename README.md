@@ -102,3 +102,8 @@ If android emulator is lagging, this might help:
 ```bash
 echo "QuickbootFileBacked = off" >> ~/.android/advancedFeatures.ini
 ```
+
+# Testing
+
+Add user phone number by going to AWS SNS -> Text Messaging (SMS) then add phone number
+https://ca-central-1.console.aws.amazon.com/sns/v3/home?region=ca-central-1#/mobile/text-messaging

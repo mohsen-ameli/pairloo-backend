@@ -1,20 +1,19 @@
-import { DefaultEventsMap, Namespace, Socket } from "socket.io"
 import User from "../models/user.model"
-import Conversation from "../models/conversation.model"
+import Conversation, { LastMessageType } from "../models/conversation.model"
 import { Types } from "mongoose"
 import Message from "../models/message.model"
-import { getObject, sendObject } from "../utils/s3"
-import { Attachment } from "../types/attachment.type"
+import { deleteObject, getObject, sendObject } from "../utils/s3"
 import { sendPushNotification } from "../utils/send-push-notification"
+import { CustomSocket } from "../types/socket/chat-socket.type"
+import { AllConversationsType, ConversationMessagesType } from "../types/conversation.type"
 
-export function chatSocket(
-  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
-) {
-  io.on("connection", async (socket: Socket) => {
+export function chatSocket(io: CustomSocket) {
+  io.on("connection", async socket => {
     let connected = false
     const userId = socket.user!.sub
     const user = await User.findById(userId)
     let otherUserPushToken: string | undefined
+    let otherMemberId: Types.ObjectId | undefined
 
     if (!user) {
       socket.emit("error", "User not found")
@@ -37,18 +36,52 @@ export function chatSocket(
       }
     }
 
-    const deleteMessageHandler = async (messageId: string, conversationId: string) => {
-      const deletedMessage = await Message.findByIdAndDelete(messageId)
+    async function updateLastMessage(conversationId: string) {
+      const lastMessage = await Message.findOne({ conversationId })
+        .sort({ createdAt: -1 })
+        .select("_id sender content attachments createdAt updatedAt")
+        .lean()
 
-      if (!deletedMessage) {
+      const newLastMessage: LastMessageType = lastMessage
+        ? {
+            _id: lastMessage._id,
+            sender: lastMessage.sender,
+            content: lastMessage.content,
+            attachmentsCount: lastMessage.attachments?.length || 0,
+            createdAt: lastMessage.createdAt,
+            updatedAt: lastMessage.updatedAt,
+          }
+        : null
+
+      await Conversation.findByIdAndUpdate(conversationId, { lastMessage: newLastMessage })
+
+      return newLastMessage
+    }
+
+    async function deleteMessageHandler(messageId: string, conversationId: string) {
+      const message = await Message.findOne({
+        _id: messageId,
+        conversationId,
+        "sender._id": new Types.ObjectId(userId),
+      })
+        .select("attachments")
+        .lean()
+
+      if (!message) {
         socket.emit("error", "Message not found")
         return
+      }
+
+      await Message.findByIdAndDelete(messageId)
+
+      for (const msg of message.attachments || []) {
+        await deleteObject(msg)
       }
 
       // Update all messages that reply to this deleted message in one query
       await Message.updateMany(
         {
-          replyTo: messageId,
+          "replyTo._id": new Types.ObjectId(messageId),
           conversationId,
         },
         {
@@ -57,10 +90,12 @@ export function chatSocket(
         }
       )
 
+      const newLastMessage = await updateLastMessage(conversationId)
+
       // Emit the deleted message event to all users in the conversation
       io.to(conversationId).emit("messageDeleted", {
         messageId,
-        conversationId,
+        newLastMessage,
       })
     }
 
@@ -86,214 +121,115 @@ export function chatSocket(
 
     socket.on(
       "newMessage",
-      handleSocketEvent(
-        "newMessage",
-        async ({
-          conversationId,
-          content,
-          attachments,
-          replyTo,
-        }: {
-          conversationId: string
-          content?: string
-          attachments?: Attachment[]
-          replyTo?: string
-        }) => {
-          const urls = []
-          const keys = []
-          if (attachments && attachments.length > 0) {
-            for (const attachment of attachments) {
-              const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
-              if (!fileName) {
-                socket.emit("error", "Failed to upload attachment")
-                return
-              }
-              const url = await getObject(fileName)
-              urls.push(url)
-              keys.push(fileName)
+      handleSocketEvent("newMessage", async ({ conversationId, content, attachments, replyTo }) => {
+        const urls = []
+        const keys = []
+        if (attachments && attachments.length > 0) {
+          for (const attachment of attachments) {
+            const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
+            if (!fileName) {
+              socket.emit("error", "Failed to upload attachment")
+              return
             }
-          }
-
-          const messageData = {
-            conversationId: new Types.ObjectId(conversationId),
-            senderId: userId,
-            content,
-            attachments: keys,
-            replyTo: replyTo ? new Types.ObjectId(replyTo) : undefined,
-          }
-
-          const message = await Message.create(messageData)
-
-          const populatedMessage = await Message.findById(message._id)
-            .populate<{
-              senderId: {
-                _id: Types.ObjectId
-                username: string
-                picture: string
-              }
-            }>({
-              path: "senderId",
-              select: "username picture",
-            })
-            .populate<{
-              replyTo: {
-                _id: Types.ObjectId
-                content: string
-                attachments: string[]
-                senderId: {
-                  _id: Types.ObjectId
-                  username: string
-                }
-              }
-            }>({
-              path: "replyTo",
-              select: "content attachments senderId",
-              populate: {
-                path: "senderId",
-                select: "username",
-              },
-            })
-
-          if (!populatedMessage) {
-            socket.emit("error", "Message not found after creation")
-            return
-          }
-
-          let replyToData
-          if (populatedMessage.replyTo) {
-            const replyAttachments = []
-            for (const key of populatedMessage.replyTo.attachments) {
-              const url = await getObject(key)
-              if (url) replyAttachments.push(url)
-            }
-            replyToData = {
-              _id: populatedMessage.replyTo._id,
-              content: populatedMessage.replyTo.content,
-              attachments: replyAttachments,
-              sender: {
-                _id: populatedMessage.replyTo.senderId._id,
-                username: populatedMessage.replyTo.senderId.username,
-              },
-            }
-          }
-
-          const formattedMessage = {
-            _id: populatedMessage._id,
-            conversationId: populatedMessage.conversationId,
-            content: populatedMessage.content,
-            createdAt: populatedMessage.createdAt,
-            updatedAt: populatedMessage.updatedAt,
-            attachments: urls,
-            replyTo: replyToData,
-            replyToDeleted: populatedMessage.replyToDeleted || false,
-            isEdited: populatedMessage.isEdited || false,
-            sender: {
-              _id: populatedMessage.senderId._id,
-              username: populatedMessage.senderId.username,
-              picture: await getObject(populatedMessage.senderId.picture),
-            },
-          }
-
-          io.to(conversationId).emit("message", formattedMessage)
-
-          // Update lastMessage in Conversation
-          await Conversation.findByIdAndUpdate(conversationId, {
-            lastMessage: {
-              conversationId: populatedMessage.conversationId,
-              senderId: populatedMessage.senderId._id,
-              content: populatedMessage.content,
-              attachments: keys,
-              createdAt: populatedMessage.createdAt,
-              updatedAt: populatedMessage.updatedAt,
-            },
-          })
-
-          if (otherUserPushToken) {
-            await sendPushNotification(
-              otherUserPushToken,
-              populatedMessage.senderId.username,
-              content ? content : "Sent an attachment"
-            )
+            const url = await getObject(fileName)
+            urls.push(url)
+            keys.push(fileName)
           }
         }
-      )
+
+        const message = await Message.create({
+          conversationId: new Types.ObjectId(conversationId),
+          sender: {
+            _id: new Types.ObjectId(userId),
+            username: user.username,
+          },
+          content,
+          attachments: keys,
+          replyTo: replyTo
+            ? {
+                ...replyTo,
+                _id: new Types.ObjectId(replyTo._id),
+              }
+            : undefined,
+        })
+
+        if (!message) {
+          socket.emit("error", "Message not found after creation")
+          return
+        }
+
+        // Attach URLs to the message object before emitting
+        message.sender.picture = user.picture
+
+        io.to(conversationId).emit("message", message)
+
+        const lastMessage: LastMessageType = {
+          _id: message._id,
+          sender: message.sender,
+          content: message.content,
+          attachmentsCount: attachments?.length || 0,
+          createdAt: message.createdAt,
+          updatedAt: message.updatedAt,
+        }
+
+        // Update lastMessage in Conversation
+        await Conversation.findByIdAndUpdate(conversationId, { lastMessage })
+
+        const isOtherMemberConnected = Array.from(io.sockets.values()).some(
+          s => (s.user!.sub as string) === otherMemberId?.toString()
+        )
+
+        if (otherUserPushToken && !isOtherMemberConnected) {
+          await sendPushNotification(
+            otherUserPushToken,
+            message.sender.username,
+            content ? content : "Sent an attachment"
+          )
+        }
+      })
     )
 
     socket.on(
       "getConversations",
       handleSocketEvent("getConversations", async () => {
-        const conversations = await Conversation.find({
-          members: userId,
-        })
-          .populate<{
-            members: {
-              _id: Types.ObjectId
-              username: string
-              picture: string
-              email: string
-            }[]
-          }>({
-            path: "members",
-            select: "username picture email",
-          })
-          .select("_id members lastMessage")
-          .populate<{
-            lastMessage: {
-              _id: Types.ObjectId
-              conversationId: Types.ObjectId
-              senderId: {
-                _id: Types.ObjectId
-                username: string
-              }
-              content: string
-              attachment: string
-              createdAt: Date
-              updatedAt: Date
-            }
-          }>({
-            path: "lastMessage.senderId",
-            select: "_id username",
-          })
-          .lean()
+        const conversations = await Conversation.aggregate<AllConversationsType>([
+          { $match: { members: new Types.ObjectId(userId) } },
+          {
+            $lookup: {
+              from: "users",
+              localField: "members",
+              foreignField: "_id",
+              as: "members",
+            },
+          },
+          {
+            $project: {
+              _id: 1,
+              members: {
+                _id: 1,
+                username: 1,
+                picture: 1,
+              },
+              lastMessage: 1,
+            },
+          },
+        ])
 
         await User.updateUserPicture(conversations.flatMap(conv => conv.members))
 
-        const formattedConversations = conversations.map(conv => {
-          if (conv.lastMessage && conv.lastMessage.senderId) {
-            return {
-              ...conv,
-              lastMessage: {
-                ...conv.lastMessage,
-                sender: {
-                  _id: conv.lastMessage.senderId._id,
-                  username: conv.lastMessage.senderId.username,
-                },
-              },
-            }
-          }
-          return conv
-        })
-
-        socket.emit("conversations", formattedConversations)
+        socket.emit("conversations", conversations)
       })
     )
 
     socket.on(
       "newConversation",
-      handleSocketEvent("newConversation", async (memberIds: Types.ObjectId[]) => {
+      handleSocketEvent("newConversation", async memberIds => {
         const existingConversation = await Conversation.findOne({
           members: { $all: memberIds },
         })
-          .populate<{
-            members: {
-              _id: Types.ObjectId
-              username: string
-              picture: string
-              email: string
-            }[]
-          }>({
+          .populate<AllConversationsType>({
             path: "members",
-            select: "username picture email",
+            select: "username picture",
           })
           .lean()
 
@@ -316,16 +252,9 @@ export function chatSocket(
         })
 
         const populatedConversation = await Conversation.findById(conversation._id)
-          .populate<{
-            members: {
-              _id: Types.ObjectId
-              username: string
-              picture: string
-              email: string
-            }[]
-          }>({
+          .populate<AllConversationsType>({
             path: "members",
-            select: "username picture email",
+            select: "username picture",
           })
           .lean()
 
@@ -342,190 +271,112 @@ export function chatSocket(
 
     socket.on(
       "getMessages",
-      handleSocketEvent(
-        "getMessages",
-        async (conversationId: string, start: number, end: number) => {
-          const skip = Math.max(0, start)
-          const limit = Math.max(0, end - start)
+      handleSocketEvent("getMessages", async (conversationId, start, end) => {
+        const skip = Math.max(0, start)
+        const limit = Math.max(0, end - start)
 
-          if (limit === 0) {
-            socket.emit("messages", [])
-            return
-          }
-
-          const messages = await Message.find({ conversationId })
-            .sort({
-              createdAt: -1,
-            })
-            .skip(skip)
-            .limit(limit)
-            .populate<{
-              senderId: {
-                _id: Types.ObjectId
-                username: string
-                picture?: string
-              }
-            }>({
-              path: "senderId",
-              select: "username picture",
-            })
-            .populate<{
-              replyTo: {
-                _id: Types.ObjectId
-                content: string
-                attachments: string[]
-                senderId: {
-                  _id: Types.ObjectId
-                  username: string
-                }
-              }
-            }>({
-              path: "replyTo",
-              select: "content attachments senderId",
-              populate: {
-                path: "senderId",
-                select: "username",
-              },
-            })
-            .lean()
-
-          if (messages.length === 0) {
-            socket.emit("messages", [])
-            return
-          }
-
-          const conversation = await Conversation.findById(conversationId).select("members").lean()
-          const otherMemberId = conversation?.members.find(
-            memberId => memberId.toString() !== userId
-          )
-
-          if (otherMemberId) {
-            const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
-            otherUserPushToken = otherUser?.expoPushToken
-          }
-
-          const map = new Map<string, string>()
-
-          const formattedMessages = []
-          for (const msg of messages) {
-            const attachments = []
-            for (const key of msg.attachments || []) {
-              const url = await getObject(key)
-              if (url) {
-                attachments.push(url)
-              }
-            }
-
-            if (msg.senderId.picture) {
-              if (map.has(msg.senderId.picture)) {
-                msg.senderId.picture = map.get(msg.senderId.picture)!
-              } else {
-                const url = await getObject(msg.senderId.picture)
-                if (url) {
-                  msg.senderId.picture = url
-                  map.set(msg.senderId.picture, url)
-                }
-              }
-            }
-
-            let replyToData
-            if (msg.replyTo) {
-              const replyAttachments = []
-              for (const key of msg.replyTo.attachments || []) {
-                const url = await getObject(key)
-                if (url) replyAttachments.push(url)
-              }
-              replyToData = {
-                _id: msg.replyTo._id,
-                content: msg.replyTo.content,
-                attachments: replyAttachments,
-                sender: {
-                  _id: msg.replyTo.senderId._id,
-                  username: msg.replyTo.senderId.username,
-                },
-              }
-            }
-
-            formattedMessages.push({
-              _id: msg._id,
-              conversationId: msg.conversationId,
-              content: msg.content,
-              createdAt: msg.createdAt,
-              updatedAt: msg.updatedAt,
-              attachments,
-              replyTo: replyToData,
-              replyToDeleted: msg.replyToDeleted || false,
-              isEdited: msg.isEdited || false,
-              sender: {
-                _id: msg.senderId._id,
-                username: msg.senderId.username.toString(),
-                picture: msg.senderId.picture,
-              },
-            })
-          }
-
-          socket.emit("messages", formattedMessages)
+        if (limit === 0) {
+          socket.emit("messages", [])
+          return
         }
-      )
+
+        const messages = await Message.aggregate<ConversationMessagesType>([
+          { $match: { conversationId: new Types.ObjectId(conversationId) } },
+          { $sort: { createdAt: -1 } },
+          { $skip: skip },
+          { $limit: limit },
+          {
+            $project: {
+              _id: 1,
+              conversationId: 1,
+              content: 1,
+              createdAt: 1,
+              updatedAt: 1,
+              attachments: 1,
+              replyTo: 1,
+              replyToDeleted: 1,
+              isEdited: 1,
+              sender: 1,
+            },
+          },
+        ])
+
+        for (const msg of messages) {
+          if (msg.attachments) {
+            const urls = []
+            for (const key of msg.attachments) {
+              const url = await getObject(key)
+              url && urls.push(url)
+            }
+            msg.attachments = urls
+          }
+        }
+
+        if (messages.length === 0) {
+          socket.emit("messages", [])
+          return
+        }
+
+        const conversation = await Conversation.findById(conversationId).select("members").lean()
+        otherMemberId = conversation?.members.find(memberId => memberId.toString() !== userId)
+
+        if (otherMemberId) {
+          const otherUser = await User.findById(otherMemberId).select("expoPushToken").lean()
+          otherUserPushToken = otherUser?.expoPushToken
+        }
+
+        socket.emit("messages", messages)
+      })
     )
 
     socket.on(
       "editMessage",
-      handleSocketEvent(
-        "editMessage",
-        async ({
-          messageId,
-          conversationId,
-          newContent,
-        }: {
-          messageId: string
-          conversationId: string
-          newContent: string
-        }) => {
-          // If the new content is empty, use the delete message handler
-          if (!newContent || !newContent.trim()) {
-            await deleteMessageHandler(messageId, conversationId)
-            return
-          }
-
-          // Update the message
-          const updatedMessage = await Message.findByIdAndUpdate(
-            messageId,
-            { content: newContent, isEdited: true, updatedAt: new Date() },
-            { new: true }
-          )
-
-          if (!updatedMessage) {
-            socket.emit("error", "Message not found")
-            return
-          }
-
-          // Emit confirmation with the new content so replies can be updated
-          io.to(conversationId).emit("messageEdited", {
-            messageId: updatedMessage._id,
-            conversationId: updatedMessage.conversationId,
-            updatedAt: updatedMessage.updatedAt,
-            content: updatedMessage.content,
-          })
+      handleSocketEvent("editMessage", async ({ messageId, conversationId, newContent }) => {
+        // If the new content is empty, use the delete message handler
+        if (!newContent || !newContent.trim()) {
+          await deleteMessageHandler(messageId, conversationId)
+          return
         }
-      )
+
+        // Update the message
+        const updatedMessage = await Message.findByIdAndUpdate(
+          messageId,
+          { content: newContent, isEdited: true, updatedAt: new Date() },
+          { new: true }
+        )
+
+        if (!updatedMessage) {
+          socket.emit("error", "Message not found")
+          return
+        }
+
+        // update all replies to this message in one query
+        await Message.updateMany(
+          { "replyTo._id": new Types.ObjectId(messageId), conversationId },
+          { "replyTo.content": newContent }
+        )
+
+        await updateLastMessage(conversationId)
+
+        // Emit confirmation with the new content so replies can be updated
+        io.to(conversationId).emit("messageEdited", {
+          messageId: updatedMessage._id,
+          conversationId: updatedMessage.conversationId,
+          updatedAt: updatedMessage.updatedAt,
+          content: updatedMessage.content,
+        })
+      })
     )
 
     socket.on(
       "deleteMessage",
-      handleSocketEvent(
-        "deleteMessage",
-        async ({ messageId, conversationId }: { messageId: string; conversationId: string }) => {
-          await deleteMessageHandler(messageId, conversationId)
-        }
-      )
+      handleSocketEvent("deleteMessage", async ({ messageId, conversationId }) => {
+        await deleteMessageHandler(messageId, conversationId)
+      })
     )
 
     if (!connected) {
-      socket.emit("connected", () => {
-        console.log("user connected: ", userId)
-        return "You are connected to chat namespace"
-      })
+      socket.emit("connected", "You are connected to chat namespace")
       connected = true
     }
   })

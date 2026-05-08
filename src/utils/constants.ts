@@ -31,6 +31,7 @@ export const REFRESH_BEFORE_EXPIRY_SEC = 60 // Refresh token 1 minute before exp
 export const DB_URI = process.env.DB_URI!
 export const CDN_BASE_URL = process.env.CDN_BASE_URL
 export const S3_EXPIRES_IN_SECONDS = 2 * 60 * 60 // 2 hours
+export const BUCKET_NAME = "pairalign"
 
 // Google OAuth Constants
 export const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!

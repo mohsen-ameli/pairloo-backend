@@ -1,12 +1,33 @@
 import mongoose from "mongoose"
 
+export type SenderType = {
+  _id: mongoose.Types.ObjectId
+  username: string
+}
+
+export type ReplyTo =
+  | null
+  | undefined
+  | {
+      _id: mongoose.Types.ObjectId
+      content?: string
+      attachmentsCount: number
+      sender: SenderType
+      createdAt: Date
+      updatedAt: Date
+    }
+
 export interface MessageType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   conversationId: mongoose.Types.ObjectId
-  senderId: mongoose.Types.ObjectId
+  sender: {
+    _id: mongoose.Types.ObjectId
+    username: string
+    picture?: string | null
+  }
   content: string
   attachments?: string[]
-  replyTo?: mongoose.Types.ObjectId
+  replyTo?: ReplyTo
   replyToDeleted?: boolean
   isEdited?: boolean
   createdAt: Date
@@ -19,9 +40,12 @@ export const messageSchema = new mongoose.Schema<MessageType>({
     ref: "conversation",
     required: true,
   },
-  senderId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "user",
+  sender: {
+    type: {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+      username: { type: String, required: true },
+      picture: { type: String, default: null },
+    },
     required: true,
   },
   content: {
@@ -31,8 +55,17 @@ export const messageSchema = new mongoose.Schema<MessageType>({
     type: [String],
   },
   replyTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "message",
+    type: {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "message", required: true },
+      content: { type: String, required: false },
+      attachmentsCount: { type: Number, required: true },
+      sender: {
+        _id: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
+        username: { type: String, required: true },
+      },
+      createdAt: { type: Date, default: Date.now },
+      updatedAt: { type: Date, default: Date.now },
+    },
   },
   replyToDeleted: {
     type: Boolean,

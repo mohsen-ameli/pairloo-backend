@@ -32,6 +32,7 @@ import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
 import weaviate, { WeaviateClient, ApiKey } from "weaviate-client"
 import Expo from "expo-server-sdk"
+import { ServerSocket } from "./types/socket/chat-socket.type"
 
 const app = express()
 
@@ -43,7 +44,7 @@ const corsOptions = {
 
 const server = http.createServer(app)
 
-const io = new Server(server, {
+const io = new Server<ServerSocket>(server, {
   cors: corsOptions,
   serveClient: false,
   maxHttpBufferSize: 1e8, // 100 MB

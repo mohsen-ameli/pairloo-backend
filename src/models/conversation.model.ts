@@ -1,10 +1,22 @@
 import mongoose from "mongoose"
-import { messageSchema, MessageType } from "./message.model"
+import { SenderType } from "./message.model"
+
+export type LastMessageType =
+  | null
+  | undefined
+  | {
+      _id: mongoose.Types.ObjectId
+      sender: SenderType
+      content: string
+      attachmentsCount: number
+      createdAt: Date
+      updatedAt: Date
+    }
 
 export interface ConversationType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   members: mongoose.Types.ObjectId[]
-  lastMessage?: MessageType
+  lastMessage?: LastMessageType
   createdBy: mongoose.Types.ObjectId
   createdAt: Date
   updatedAt: Date
@@ -17,7 +29,17 @@ const conversationSchema = new mongoose.Schema<ConversationType>({
     required: true,
   },
   lastMessage: {
-    type: messageSchema,
+    type: {
+      _id: { type: mongoose.Schema.Types.ObjectId, ref: "message" },
+      sender: {
+        _id: { type: mongoose.Schema.Types.ObjectId, ref: "user" },
+        username: { type: String },
+      },
+      content: { type: String },
+      attachmentsCount: { type: Number },
+      createdAt: { type: Date },
+      updatedAt: { type: Date },
+    },
     required: false,
   },
   createdBy: {
