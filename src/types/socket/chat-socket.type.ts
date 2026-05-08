@@ -37,9 +37,7 @@ interface ClientToServerEvents {
   deleteMessage: (data: { messageId: string; conversationId: string }) => void
 }
 
-export type ServerSocket = Server<DefaultEventsMap, ClientToServerEvents, ServerToClientEvents, any>
-
-export type CustomSocket = Namespace<
+export type ChatSocket = Namespace<
   ClientToServerEvents,
   ServerToClientEvents,
   DefaultEventsMap,

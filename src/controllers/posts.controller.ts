@@ -4,6 +4,7 @@ import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 import Post from "../models/post.model"
+import { deleteObject } from "../utils/s3"
 
 // Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
@@ -142,6 +143,15 @@ export async function postDelete(req: Request, res: Response) {
   try {
     if (!weaviateClient) {
       return res.status(500).json({ message: "Weaviate client not initialized" })
+    }
+
+    const post = await Post.findOne({ _id: postId, userId })
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" })
+    }
+
+    for (const img of post.images || []) {
+      await deleteObject(img)
     }
 
     await Post.findOneAndDelete({ _id: postId, userId })

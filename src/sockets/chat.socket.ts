@@ -4,10 +4,10 @@ import { Types } from "mongoose"
 import Message from "../models/message.model"
 import { deleteObject, getObject, sendObject } from "../utils/s3"
 import { sendPushNotification } from "../utils/send-push-notification"
-import { CustomSocket } from "../types/socket/chat-socket.type"
+import { ChatSocket } from "../types/socket/chat-socket.type"
 import { AllConversationsType, ConversationMessagesType } from "../types/conversation.type"
 
-export function chatSocket(io: CustomSocket) {
+export function chatSocket(io: ChatSocket) {
   io.on("connection", async socket => {
     let connected = false
     const userId = socket.user!.sub
