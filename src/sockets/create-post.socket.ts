@@ -194,7 +194,10 @@ export function createPostSocket(io: CreatePostSocket) {
     socket.on(
       "discardDraft",
       handleSocketEvent("discardDraft", async () => {
-        if (!draftId) return
+        if (!draftId) {
+          socket.emit("draftDiscarded")
+          return
+        }
 
         await Post.findByIdAndDelete(draftId)
         session = structuredClone(initialSession)
