@@ -158,8 +158,9 @@ export function chatSocket(io: CustomSocket) {
           return
         }
 
-        // Attach URLs to the message object before emitting
+        // populate sender picture
         message.sender.picture = user.picture
+        await User.updateUserPicture([message.sender])
 
         io.to(conversationId).emit("message", message)
 
