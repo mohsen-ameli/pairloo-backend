@@ -1,26 +1,23 @@
-import { DefaultEventsMap, Namespace, Socket } from "socket.io"
 import { callForQuestion, callForSummaries, callForTitle } from "../utils/AIQA"
 import { MAX_GENERATED_POST_QUESTIONS } from "../utils/constants"
 import { getClosestPosts } from "../utils/getClosestPosts"
 import User from "../models/user.model"
 import Post, { PostType } from "../models/post.model"
-import { ImageType, PostSession, QnaType } from "../types/session.types"
+import { PostSession } from "../types/session.types"
 import { sendObject } from "../utils/s3"
-import { LocationType } from "../types/location.type"
 import { weaviateClient } from "../server"
 import { generateEmbedding } from "../utils/AIModel"
 import { generateUuid5 } from "weaviate-client"
 import mongoose from "mongoose"
+import { CreatePostSocket } from "../types/socket/create-post-socket.types"
 
 const initialSession: PostSession = {
   context: [],
   maxQuestions: MAX_GENERATED_POST_QUESTIONS + 1, // +1 to count the initial question
 }
 
-export function createPostSocket(
-  io: Namespace<DefaultEventsMap, DefaultEventsMap, DefaultEventsMap, any>
-) {
-  io.on("connection", async (socket: Socket) => {
+export function createPostSocket(io: CreatePostSocket) {
+  io.on("connection", async socket => {
     const userId = (socket as any).user.sub as string
     const user = await User.findById(userId)
     const posts = await Post.find({ userId }).sort({ createdAt: 1 })
@@ -55,19 +52,19 @@ export function createPostSocket(
       if (lastPost.isDraft) {
         draftId = lastPost._id.toString()
         session.context = lastPost.qna
-        socket.emit("draft-restored", session.context)
+        socket.emit("draftRestored", session.context)
       }
     }
 
     socket.on(
       "chat",
-      handleSocketEvent("chat", async (qna: QnaType) => {
+      handleSocketEvent("chat", async qna => {
         if (!session) return
 
         // Override the context with qna object coming from frontend
         session.context = qna
 
-        // If the user is answering the very last gemini generated question then this variable will be kept false and then we emit chat-finished
+        // If the user is answering the very last gemini generated question then this variable will be kept false and then we emit chatFinished
         if (session.context.length < session.maxQuestions) {
           const question = await callForQuestion(session)
           if (question) {
@@ -86,113 +83,103 @@ export function createPostSocket(
           })
           socket.emit("question", session.context)
         } else {
-          socket.emit("chat-finished")
+          socket.emit("chatFinished")
         }
         draftId = await saveDraft(draftId, userId, session)
-        socket.emit("draft-saved")
+        socket.emit("draftSaved")
       })
     )
 
     socket.on(
-      "ai-title",
-      handleSocketEvent("ai-title", async () => {
+      "aiTitle",
+      handleSocketEvent("aiTitle", async () => {
         if (!session) return
 
         const title = await callForTitle(session)
-        socket.emit("ai-title-generated", title)
+        socket.emit("aiTitleGenerated", title)
       })
     )
 
     socket.on(
       "submit",
-      handleSocketEvent(
-        "submit",
-        async (newPost: {
-          title: string
-          description: string
-          publicPost: boolean
-          images: ImageType[] | undefined
-          location: LocationType
-          distance: number
-        }) => {
-          const { title, description, publicPost, images, location, distance } = newPost
+      handleSocketEvent("submit", async newPost => {
+        const { title, description, publicPost, images, location, distance } = newPost
 
-          if (!weaviateClient) {
-            socket.emit("error", "Weaviate client not initialized")
-            socket.disconnect(true)
-            return
-          }
-
-          const postImages: string[] = []
-          for (const img of images || []) {
-            const { file, mimeType } = img
-            let fileName: string | null = ""
-            if (file && mimeType) {
-              fileName = await sendObject("posts", file, mimeType)
-              if (!fileName) {
-                socket.emit("error", "Failed to upload attachment")
-                return
-              }
-              postImages.push(fileName)
-            }
-          }
-
-          const { needSummary, provideSummary, generalSummary } = await callForSummaries(session)
-          const needEmbedding = await generateEmbedding(needSummary)
-          const provideEmbedding = await generateEmbedding(provideSummary)
-          const generalEmbedding = await generateEmbedding(generalSummary)
-
-          const post: Partial<PostType> = {
-            userId: new mongoose.Types.ObjectId(userId),
-            title,
-            description,
-            publicPost,
-            location,
-            distance,
-            needSummary,
-            provideSummary,
-            generalSummary,
-            images: postImages,
-            qna: session.context,
-            closestPosts: [],
-            isDraft: false,
-          }
-
-          // Insert to MongoDB
-          const user = await User.findById(userId)
-          const posts = await Post.find({ userId })
-          let postId = ""
-          if (user && posts.length > 0 && posts[posts.length - 1].isDraft) {
-            await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
-            postId = posts[posts.length - 1]._id.toString()
-          } else {
-            const newPost = await Post.create(post)
-            postId = newPost._id.toString()
-          }
-
-          // Insert to weaviate
-          const weaviatePosts = weaviateClient.collections.use("Post")
-          await weaviatePosts.data.insert({
-            properties: { userId, postId, location, distance },
-            vectors: { needEmbedding, provideEmbedding, generalEmbedding },
-            id: generateUuid5(postId),
-          })
-
-          // Get closest posts
-          const closestPosts = await getClosestPosts({
-            userId: new mongoose.Types.ObjectId(userId),
-            postId: new mongoose.Types.ObjectId(postId),
-            location,
-            distance,
-            needEmbedding,
-            provideEmbedding,
-          })
-          await Post.findByIdAndUpdate(postId, { closestPosts })
-
-          socket.emit("success", postId)
-          session = structuredClone(initialSession)
+        if (!weaviateClient) {
+          socket.emit("error", "Weaviate client not initialized")
+          socket.disconnect(true)
+          return
         }
-      )
+
+        const postImages: string[] = []
+        for (const img of images || []) {
+          const { file, mimeType } = img
+          let fileName: string | null = ""
+          if (file && mimeType) {
+            fileName = await sendObject("posts", file, mimeType)
+            if (!fileName) {
+              socket.emit("error", "Failed to upload attachment")
+              return
+            }
+            postImages.push(fileName)
+          }
+        }
+
+        const { needSummary, provideSummary, generalSummary } = await callForSummaries(session)
+        const needEmbedding = await generateEmbedding(needSummary)
+        const provideEmbedding = await generateEmbedding(provideSummary)
+        const generalEmbedding = await generateEmbedding(generalSummary)
+
+        const post: Partial<PostType> = {
+          userId: new mongoose.Types.ObjectId(userId),
+          title,
+          description,
+          publicPost,
+          location,
+          distance,
+          needSummary,
+          provideSummary,
+          generalSummary,
+          images: postImages,
+          qna: session.context,
+          closestPosts: [],
+          isDraft: false,
+        }
+
+        // Insert to MongoDB
+        const user = await User.findById(userId)
+        const posts = await Post.find({ userId })
+        let postId = ""
+        if (user && posts.length > 0 && posts[posts.length - 1].isDraft) {
+          await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
+          postId = posts[posts.length - 1]._id.toString()
+        } else {
+          const newPost = await Post.create(post)
+          postId = newPost._id.toString()
+        }
+
+        // Insert to weaviate
+        const weaviatePosts = weaviateClient.collections.use("Post")
+        await weaviatePosts.data.insert({
+          properties: { userId, postId, location, distance },
+          vectors: { needEmbedding, provideEmbedding, generalEmbedding },
+          id: generateUuid5(postId),
+        })
+
+        // Get closest posts
+        const closestPosts = await getClosestPosts({
+          userId: new mongoose.Types.ObjectId(userId),
+          postId: new mongoose.Types.ObjectId(postId),
+          location,
+          distance,
+          needEmbedding,
+          provideEmbedding,
+        })
+        await Post.findByIdAndUpdate(postId, { closestPosts })
+
+        socket.emit("success", postId)
+        session = structuredClone(initialSession)
+      })
     )
 
     socket.on(
@@ -205,25 +192,25 @@ export function createPostSocket(
     )
 
     socket.on(
-      "discard-draft",
-      handleSocketEvent("discard-draft", async () => {
-        if (!draftId) return
+      "discardDraft",
+      handleSocketEvent("discardDraft", async () => {
+        if (!draftId) {
+          socket.emit("draftDiscarded")
+          return
+        }
 
         await Post.findByIdAndDelete(draftId)
         session = structuredClone(initialSession)
-        socket.emit("draft-discarded")
+        socket.emit("draftDiscarded")
       })
     )
 
     socket.on(
-      "update-draft-settings",
-      handleSocketEvent(
-        "update-draft-settings",
-        async (title: string, description: string, images: ImageType[], publicPost: boolean) => {
-          console.log("updating ", title, description, images, publicPost)
-          await Post.findByIdAndUpdate(draftId, { title, description, images, publicPost })
-        }
-      )
+      "updateDraftSettings",
+      handleSocketEvent("updateDraftSettings", async (title, description, images, publicPost) => {
+        console.log("updating ", title, description, images, publicPost)
+        await Post.findByIdAndUpdate(draftId, { title, description, images, publicPost })
+      })
     )
   })
 }

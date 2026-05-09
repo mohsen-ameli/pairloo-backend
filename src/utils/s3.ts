@@ -1,10 +1,13 @@
 import { s3Client } from "../server"
-import { GetObjectCommand, PutObjectCommand, S3ServiceException } from "@aws-sdk/client-s3"
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3ServiceException,
+  DeleteObjectCommand,
+} from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import crypto from "crypto"
-import { S3_EXPIRES_IN_SECONDS } from "./constants"
-
-const bucketName = "pairalign"
+import { S3_EXPIRES_IN_SECONDS, BUCKET_NAME } from "./constants"
 
 const genHash = () => crypto.randomBytes(16).toString("hex")
 
@@ -20,7 +23,7 @@ export async function sendObject(
   const extension = mimeType.split("/")[1] || "bin"
   const key = `${folder}/${fileName}.${extension}`
   const command = new PutObjectCommand({
-    Bucket: bucketName,
+    Bucket: BUCKET_NAME,
     Key: key,
     Body: file,
     ContentType: mimeType,
@@ -32,19 +35,27 @@ export async function sendObject(
   } catch (caught) {
     if (caught instanceof S3ServiceException && caught.name === "EntityTooLarge") {
       console.error(
-        `Error from S3 while uploading object to ${bucketName}. \
+        `Error from S3 while uploading object to ${BUCKET_NAME}. \
 The object was too large. To upload objects larger than 5GB, use the S3 console (160GB max) \
 or the multipart upload API (5TB max).`
       )
     } else if (caught instanceof S3ServiceException) {
       console.error(
-        `Error from S3 while uploading object to ${bucketName}.  ${caught.name}: ${caught.message}`
+        `Error from S3 while uploading object to ${BUCKET_NAME}.  ${caught.name}: ${caught.message}`
       )
     } else {
       throw caught
     }
   }
   return null
+}
+
+export async function deleteObject(key: string) {
+  const command = new DeleteObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+  })
+  await s3Client.send(command)
 }
 
 export async function getObject(key: string | null | undefined) {
@@ -56,7 +67,7 @@ export async function getObject(key: string | null | undefined) {
 
   // return `${CDN_BASE_URL}/${key}`
   const command = new GetObjectCommand({
-    Bucket: bucketName,
+    Bucket: BUCKET_NAME,
     Key: key,
   })
 
