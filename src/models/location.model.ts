@@ -1,4 +1,5 @@
 import mongoose from "mongoose"
+import pointSchema from "./point.model"
 
 export interface LocationType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
@@ -9,8 +10,10 @@ export interface LocationType extends mongoose.Document {
   country_id: number
   country_code: string
   country_name: string
-  latitude: string
-  longitude: string
+  location: {
+    type: string
+    coordinates: [number, number] // [longitude, latitude]
+  }
   type: string
   population?: number
   timezone: string
@@ -24,12 +27,16 @@ const locationSchema = new mongoose.Schema<LocationType>({
   country_id: { type: Number },
   country_code: { type: String },
   country_name: { type: String },
-  latitude: { type: String },
-  longitude: { type: String },
+  location: {
+    type: pointSchema,
+    required: true,
+  },
   type: { type: String },
   population: { type: Number },
   timezone: { type: String },
 })
+
+locationSchema.index({ latitude: "2dsphere", longitude: "2dsphere" })
 
 const Location = mongoose.model<LocationType>("location", locationSchema)
 export default Location
