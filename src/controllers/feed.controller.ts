@@ -26,6 +26,7 @@ type GeneralPostType = {
   }
   distance?: number
   score: number
+  status?: "Active" | "Inactive" | "Hidden"
 }
 
 export async function feedGet(req: Request, res: Response) {
@@ -43,10 +44,11 @@ export async function feedGet(req: Request, res: Response) {
         userId: { $ne: userId },
         publicPost: true,
         isDraft: { $ne: true },
+        status: { $nin: ["Inactive", "Hidden"] },
       })
         .sort({ createdAt: -1 })
         .limit(20)
-        .select("_id title description images createdAt")
+        .select("_id title description images createdAt status")
         .populate<{
           userId: {
             _id: string
@@ -70,6 +72,7 @@ export async function feedGet(req: Request, res: Response) {
         description: post.description,
         images: post.images,
         createdAt: post.createdAt,
+        status: post.status,
         userId: post.userId._id,
         username: post.userId.username,
         firstName: post.userId.firstName,
@@ -115,7 +118,7 @@ export async function feedGet(req: Request, res: Response) {
       publicPost: true,
       isDraft: { $ne: true },
     })
-      .select("_id title description images createdAt")
+      .select("_id title description images createdAt status")
       .populate<{
         userId: {
           _id: string
@@ -139,6 +142,7 @@ export async function feedGet(req: Request, res: Response) {
         description: post.description,
         images: post.images,
         createdAt: post.createdAt,
+        status: post.status,
         userId: post.userId._id,
         username: post.userId.username,
         firstName: post.userId.firstName,

@@ -19,6 +19,7 @@ export interface PostType extends mongoose.Document {
   qna: QnaType
   closestPosts: ClosePost[]
   isDraft?: boolean
+  status?: "Active" | "Inactive" | "Hidden"
   createdAt: Date
 }
 
@@ -106,6 +107,12 @@ const postSchema = new mongoose.Schema<PostType>({
   isDraft: {
     type: Boolean,
     required: false,
+  },
+  status: {
+    type: String,
+    enum: ["Active", "Inactive", "Hidden"],
+    default: "Active",
+    required: true,
   },
   createdAt: {
     type: Date,
