@@ -13,6 +13,7 @@ import {
   socialGet,
 } from "../controllers/users/user.controller"
 import { updateExpoPushToken } from "../controllers/users/update-expo-push-token.controller"
+import { searchUsers } from "../controllers/search.controller"
 
 const userRoutes = Router()
 
@@ -36,5 +37,7 @@ userRoutes.post("/save-post/:postId", savePost)
 userRoutes.delete("/save-post/:postId", unsavePost)
 
 userRoutes.post("/update-expo-push-token", updateExpoPushToken)
+
+userRoutes.get("/search", searchUsers)
 
 export default userRoutes
