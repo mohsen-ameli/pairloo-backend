@@ -36,7 +36,7 @@ const locationSchema = new mongoose.Schema<LocationType>({
   timezone: { type: String },
 })
 
-locationSchema.index({ latitude: "2dsphere", longitude: "2dsphere" })
+locationSchema.index({ location: "2dsphere" })
 
 const Location = mongoose.model<LocationType>("location", locationSchema)
 export default Location
