@@ -43,8 +43,7 @@ export async function feedGet(req: Request, res: Response) {
       const recentPosts = await Post.find({
         userId: { $ne: userId },
         publicPost: true,
-        isDraft: { $ne: true },
-        status: { $nin: ["Inactive", "Hidden"] },
+        status: { $nin: ["Inactive", "Hidden", "Draft"] },
       })
         .sort({ createdAt: -1 })
         .limit(20)
@@ -116,7 +115,7 @@ export async function feedGet(req: Request, res: Response) {
     const fullPosts = await Post.find({
       _id: { $in: postIds },
       publicPost: true,
-      isDraft: { $ne: true },
+      status: { $ne: "Draft" },
     })
       .select("_id title description images createdAt status")
       .populate<{

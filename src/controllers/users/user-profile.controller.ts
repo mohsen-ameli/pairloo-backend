@@ -65,7 +65,7 @@ export async function userProfileGet(req: Request, res: Response) {
         $match: {
           userId: new mongoose.Types.ObjectId(userId),
           publicPost: true,
-          status: { $ne: "Hidden" },
+          status: { $nin: ["Hidden", "Draft"] },
         },
       },
       { $project: { title: 1, description: 1, images: 1, createdAt: 1, status: 1 } },
