@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
 import mongoose from "mongoose"
-import Post, { PostType } from "../../models/post.model"
+import Post, { PostType, StatusType } from "../../models/post.model"
 
 type UserProfileType = {
   username: string
@@ -59,9 +59,16 @@ export async function userProfileGet(req: Request, res: Response) {
       description: string
       images: string[]
       createdAt: Date
+      status: StatusType
     }>([
-      { $match: { userId: new mongoose.Types.ObjectId(userId), publicPost: true } },
-      { $project: { title: 1, description: 1, images: 1, createdAt: 1 } },
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+          publicPost: true,
+          status: { $ne: "Hidden" },
+        },
+      },
+      { $project: { title: 1, description: 1, images: 1, createdAt: 1, status: 1 } },
       { $sort: { createdAt: -1 } },
     ])
 

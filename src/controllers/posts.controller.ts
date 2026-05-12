@@ -3,7 +3,7 @@ import User from "../models/user.model"
 import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
-import Post from "../models/post.model"
+import Post, { StatusType, VALID_STATUSES } from "../models/post.model"
 import { deleteObject } from "../utils/s3"
 
 // Get a specific post belonging to any user
@@ -81,7 +81,7 @@ export async function postGet(req: Request, res: Response) {
     distance?: number
     images: string[]
     createdAt: Date
-    status?: "Active" | "Inactive" | "Hidden"
+    status?: StatusType
   }
   const postId = req.params.id as string
   const currentUserId = req.user?.sub
@@ -176,8 +176,7 @@ export async function postStatusUpdate(req: Request, res: Response) {
   const { status } = req.body
 
   try {
-    const validStatuses = ["Active", "Inactive", "Hidden"]
-    if (!validStatuses.includes(status)) {
+    if (!VALID_STATUSES.includes(status)) {
       return res.status(400).json({ message: "Invalid status value" })
     }
 

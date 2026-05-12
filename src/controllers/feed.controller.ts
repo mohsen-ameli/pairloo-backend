@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import Post from "../models/post.model"
+import Post, { StatusType } from "../models/post.model"
 import Interaction, { InteractionTypeEnum } from "../models/interaction.model"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
@@ -26,7 +26,7 @@ type GeneralPostType = {
   }
   distance?: number
   score: number
-  status?: "Active" | "Inactive" | "Hidden"
+  status?: StatusType
 }
 
 export async function feedGet(req: Request, res: Response) {
