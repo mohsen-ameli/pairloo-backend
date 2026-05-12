@@ -92,7 +92,7 @@ export async function postGet(req: Request, res: Response) {
         $match: {
           _id: new mongoose.Types.ObjectId(postId),
           publicPost: true,
-          status: { $ne: "Draft" },
+          status: { $ne: "draft" },
         },
       },
       {

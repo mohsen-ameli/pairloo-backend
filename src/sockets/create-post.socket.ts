@@ -49,7 +49,7 @@ export function createPostSocket(io: CreatePostSocket) {
     if (posts.length > 0) {
       const lastPost = posts[posts.length - 1]
 
-      if (lastPost.status === "Draft") {
+      if (lastPost.status === "draft") {
         draftId = lastPost._id.toString()
         session.context = lastPost.qna
         socket.emit("draftRestored", session.context)
@@ -143,14 +143,14 @@ export function createPostSocket(io: CreatePostSocket) {
           images: postImages,
           qna: session.context,
           closestPosts: [],
-          status: "Active",
+          status: "active",
         }
 
         // Insert to MongoDB
         const user = await User.findById(userId)
         const posts = await Post.find({ userId })
         let postId = ""
-        if (user && posts.length > 0 && posts[posts.length - 1].status === "Draft") {
+        if (user && posts.length > 0 && posts[posts.length - 1].status === "draft") {
           await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
           postId = posts[posts.length - 1]._id.toString()
         } else {
@@ -224,7 +224,7 @@ async function saveDraft(draftId: string, userId: string, session: PostSession) 
       description: "Draft description",
       qna: session.context,
       publicPost: false,
-      status: "Draft",
+      status: "draft",
     })
     return draft._id.toString()
   }

@@ -317,7 +317,7 @@ export async function test(req: Request, res: Response) {
   }
 
   // Update all posts to have status "active"
-  // await Post.updateMany({}, { $set: { status: "Active" } })
+  // await Post.updateMany({}, { $set: { status: "active" } })
 
   // const postId = "69b711b38a5c8924c4293d05"
   // // const username = "noobmoe"

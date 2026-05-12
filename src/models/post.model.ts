@@ -4,8 +4,8 @@ import { QnaType } from "../types/session.types"
 import { LocationType } from "../types/location.type"
 import { getObject } from "../utils/s3"
 
-export type StatusType = "Active" | "Inactive" | "Hidden" | "Draft"
-export const VALID_STATUSES: StatusType[] = ["Active", "Inactive", "Hidden", "Draft"]
+export type StatusType = "active" | "inactive" | "hidden" | "draft"
+export const VALID_STATUSES: StatusType[] = ["active", "inactive", "hidden", "draft"]
 
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
@@ -109,7 +109,7 @@ const postSchema = new mongoose.Schema<PostType>({
   status: {
     type: String,
     enum: VALID_STATUSES,
-    default: "Active",
+    default: "active",
     required: true,
   },
   createdAt: {

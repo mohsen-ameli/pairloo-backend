@@ -354,7 +354,7 @@ export async function getSavedPosts(req: Request, res: Response) {
       {
         $match: {
           _id: { $in: savedPostIds },
-          status: { $ne: "Hidden" },
+          status: { $ne: "hidden" },
         },
       },
       {
