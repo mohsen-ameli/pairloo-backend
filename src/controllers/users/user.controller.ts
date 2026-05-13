@@ -350,17 +350,26 @@ export async function getSavedPosts(req: Request, res: Response) {
     }
     const savedPostIds = savedIdsDoc.savedPosts
 
-    const savedPosts = await Post.find(
-      { _id: { $in: savedPostIds } },
+    const savedPosts = await Post.aggregate([
       {
-        _id: 1,
-        title: 1,
-        images: 1,
-        createdAt: 1,
-      }
-    )
-      .sort({ createdAt: -1 })
-      .lean()
+        $match: {
+          _id: { $in: savedPostIds },
+          status: { $ne: "hidden" },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          title: 1,
+          images: 1,
+          createdAt: 1,
+          status: 1,
+        },
+      },
+      {
+        $sort: { createdAt: -1 },
+      },
+    ])
 
     for (const post of savedPosts) {
       await Post.updatePostImages(post)

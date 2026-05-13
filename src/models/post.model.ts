@@ -4,6 +4,9 @@ import { QnaType } from "../types/session.types"
 import { LocationType } from "../types/location.type"
 import { getObject } from "../utils/s3"
 
+export type StatusType = "active" | "inactive" | "hidden" | "draft"
+export const VALID_STATUSES: StatusType[] = ["active", "inactive", "hidden", "draft"]
+
 export interface PostType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   userId: mongoose.Types.ObjectId
@@ -18,7 +21,7 @@ export interface PostType extends mongoose.Document {
   publicPost: boolean
   qna: QnaType
   closestPosts: ClosePost[]
-  isDraft?: boolean
+  status: StatusType
   createdAt: Date
 }
 
@@ -103,9 +106,11 @@ const postSchema = new mongoose.Schema<PostType>({
     required: false,
     default: [],
   },
-  isDraft: {
-    type: Boolean,
-    required: false,
+  status: {
+    type: String,
+    enum: VALID_STATUSES,
+    default: "active",
+    required: true,
   },
   createdAt: {
     type: Date,

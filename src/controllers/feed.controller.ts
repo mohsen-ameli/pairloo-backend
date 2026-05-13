@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import Post from "../models/post.model"
+import Post, { StatusType } from "../models/post.model"
 import Interaction, { InteractionTypeEnum } from "../models/interaction.model"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
@@ -26,6 +26,7 @@ type GeneralPostType = {
   }
   distance?: number
   score: number
+  status?: StatusType
 }
 
 export async function feedGet(req: Request, res: Response) {
@@ -42,11 +43,11 @@ export async function feedGet(req: Request, res: Response) {
       const recentPosts = await Post.find({
         userId: { $ne: userId },
         publicPost: true,
-        isDraft: { $ne: true },
+        status: { $nin: ["inactive", "hidden", "draft"] },
       })
         .sort({ createdAt: -1 })
         .limit(20)
-        .select("_id title description images createdAt")
+        .select("_id title description images createdAt status")
         .populate<{
           userId: {
             _id: string
@@ -70,6 +71,7 @@ export async function feedGet(req: Request, res: Response) {
         description: post.description,
         images: post.images,
         createdAt: post.createdAt,
+        status: post.status,
         userId: post.userId._id,
         username: post.userId.username,
         firstName: post.userId.firstName,
@@ -113,9 +115,9 @@ export async function feedGet(req: Request, res: Response) {
     const fullPosts = await Post.find({
       _id: { $in: postIds },
       publicPost: true,
-      isDraft: { $ne: true },
+      status: { $ne: "draft" },
     })
-      .select("_id title description images createdAt")
+      .select("_id title description images createdAt status")
       .populate<{
         userId: {
           _id: string
@@ -139,6 +141,7 @@ export async function feedGet(req: Request, res: Response) {
         description: post.description,
         images: post.images,
         createdAt: post.createdAt,
+        status: post.status,
         userId: post.userId._id,
         username: post.userId.username,
         firstName: post.userId.firstName,

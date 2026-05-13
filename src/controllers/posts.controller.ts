@@ -3,7 +3,7 @@ import User from "../models/user.model"
 import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
-import Post from "../models/post.model"
+import Post, { StatusType, VALID_STATUSES } from "../models/post.model"
 import { deleteObject } from "../utils/s3"
 
 // Get a specific post belonging to any user
@@ -14,7 +14,7 @@ export async function myPostGet(req: Request, res: Response) {
   try {
     const post = await Post.findOne({ _id: postId, userId })
       .select(
-        "_id title description images publicPost qna createdAt location distance closestPosts"
+        "_id title description images publicPost qna createdAt location distance closestPosts status"
       )
       .lean()
 
@@ -81,8 +81,10 @@ export async function postGet(req: Request, res: Response) {
     distance?: number
     images: string[]
     createdAt: Date
+    status?: StatusType
   }
   const postId = req.params.id as string
+  const currentUserId = req.user?.sub
 
   try {
     const posts = await Post.aggregate<ProjectedDocument>([
@@ -90,7 +92,7 @@ export async function postGet(req: Request, res: Response) {
         $match: {
           _id: new mongoose.Types.ObjectId(postId),
           publicPost: true,
-          isDraft: { $ne: true },
+          status: { $ne: "draft" },
         },
       },
       {
@@ -111,6 +113,7 @@ export async function postGet(req: Request, res: Response) {
           distance: 1,
           images: 1,
           createdAt: 1,
+          status: 1,
           userId: "$userDetails._id",
           username: "$userDetails.username",
           firstName: "$userDetails.firstName",
@@ -164,5 +167,28 @@ export async function postDelete(req: Request, res: Response) {
   } catch (error) {
     console.error("Error deleting post:", error)
     return res.status(500).json({ message: "An error occurred while deleting the post" })
+  }
+}
+
+export async function postStatusUpdate(req: Request, res: Response) {
+  const postId = req.params.id as string
+  const userId = req.user!.sub
+  const { status } = req.body
+
+  try {
+    if (!VALID_STATUSES.includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" })
+    }
+
+    const post = await Post.findOneAndUpdate({ _id: postId, userId }, { status }, { new: true })
+
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" })
+    }
+
+    return res.status(200).json({ message: "Post status updated successfully", post })
+  } catch (error) {
+    console.error("Error updating post status:", error)
+    return res.status(500).json({ message: "An error occurred while updating post status" })
   }
 }

@@ -316,6 +316,9 @@ export async function test(req: Request, res: Response) {
     throw new Error("Weaviate client not initialized")
   }
 
+  // Update all posts to have status "active"
+  // await Post.updateMany({}, { $set: { status: "active" } })
+
   // const postId = "69b711b38a5c8924c4293d05"
   // // const username = "noobmoe"
   // const post = await findPost(postId)
