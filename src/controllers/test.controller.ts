@@ -55,7 +55,7 @@ async function storePostsToWeaviate(posts: PostType[]) {
       await new Promise(resolve => setTimeout(resolve, 100)) // add delay to avoid overwhelming the server
     } catch (error) {
       console.error("Error processing post with id: ", post._id.toString())
-      console.log(error)
+      console.error(error)
       continue
     }
   }
@@ -106,6 +106,22 @@ async function closestPosts(postId: string) {
   }
 }
 
+async function generateAllPostSummaries() {
+  const posts = await Post.find()
+
+  for (const post of posts) {
+    try {
+      const summaries = await callForSummaries({ context: post.qna })
+      await Post.updateOne({ _id: post._id }, { $set: summaries })
+      console.log("Updated summaries for post with id: ", post._id.toString())
+    } catch (error) {
+      console.error("Error updating summaries for post with id: ", post._id.toString())
+      console.error(error)
+      break
+    }
+  }
+}
+
 async function addPostToUser(userId: string, post: Partial<PostType>) {
   const user = await User.findById(userId)
   if (!user) {
@@ -151,19 +167,19 @@ async function updateAllUserPostsClosestPosts() {
       count++
     } catch (error) {
       console.error("Error updating closest posts for post with id: ", post._id.toString())
-      console.log(error)
+      console.error(error)
     }
   }
   console.log("Updated closest posts for", count, "posts")
 }
 
-async function weaviateCreateCollection(coll: string) {
+async function weaviateCreateCollection(name: string) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
 
   weaviateClient.collections.create({
-    name: coll,
+    name: name,
     properties: [
       {
         name: "userId",
@@ -209,20 +225,20 @@ async function weaviateCreateCollection(coll: string) {
   })
 }
 
-async function weaviateDeleteCollection(coll: string) {
+async function weaviateDeleteCollection(name: string) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
 
-  await weaviateClient.collections.delete(coll)
+  await weaviateClient.collections.delete(name)
 }
 
-async function weaviateDeleteObject(coll: string, id: string) {
+async function weaviateDeleteObject(name: string, id: string) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
 
-  const weaviatePosts = weaviateClient.collections.use("Post")
+  const weaviatePosts = weaviateClient.collections.use(name)
   await weaviatePosts.data.deleteById(id)
 }
 
@@ -263,104 +279,25 @@ async function weaviateTransfer(collA: string, collB: string) {
   }
 }
 
-/**
- * Compare every pair of posts using cosine similarity.
- * Track and log the minimum and maximum similarity across all pairs.
- * Print pair-by-pair similarity in server logs so you can inspect semantic closeness manually.
- * THIS USES OLD CODE, BROKEN ATM
- */
-// async function getAllPostPairEvaluations() {
-//   const texts = await Post.find().then((posts) => posts.map((p) => p.summary));
-//   const response = await openai.embeddings.create({
-//     model: "text-embedding-3-small",
-//     input: texts,
-//   });
-//   if (!response.data || response.data.length === 0) {
-//     throw new Error("No embeddings returned from AI model");
-//   }
-//   const embeddings = response.data.map((e) => e.embedding);
-//   const posts = await Post.find();
-//   const texts = posts.map((p) => p.content);
-//   const embeddings = posts.map((p) => p.embedding);
-
-//   let minSim = Infinity;
-//   let maxSim = -Infinity;
-//   for (let i = 0; i < texts.length; i++) {
-//     for (let j = i + 1; j < texts.length; j++) {
-//       const text1 = texts[i];
-//       const text2 = texts[j];
-//       const similarity = cosineSimilarity(
-//         embeddings[i] as number[],
-//         embeddings[j] as number[]
-//       );
-//       if (similarity < minSim) {
-//         minSim = similarity;
-//       }
-//       if (similarity > maxSim) {
-//         maxSim = similarity;
-//       }
-//       console.log(
-//         `Text1: ${text1}\nText2: '${text2}'\nSimilarity: ${similarity.toFixed(4)}\n\n`
-//       );
-//     }
-//   }
-//   console.log("min similarity:", minSim);
-//   console.log("max similarity:", maxSim);
-//   res.json({ message: "Check server logs for similarity results" });
-// }
-
 // Simple route for testing
-
 export async function test(req: Request, res: Response) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
 
-  // Update all posts to have status "active"
-  // await Post.updateMany({}, { $set: { status: "active" } })
-
-  // const postId = "69b711b38a5c8924c4293d05"
-  // // const username = "noobmoe"
-  // const post = await findPost(postId)
-  // // const results = await closestPosts(postId, username)
-  // return res.json(post)
-
-  // const myId = "6953259c89bfe6ca51b7e1d6" //req.user!.sub
-  // const user = await User.findById(myId)
-
   // if (!user || !user.expoPushToken) {
   //   return res.status(404).json({ error: "User not found" })
   // }
-
   // await sendPushNotification(
   //   user.expoPushToken,
   //   "Test Notification",
   //   "This is a test push notification from the server!"
   // )
 
-  const postId = "69ef0205d276eda74cab9d9a" //req.query.postId as string
+  const postId = req.query.postId as string
   const userId = req.query.userId as string
 
-  // const post = await Post.findById(postId)
-  // return res.json(post)
-
-  // await weaviateDeleteCollection("PostTemp")
-  // await weaviateCreateCollection("Post")
-  // await weaviateTransfer("PostTemp", "Post")
-
-  await Interaction.deleteMany({})
-  const post = await Post.findById(postId)
-  return res.json(post)
-
-  // @ts-ignore
-  // storePostsToWeaviate([post?.post], post?.user)
-
-  // await deleteAllUserClosestPosts()
-  // await updateAllUserPostsClosestPosts()
-  return res.json({ message: "Post stored to Weaviate, check server logs for details" })
-
-  // const closePosts = await closestPosts(postId)
-  // return res.json(closePosts)
+  return res.json({ message: "Test has worked! Great Job :)" })
 }
 
 /**

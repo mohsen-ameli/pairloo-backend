@@ -26,13 +26,22 @@ interface ServerToClientEvents {
 interface ClientToServerEvents {
   newMessage: (data: {
     conversationId: string
+    postId?: string | null
     content: string
     attachments?: Attachment[]
     replyTo?: ReplyTo
   }) => void
   getConversations: () => void
-  newConversation: (memberIds: Types.ObjectId[]) => void
-  getMessages: (conversationId: string, start: number, end: number) => void
+  newConversation: (
+    memberIds: Types.ObjectId[],
+    post?: { postId: Types.ObjectId; title: string }
+  ) => void
+  getMessages: (data: {
+    conversationId: string
+    postId?: string
+    start: number
+    end: number
+  }) => void
   editMessage: (data: { messageId: string; conversationId: string; newContent: string }) => void
   deleteMessage: (data: { messageId: string; conversationId: string }) => void
 }

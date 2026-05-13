@@ -112,82 +112,82 @@ export function chatSocket(io: ChatSocket) {
       return
     }
 
-    socket.on(
-      "disconnect",
-      handleSocketEvent("disconnect", async () => {
-        console.log("user disconnected: ", userId)
-      })
-    )
+    socket.on("disconnect", () => {})
 
     socket.on(
       "newMessage",
-      handleSocketEvent("newMessage", async ({ conversationId, content, attachments, replyTo }) => {
-        const urls = []
-        const keys = []
-        if (attachments && attachments.length > 0) {
-          for (const attachment of attachments) {
-            const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
-            if (!fileName) {
-              socket.emit("error", "Failed to upload attachment")
-              return
+      handleSocketEvent(
+        "newMessage",
+        async ({ conversationId, postId, content, attachments, replyTo }) => {
+          const urls = []
+          const keys = []
+          if (attachments && attachments.length > 0) {
+            for (const attachment of attachments) {
+              const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
+              if (!fileName) {
+                socket.emit("error", "Failed to upload attachment")
+                return
+              }
+              const url = await getObject(fileName)
+              urls.push(url)
+              keys.push(fileName)
             }
-            const url = await getObject(fileName)
-            urls.push(url)
-            keys.push(fileName)
+          }
+
+          const message = await Message.create({
+            conversationId: new Types.ObjectId(conversationId),
+            postId: postId ? new Types.ObjectId(postId) : undefined,
+            sender: {
+              _id: new Types.ObjectId(userId),
+              username: user.username,
+            },
+            content,
+            attachments: keys,
+            replyTo: replyTo
+              ? {
+                  ...replyTo,
+                  _id: new Types.ObjectId(replyTo._id),
+                }
+              : undefined,
+          })
+
+          if (!message) {
+            socket.emit("error", "Message not found after creation")
+            return
+          }
+
+          // populate sender picture
+          message.sender.picture = user.picture
+          await User.updateUserPicture([message.sender])
+
+          io.to(conversationId).emit("message", message)
+
+          const lastMessage: LastMessageType = {
+            _id: message._id,
+            sender: message.sender,
+            postId: postId ? new Types.ObjectId(postId) : undefined,
+            content: message.content,
+            attachmentsCount: attachments?.length || 0,
+            createdAt: message.createdAt,
+            updatedAt: message.updatedAt,
+          }
+
+          // Update lastMessage in Conversation
+          await Conversation.findByIdAndUpdate(conversationId, { lastMessage })
+
+          const isOtherMemberConnected = Array.from(io.sockets.values()).some(
+            s => (s.user!.sub as string) === otherMemberId?.toString()
+          )
+
+          if (otherUserPushToken && !isOtherMemberConnected) {
+            await sendPushNotification(
+              otherUserPushToken,
+              message.sender.username,
+              content ? content : "Sent an attachment"
+            )
           }
         }
-
-        const message = await Message.create({
-          conversationId: new Types.ObjectId(conversationId),
-          sender: {
-            _id: new Types.ObjectId(userId),
-            username: user.username,
-          },
-          content,
-          attachments: keys,
-          replyTo: replyTo
-            ? {
-                ...replyTo,
-                _id: new Types.ObjectId(replyTo._id),
-              }
-            : undefined,
-        })
-
-        if (!message) {
-          socket.emit("error", "Message not found after creation")
-          return
-        }
-
-        // populate sender picture
-        message.sender.picture = user.picture
-        await User.updateUserPicture([message.sender])
-
-        io.to(conversationId).emit("message", message)
-
-        const lastMessage: LastMessageType = {
-          _id: message._id,
-          sender: message.sender,
-          content: message.content,
-          attachmentsCount: attachments?.length || 0,
-          createdAt: message.createdAt,
-          updatedAt: message.updatedAt,
-        }
-
-        // Update lastMessage in Conversation
-        await Conversation.findByIdAndUpdate(conversationId, { lastMessage })
-
-        const isOtherMemberConnected = Array.from(io.sockets.values()).some(
-          s => (s.user!.sub as string) === otherMemberId?.toString()
-        )
-
-        if (otherUserPushToken && !isOtherMemberConnected) {
-          await sendPushNotification(
-            otherUserPushToken,
-            message.sender.username,
-            content ? content : "Sent an attachment"
-          )
-        }
-      })
+      )
     )
 
     socket.on(
@@ -211,6 +211,7 @@ export function chatSocket(io: ChatSocket) {
                 username: 1,
                 picture: 1,
               },
+              contactedPosts: 1,
               lastMessage: 1,
             },
           },
@@ -224,10 +225,8 @@ export function chatSocket(io: ChatSocket) {
 
     socket.on(
       "newConversation",
-      handleSocketEvent("newConversation", async memberIds => {
-        const existingConversation = await Conversation.findOne({
-          members: { $all: memberIds },
-        })
+      handleSocketEvent("newConversation", async (memberIds, post) => {
+        const existingConversation = await Conversation.findOne({ members: { $all: memberIds } })
           .populate<AllConversationsType>({
             path: "members",
             select: "username picture",
@@ -235,12 +234,28 @@ export function chatSocket(io: ChatSocket) {
           .lean()
 
         if (existingConversation) {
+          if (post) {
+            // Check if the post is already in contactedPosts
+            const postAlreadyContacted = existingConversation.contactedPosts.some(
+              contactedPost => contactedPost.postId.toString() === post.postId.toString()
+            )
+
+            if (!postAlreadyContacted) {
+              existingConversation.contactedPosts.push({ ...post, isDeleted: false })
+              await Conversation.findByIdAndUpdate(existingConversation._id, {
+                contactedPosts: existingConversation.contactedPosts,
+              })
+            }
+          }
+
+          await User.updateUserPicture(existingConversation.members)
           socket.emit("conversation", existingConversation)
           return
         }
 
         const conversation = await Conversation.create({
           members: memberIds,
+          ...(post ? { contactedPosts: [post] } : {}),
           createdBy: userId,
         })
 
@@ -252,7 +267,10 @@ export function chatSocket(io: ChatSocket) {
           s.join(conversation._id.toString())
         })
 
-        const populatedConversation = await Conversation.findById(conversation._id)
+        const populatedConversation = await Conversation.findOne({
+          members: { $all: memberIds },
+          ...(post ? { "contactedPosts.postId": new Types.ObjectId(post.postId) } : {}),
+        })
           .populate<AllConversationsType>({
             path: "members",
             select: "username picture",
@@ -272,7 +290,7 @@ export function chatSocket(io: ChatSocket) {
 
     socket.on(
       "getMessages",
-      handleSocketEvent("getMessages", async (conversationId, start, end) => {
+      handleSocketEvent("getMessages", async ({ conversationId, postId, start, end }) => {
         const skip = Math.max(0, start)
         const limit = Math.max(0, end - start)
 
@@ -282,7 +300,12 @@ export function chatSocket(io: ChatSocket) {
         }
 
         const messages = await Message.aggregate<ConversationMessagesType>([
-          { $match: { conversationId: new Types.ObjectId(conversationId) } },
+          {
+            $match: {
+              conversationId: new Types.ObjectId(conversationId),
+              postId: postId ? new Types.ObjectId(postId) : undefined,
+            },
+          },
           { $sort: { createdAt: -1 } },
           { $skip: skip },
           { $limit: limit },

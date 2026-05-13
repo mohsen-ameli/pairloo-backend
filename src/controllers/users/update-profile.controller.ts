@@ -25,6 +25,7 @@ export async function updateProfile(req: Request, res: Response) {
     for (const field of allowedFields) {
       if (field in req.body) updates[field] = req.body[field]
     }
+
     if (Object.keys(updates).length === 0) {
       return res.status(400).json({ error: "No valid fields to update." })
     }
@@ -50,7 +51,7 @@ export async function updateProfile(req: Request, res: Response) {
 
     const updatedUser = await User.findByIdAndUpdate(userId, updates, { returnDocument: "after" })
       .select(
-        "_id username firstName lastName phoneNumber country city state latitude longitude timezone locationId email picture"
+        "_id username firstName lastName phoneNumber country city state location timezone locationId email picture"
       )
       .lean()
     if (!updatedUser) return res.status(404).json({ error: "User not found" })

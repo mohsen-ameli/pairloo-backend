@@ -20,6 +20,7 @@ export type ReplyTo =
 export interface MessageType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
   conversationId: mongoose.Types.ObjectId
+  postId: mongoose.Types.ObjectId
   sender: {
     _id: mongoose.Types.ObjectId
     username: string
@@ -39,6 +40,11 @@ export const messageSchema = new mongoose.Schema<MessageType>({
     type: mongoose.Schema.Types.ObjectId,
     ref: "conversation",
     required: true,
+  },
+  postId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "post",
+    required: false,
   },
   sender: {
     type: {

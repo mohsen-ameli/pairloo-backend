@@ -53,7 +53,6 @@ async function createIndexes() {
         },
       },
     })
-    console.log("User search index created")
   } catch (error) {
     console.error("Error creating user search index:", error)
   }
