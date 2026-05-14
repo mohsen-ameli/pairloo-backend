@@ -114,12 +114,15 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
       required: false,
       unique: false,
     },
-    savedPosts: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "post",
-      },
-    ],
+    savedPosts: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "post",
+        },
+      ],
+      default: [],
+    },
     followers: [
       {
         type: mongoose.Schema.Types.ObjectId,
