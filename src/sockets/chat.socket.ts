@@ -249,7 +249,7 @@ export function chatSocket(io: ChatSocket) {
           }
 
           await User.updateUserPicture(existingConversation.members)
-          socket.emit("conversation", existingConversation)
+          io.to(existingConversation._id.toString()).emit("conversation", existingConversation)
           return
         }
 
