@@ -122,8 +122,13 @@ export function createPostSocket(io: CreatePostSocket) {
       handleSocketEvent("submit", async newPost => {
         const { title, description, publicPost, images, location, distance } = newPost
 
+        if (!title || !description) {
+          socket.emit("error", "Title and description are required")
+          return
+        }
+
         if (!weaviateClient) {
-          socket.emit("error", "Weaviate client not initialized")
+          socket.emit("error", "Something went wrong. Please try again.")
           socket.disconnect(true)
           return
         }
@@ -164,15 +169,21 @@ export function createPostSocket(io: CreatePostSocket) {
         }
 
         // Insert to MongoDB
-        const user = await User.findById(userId)
-        const posts = await Post.find({ userId })
         let postId = ""
-        if (user && posts.length > 0 && posts[posts.length - 1].status === "draft") {
-          await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
-          postId = posts[posts.length - 1]._id.toString()
-        } else {
-          const newPost = await Post.create(post)
-          postId = newPost._id.toString()
+        try {
+          const user = await User.findById(userId)
+          const posts = await Post.find({ userId })
+          if (user && posts.length > 0 && posts[posts.length - 1].status === "draft") {
+            await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
+            postId = posts[posts.length - 1]._id.toString()
+          } else {
+            const newPost = await Post.create(post)
+            postId = newPost._id.toString()
+          }
+        } catch (error) {
+          console.error("Error saving post to MongoDB:", error)
+          socket.emit("error", "Failed to save post. Please try again.")
+          return
         }
 
         // Insert to weaviate

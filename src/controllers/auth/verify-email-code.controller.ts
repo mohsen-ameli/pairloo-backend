@@ -2,7 +2,13 @@ import { Request, Response } from "express"
 import User from "../../models/user.model"
 import createJWT from "../../utils/create-jwt"
 import EmailVerification from "../../models/email-verification.model"
-import { COOKIE_MAX_AGE, COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } from "../../utils/constants"
+import {
+  ACCESS_COOKIE_NAME,
+  COOKIE_MAX_AGE,
+  ACCESS_COOKIE_OPTIONS,
+  REFRESH_COOKIE_NAME,
+  REFRESH_COOKIE_OPTIONS,
+} from "../../utils/constants"
 
 export async function verifyEmailCode(req: Request, res: Response) {
   const {
@@ -36,43 +42,20 @@ export async function verifyEmailCode(req: Request, res: Response) {
 
       // Create JWT tokens
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
-      const issuedAt = Math.floor(Date.now() / 1000)
 
       // Handle web platform with cookies
       if (platform === "web") {
         // Set the access token in an HTTP-only cookie
-        res.cookie(COOKIE_OPTIONS.name, accessToken, {
-          maxAge: COOKIE_OPTIONS.maxAge,
-          httpOnly: COOKIE_OPTIONS.httpOnly,
-          secure: COOKIE_OPTIONS.secure,
-          sameSite: "lax",
-          path: COOKIE_OPTIONS.path,
-        })
+        res.cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
 
         // Set the refresh token in a separate HTTP-only cookie
-        res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
-          maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
-          httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
-          secure: REFRESH_COOKIE_OPTIONS.secure,
-          sameSite: "lax",
-          path: REFRESH_COOKIE_OPTIONS.path,
-        })
+        res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
 
         // Send a response with success and token metadata
-        return res.status(200).json({
-          _id: user._id,
-          issuedAt: issuedAt,
-          expiresAt: issuedAt + COOKIE_MAX_AGE,
-        })
+        return res.status(200).json({ _id: user._id })
       }
 
-      return res.status(200).json({
-        _id: user._id,
-        accessToken,
-        refreshToken,
-        issuedAt: issuedAt,
-        expiresAt: issuedAt + COOKIE_MAX_AGE,
-      })
+      return res.status(200).json({ _id: user._id, accessToken, refreshToken })
     }
 
     return res.status(200).json({ message: "Email verified successfully." })

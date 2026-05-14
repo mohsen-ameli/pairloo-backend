@@ -11,6 +11,21 @@ import { S3_EXPIRES_IN_SECONDS, BUCKET_NAME } from "./constants"
 
 const genHash = () => crypto.randomBytes(16).toString("hex")
 
+export function getS3ObjectKey(value: string | null | undefined) {
+  if (!value) return null
+
+  if (value.startsWith("http://") || value.startsWith("https://")) {
+    try {
+      const url = new URL(value)
+      return decodeURIComponent(url.pathname.replace(/^\//, ""))
+    } catch {
+      return null
+    }
+  }
+
+  return value
+}
+
 export async function sendObject(
   folder: string,
   file: File | Buffer | Blob,

@@ -56,6 +56,8 @@ Then make an API key and put the value in GEMINI_API_KEY
 Follow the guide here to install AWS CLI
 https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
 
+Ask the developers to make you an IAM user and create console sign-in credentials.
+
 Then sign in via the terminal.
 Guide:
 https://docs.aws.amazon.com/signin/latest/userguide/command-line-sign-in.html#command-line-sign-in-local-development
@@ -65,8 +67,6 @@ Then do the following:
 ```bash
 aws configure set region "ca-central-1"
 ```
-
-Get your IAM access and secret keys and put them in .env (ask moe)
 
 5. Start the backend server
 

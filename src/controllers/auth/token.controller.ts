@@ -1,7 +1,9 @@
 import * as jose from "jose"
 import {
+  ACCESS_COOKIE_NAME,
   COOKIE_MAX_AGE,
-  COOKIE_OPTIONS,
+  ACCESS_COOKIE_OPTIONS,
+  REFRESH_COOKIE_NAME,
   GOOGLE_CLIENT_ID,
   GOOGLE_CLIENT_SECRET,
   GOOGLE_REDIRECT_URI,
@@ -71,44 +73,21 @@ export async function tokenPost(req: Request, res: Response) {
 
     // Create JWT tokens
     const { accessToken, refreshToken } = await createJWT(user._id.toString())
-    const issuedAt = Math.floor(Date.now() / 1000)
 
     // Handle web platform with cookies
     if (platform === "web") {
       // Set the access token in an HTTP-only cookie
-      res.cookie(COOKIE_OPTIONS.name, accessToken, {
-        maxAge: COOKIE_OPTIONS.maxAge,
-        httpOnly: COOKIE_OPTIONS.httpOnly,
-        secure: COOKIE_OPTIONS.secure,
-        sameSite: "lax",
-        path: COOKIE_OPTIONS.path,
-      })
+      res.cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
 
       // Set the refresh token in a separate HTTP-only cookie
-      res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
-        maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
-        httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
-        secure: REFRESH_COOKIE_OPTIONS.secure,
-        sameSite: "lax",
-        path: REFRESH_COOKIE_OPTIONS.path,
-      })
+      res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
 
       // Send a response with success and token metadata
-      return res.json({
-        _id: user._id,
-        issuedAt: issuedAt,
-        expiresAt: issuedAt + COOKIE_MAX_AGE,
-      })
+      return res.json({ _id: user._id })
     }
 
     // For native platforms, return both tokens in the response body
-    return res.json({
-      _id: user._id,
-      accessToken,
-      refreshToken,
-      issuedAt: issuedAt,
-      expiresAt: issuedAt + COOKIE_MAX_AGE,
-    })
+    return res.json({ _id: user._id, accessToken, refreshToken })
   } catch (err) {
     console.error("Error exchanging code for tokens:", err)
     return res.status(500).json({ error: "Internal server error" })

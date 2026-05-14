@@ -228,7 +228,36 @@ export async function myPostsGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
   try {
-    const posts = await Post.find({ userId }).sort({ createdAt: -1 })
+    const posts = await Post.aggregate<{
+      _id: mongoose.Types.ObjectId
+      images?: string[]
+      title: string
+      status: string
+      publicPost: boolean
+      description: string
+      createdAt: Date
+      topMatchingPostScore?: number | null
+    }>([
+      {
+        $match: {
+          userId: new mongoose.Types.ObjectId(userId),
+        },
+      },
+      {
+        $project: {
+          images: 1,
+          title: 1,
+          status: 1,
+          publicPost: 1,
+          description: 1,
+          createdAt: 1,
+          topMatchingPostScore: {
+            $ifNull: [{ $arrayElemAt: ["$closestPosts.score", 0] }, null],
+          },
+        },
+      },
+      { $sort: { createdAt: -1 } },
+    ])
     if (!posts) {
       return res.status(404).json({ message: "Posts not found" })
     }
@@ -253,6 +282,7 @@ export async function myUserGet(req: Request, res: Response) {
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
       {
         $project: {
+          _id: 0,
           username: 1,
           firstName: 1,
           lastName: 1,

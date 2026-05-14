@@ -2,12 +2,19 @@ import { Request, Response } from "express"
 import User from "../../models/user.model"
 import createJWT from "../../utils/create-jwt"
 import { sendObject } from "../../utils/s3"
+import {
+  ACCESS_COOKIE_NAME,
+  ACCESS_COOKIE_OPTIONS,
+  REFRESH_COOKIE_NAME,
+  REFRESH_COOKIE_OPTIONS,
+} from "../../utils/constants"
 
 export async function signupPost(req: Request, res: Response) {
   const userData = {
     username: req.body.username.toLowerCase(),
     firstName: req.body.firstName,
     lastName: req.body.lastName,
+    picture: req.body.picture,
     phoneNumber: req.body.phoneNumber,
     country: req.body.country,
     city: req.body.city,
@@ -36,15 +43,22 @@ export async function signupPost(req: Request, res: Response) {
       }
     }
 
-    await newUser.save()
+    const user = await newUser.save()
 
-    const { accessToken, refreshToken } = await createJWT(userId)
+    const { accessToken, refreshToken } = await createJWT(user._id.toString())
 
-    return res.status(201).json({
-      _id: newUser._id,
-      accessToken,
-      refreshToken,
-    })
+    // Handle web platform with cookies
+    if (req.body.platform === "web") {
+      // Set the access token in an HTTP-only cookie
+      res.cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
+
+      // Set the refresh token in a separate HTTP-only cookie
+      res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
+
+      return res.status(200).json({ _id: user._id })
+    }
+
+    return res.status(200).json({ _id: user._id, accessToken, refreshToken })
   } catch (err: any) {
     return res.status(500).json({ errors: { general: err.message } })
   }

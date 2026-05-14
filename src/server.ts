@@ -1,8 +1,11 @@
+import multer from "multer"
+export const upload = multer({ storage: multer.memoryStorage() })
+
 import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
-  COOKIE_MAX_AGE,
-  COOKIE_OPTIONS,
+  ACCESS_COOKIE_NAME,
+  ACCESS_COOKIE_OPTIONS,
   DB_URI,
   EMAIL_HOST,
   EMAIL_PASS,
@@ -20,7 +23,6 @@ import locationRoutes from "./routes/location.routes"
 import userRoutes from "./routes/user.routes"
 import mongoose from "mongoose"
 import cookieParser from "cookie-parser"
-import csurf from "csurf"
 import { Server } from "socket.io"
 import http from "http"
 import authMiddleware from "./middleware/auth.middleware"
@@ -38,7 +40,7 @@ import Expo from "expo-server-sdk"
 const app = express()
 
 const corsOptions = {
-  origin: IS_PRODUCTION ? false : FRONTEND_URL,
+  origin: IS_PRODUCTION ? FRONTEND_URL : true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 }
@@ -50,12 +52,8 @@ const io = new Server(server, {
   serveClient: false,
   maxHttpBufferSize: 1e8, // 100 MB
   cookie: {
-    name: COOKIE_OPTIONS.name,
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
+    name: ACCESS_COOKIE_NAME,
+    ...ACCESS_COOKIE_OPTIONS,
   },
 })
 
@@ -75,9 +73,6 @@ export const s3Client = new S3Client({
 app.use(cookieParser())
 app.use(cors(corsOptions))
 app.use(express.json())
-if (IS_PRODUCTION) {
-  app.use(csurf({ cookie: true }))
-}
 
 export const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
@@ -89,6 +84,7 @@ export const transporter = nodemailer.createTransport({
 })
 
 // Express - Routes & handlers
+app.get("/", (req, res) => res.send("This is the backend API."))
 app.use("/api/auth", authRoutes)
 app.use("/api/posts", authMiddleware, postsRoutes)
 app.use("/api/settings", authMiddleware, settingsRoutes)
