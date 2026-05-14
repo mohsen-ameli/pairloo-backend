@@ -4,7 +4,7 @@ import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 import Post, { StatusType, VALID_STATUSES } from "../models/post.model"
-import { deleteObject } from "../utils/s3"
+import { deleteObject, sendObject } from "../utils/s3"
 
 // Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
@@ -170,4 +170,68 @@ export async function postStatusUpdate(req: Request, res: Response) {
   }
 
   return res.status(200).json({ message: "Post status updated successfully", post })
+}
+
+export async function postUpdate(req: Request, res: Response) {
+  const postId = req.params.id as string
+  const userId = req.user!.sub
+
+  try {
+    const post = await Post.findOne({ _id: postId, userId })
+    if (!post) {
+      return res.status(404).json({ message: "Post not found" })
+    }
+
+    const { title, description, publicPost, location, distance, removedImages } = req.body
+
+    // Handle removed images
+    if (removedImages) {
+      const imagesToRemove =
+        typeof removedImages === "string" ? JSON.parse(removedImages) : removedImages
+      if (Array.isArray(imagesToRemove)) {
+        for (const imagePath of imagesToRemove) {
+          await deleteObject(imagePath)
+        }
+      }
+    }
+
+    const imageKeys: string[] = []
+    if (req.body.images) {
+      const images = Array.isArray(req.body.images) ? req.body.images : [req.body.images]
+      for (const img of images) {
+        if (img && typeof img === "string") {
+          imageKeys.push(img)
+        }
+      }
+    }
+
+    // Handle new image uploads
+    if (req.files && Array.isArray(req.files)) {
+      for (const file of req.files) {
+        const fileName = await sendObject("posts", file.buffer, file.mimetype)
+        if (fileName) {
+          imageKeys.push(fileName)
+        }
+      }
+    }
+
+    // Update post with new values
+    const updateData: any = {}
+    if (title !== undefined) updateData.title = title
+    if (description !== undefined) updateData.description = description
+    if (publicPost !== undefined) updateData.publicPost = publicPost === "true"
+    if (location !== undefined)
+      updateData.location = typeof location === "string" ? JSON.parse(location) : location
+    if (distance !== undefined) updateData.distance = distance
+    if (imageKeys.length > 0) {
+      updateData.images = imageKeys
+    }
+
+    const updatedPost = await Post.findByIdAndUpdate(postId, updateData, { new: true })
+
+    return res.status(200).json({ message: "Post updated successfully", post: updatedPost })
+  } catch (error) {
+    console.error("Error updating post:", error)
+    return res.status(500).json({ message: "An error occurred while updating the post" })
+  }
 }
