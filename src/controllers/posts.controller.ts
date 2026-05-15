@@ -175,59 +175,69 @@ export async function postStatusUpdate(req: Request, res: Response) {
 export async function postUpdate(req: Request, res: Response) {
   const postId = req.params.id as string
   const userId = req.user!.sub
+  const files = (req as any).files as Express.Multer.File[] | undefined
+
+  let metadata: {
+    title: string
+    description: string
+    publicPost: boolean
+    distance: number
+    location: { latitude: number; longitude: number } | null
+    existingImages: string[]
+    removedImages: string[]
+  }
+
+  try {
+    metadata = JSON.parse(req.body.metadata)
+  } catch (e) {
+    return res.status(400).json({ message: "Invalid metadata format" })
+  }
+
+  const { title, description, publicPost, distance, location, existingImages, removedImages } =
+    metadata
 
   try {
     const post = await Post.findOne({ _id: postId, userId })
+
     if (!post) {
       return res.status(404).json({ message: "Post not found" })
     }
 
-    const { title, description, publicPost, location, distance, removedImages } = req.body
-
-    // Handle removed images
-    if (removedImages) {
-      const imagesToRemove =
-        typeof removedImages === "string" ? JSON.parse(removedImages) : removedImages
-      if (Array.isArray(imagesToRemove)) {
-        for (const imagePath of imagesToRemove) {
-          await deleteObject(imagePath)
+    const newImageKeys: string[] = existingImages.filter(img => img && img.length > 0)
+    if (files && files.length > 0) {
+      for (const file of files) {
+        try {
+          const imageKey = await sendObject("posts", file.buffer, file.mimetype)
+          if (imageKey) {
+            newImageKeys.push(imageKey)
+          }
+        } catch (uploadError) {
+          console.error("Error uploading image:", uploadError)
         }
       }
     }
 
-    const imageKeys: string[] = []
-    if (req.body.images) {
-      const images = Array.isArray(req.body.images) ? req.body.images : [req.body.images]
-      for (const img of images) {
-        if (img && typeof img === "string") {
-          imageKeys.push(img)
-        }
+    // Delete removed images from S3
+    for (const removedImage of removedImages.filter(img => img && img.length > 0)) {
+      try {
+        await deleteObject(removedImage)
+      } catch (deleteError) {
+        console.error("Error deleting image:", deleteError)
       }
     }
 
-    // Handle new image uploads
-    if (req.files && Array.isArray(req.files)) {
-      for (const file of req.files) {
-        const fileName = await sendObject("posts", file.buffer, file.mimetype)
-        if (fileName) {
-          imageKeys.push(fileName)
-        }
-      }
-    }
-
-    // Update post with new values
-    const updateData: any = {}
-    if (title !== undefined) updateData.title = title
-    if (description !== undefined) updateData.description = description
-    if (publicPost !== undefined) updateData.publicPost = publicPost === "true"
-    if (location !== undefined)
-      updateData.location = typeof location === "string" ? JSON.parse(location) : location
-    if (distance !== undefined) updateData.distance = distance
-    if (imageKeys.length > 0) {
-      updateData.images = imageKeys
-    }
-
-    const updatedPost = await Post.findByIdAndUpdate(postId, updateData, { new: true })
+    const updatedPost = await Post.findByIdAndUpdate(
+      postId,
+      {
+        title,
+        description,
+        location,
+        distance,
+        publicPost,
+        images: newImageKeys,
+      },
+      { new: true }
+    )
 
     return res.status(200).json({ message: "Post updated successfully", post: updatedPost })
   } catch (error) {
