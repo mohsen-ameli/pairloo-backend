@@ -1,5 +1,5 @@
 import { Types } from "mongoose"
-import { LastMessageType } from "../models/conversation.model"
+import { ContactedPost, LastMessageType } from "../models/conversation.model"
 import { ReplyTo } from "../models/message.model"
 
 export type ConversationMessagesType = {
@@ -26,5 +26,6 @@ export type AllConversationsType = {
     username: string
     picture: string
   }[]
+  contactedPosts: ContactedPost[]
   lastMessage?: LastMessageType
 }

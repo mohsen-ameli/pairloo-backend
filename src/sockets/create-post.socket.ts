@@ -208,7 +208,6 @@ export function createPostSocket(io: CreatePostSocket) {
     socket.on(
       "updateDraftSettings",
       handleSocketEvent("updateDraftSettings", async (title, description, images, publicPost) => {
-        console.log("updating ", title, description, images, publicPost)
         await Post.findByIdAndUpdate(draftId, { title, description, images, publicPost })
       })
     )
