@@ -64,7 +64,7 @@ export const messageSchema = new mongoose.Schema<MessageType>({
     type: {
       _id: { type: mongoose.Schema.Types.ObjectId, ref: "message", required: true },
       content: { type: String, required: false },
-      attachmentsCount: { type: Number, required: true },
+      attachmentsCount: { type: Number, required: true, default: 0 },
       sender: {
         _id: { type: mongoose.Schema.Types.ObjectId, ref: "user", required: true },
         username: { type: String, required: true },

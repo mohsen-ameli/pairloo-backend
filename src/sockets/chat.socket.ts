@@ -313,6 +313,7 @@ export function chatSocket(io: ChatSocket) {
             $project: {
               _id: 1,
               conversationId: 1,
+              postId: 1,
               content: 1,
               createdAt: 1,
               updatedAt: 1,
