@@ -1,6 +1,7 @@
 import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
+  COOKIE_MAX_AGE,
   DB_URI,
   EMAIL_HOST,
   EMAIL_PASS,
@@ -47,6 +48,14 @@ const io = new Server(server, {
   cors: corsOptions,
   serveClient: false,
   maxHttpBufferSize: 1e8, // 100 MB
+  cookie: {
+    name: "auth_token",
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+  },
 })
 
 export const expo = new Expo()

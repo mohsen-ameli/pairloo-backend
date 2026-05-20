@@ -2,9 +2,15 @@ import { Request, Response } from "express"
 import User from "../../models/user.model"
 import createJWT from "../../utils/create-jwt"
 import EmailVerification from "../../models/email-verification.model"
+import { COOKIE_MAX_AGE, COOKIE_OPTIONS, REFRESH_COOKIE_OPTIONS } from "../../utils/constants"
 
 export async function verifyEmailCode(req: Request, res: Response) {
-  const { email, code, isSignUp }: { email: string; code: string; isSignUp: boolean } = req.body
+  const {
+    email,
+    code,
+    isSignUp,
+    platform,
+  }: { email: string; code: string; isSignUp: boolean; platform: string } = req.body
 
   try {
     const userVerify = await EmailVerification.findOne({
@@ -28,12 +34,63 @@ export async function verifyEmailCode(req: Request, res: Response) {
 
       await EmailVerification.deleteMany({ email: email.toLowerCase() })
 
+      // Create JWT tokens
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
+      const issuedAt = Math.floor(Date.now() / 1000)
+
+      // Handle web platform with cookies
+      if (platform === "web") {
+        // Set the access token in an HTTP-only cookie
+        res.setHeader("Set-Cookie", [
+          "Set-Cookie",
+          `${COOKIE_OPTIONS.name}=${accessToken}; Max-Age=${COOKIE_OPTIONS.maxAge}; Path=${
+            COOKIE_OPTIONS.path
+          }; ${COOKIE_OPTIONS.httpOnly ? "HttpOnly;" : ""} ${
+            COOKIE_OPTIONS.secure ? "Secure;" : ""
+          } SameSite=${COOKIE_OPTIONS.sameSite}`,
+        ])
+        // res.cookie(COOKIE_OPTIONS.name, accessToken, {
+        //   maxAge: COOKIE_OPTIONS.maxAge,
+        //   httpOnly: COOKIE_OPTIONS.httpOnly,
+        //   secure: COOKIE_OPTIONS.secure,
+        //   sameSite: "lax",
+        //   path: COOKIE_OPTIONS.path,
+        // })
+
+        // // Set the refresh token in a separate HTTP-only cookie
+        res.setHeader(
+          "Set-Cookie",
+          `${REFRESH_COOKIE_OPTIONS.name}=${refreshToken}; Max-Age=${
+            REFRESH_COOKIE_OPTIONS.maxAge
+          }; Path=${REFRESH_COOKIE_OPTIONS.path}; ${
+            REFRESH_COOKIE_OPTIONS.httpOnly ? "HttpOnly;" : ""
+          } ${REFRESH_COOKIE_OPTIONS.secure ? "Secure;" : ""} SameSite=${
+            REFRESH_COOKIE_OPTIONS.sameSite
+          }`
+        )
+
+        // res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
+        //   maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
+        //   httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
+        //   secure: REFRESH_COOKIE_OPTIONS.secure,
+        //   sameSite: "lax",
+        //   path: REFRESH_COOKIE_OPTIONS.path,
+        // })
+
+        // Send a response with success and token metadata
+        return res.status(200).json({
+          _id: user._id,
+          issuedAt: issuedAt,
+          expiresAt: issuedAt + COOKIE_MAX_AGE,
+        })
+      }
 
       return res.status(200).json({
         _id: user._id,
         accessToken,
         refreshToken,
+        issuedAt: issuedAt,
+        expiresAt: issuedAt + COOKIE_MAX_AGE,
       })
     }
 

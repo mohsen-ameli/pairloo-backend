@@ -1,5 +1,5 @@
 import { Request, Response } from "express"
-import { APP_SCHEME, BASE_URL } from "../../utils/constants"
+import { APP_SCHEME, FRONTEND_URL } from "../../utils/constants"
 
 // This function is called once the user has authenticated with Google
 // It handles the callback and redirects back to the app with the authorization code
@@ -32,7 +32,7 @@ export async function callbackGet(req: Request, res: Response) {
     })
 
     return res.redirect(
-      (platform == "web" ? BASE_URL : APP_SCHEME) + "?" + outgoingParams.toString()
+      (platform == "web" ? FRONTEND_URL : APP_SCHEME) + "?" + outgoingParams.toString()
     )
   } catch (error) {
     console.error("Callback error:", error)
