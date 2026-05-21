@@ -76,13 +76,19 @@ export async function refreshTokenPost(req: Request, res: Response) {
 
         // Send a response with success and token metadata
         return res.json({
+          _id: user._id,
           issuedAt: issuedAt,
           expiresAt: issuedAt + COOKIE_MAX_AGE,
         })
       }
     }
 
-    return res.json({ accessToken, issuedAt: issuedAt, expiresAt: issuedAt + COOKIE_MAX_AGE })
+    return res.json({
+      _id: user._id,
+      accessToken,
+      issuedAt: issuedAt,
+      expiresAt: issuedAt + COOKIE_MAX_AGE,
+    })
   } catch (err) {
     console.error("Error refreshing token:", err)
     return res.status(500).json({ error: "Internal server error" })
