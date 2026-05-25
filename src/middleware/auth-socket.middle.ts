@@ -1,10 +1,31 @@
 import { Socket } from "socket.io"
-import { JWT_SECRET } from "../utils/constants"
+import { COOKIE_OPTIONS, JWT_SECRET } from "../utils/constants"
 import jwt from "jsonwebtoken"
 import { JwtPayload } from "../types/user.types"
 
 export function authSocketMiddleware(socket: Socket, next: (err?: Error) => void) {
-  const token = socket.handshake.auth.token
+  let token: string | null = null
+
+  // Try to read cookie token (web only)
+  const cookieHeader = socket.handshake.headers.cookie
+
+  if (cookieHeader) {
+    const cookies = cookieHeader
+      ? cookieHeader.split(";").reduce(
+          (acc, cookie) => {
+            const [k, ...v] = cookie.trim().split("=")
+            acc[k.trim()] = decodeURIComponent(v.join("="))
+            return acc
+          },
+          {} as Record<string, string>
+        )
+      : {}
+    token = cookies[COOKIE_OPTIONS.name]
+  } else {
+    // Try to get the token (native only)
+    token = socket.handshake.auth?.token
+  }
+
   if (!token) return next(new Error("Authentication error"))
 
   try {

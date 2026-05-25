@@ -6,6 +6,10 @@ export async function postInteraction(req: Request, res: Response) {
   const postId = req.body.postId
   const type = req.body.type
 
+  if (!postId || !type) {
+    return res.status(400).json({ message: "postId and type are required" })
+  }
+
   const validTypes = ["post_view", "profile_view", "contact", "save"]
   if (!validTypes.includes(type)) {
     return res.status(400).json({ message: "Invalid interaction type" })

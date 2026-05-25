@@ -1,6 +1,8 @@
 import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
+  COOKIE_MAX_AGE,
+  COOKIE_OPTIONS,
   DB_URI,
   EMAIL_HOST,
   EMAIL_PASS,
@@ -37,7 +39,7 @@ const app = express()
 
 const corsOptions = {
   origin: IS_PRODUCTION ? false : FRONTEND_URL,
-  methods: ["GET", "POST", "PUT", "DELETE"],
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 }
 
@@ -47,6 +49,14 @@ const io = new Server(server, {
   cors: corsOptions,
   serveClient: false,
   maxHttpBufferSize: 1e8, // 100 MB
+  cookie: {
+    name: COOKIE_OPTIONS.name,
+    path: "/",
+    httpOnly: true,
+    secure: true,
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+  },
 })
 
 export const expo = new Expo()

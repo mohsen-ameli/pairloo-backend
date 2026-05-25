@@ -119,8 +119,8 @@ export function chatSocket(io: ChatSocket) {
       handleSocketEvent(
         "newMessage",
         async ({ conversationId, postId, content, attachments, replyTo }) => {
-          const urls = []
-          const keys = []
+          const urls: string[] = []
+          const keys: string[] = []
           if (attachments && attachments.length > 0) {
             for (const attachment of attachments) {
               const fileName = await sendObject("chat", attachment.file, attachment.mimeType)
@@ -129,7 +129,7 @@ export function chatSocket(io: ChatSocket) {
                 return
               }
               const url = await getObject(fileName)
-              urls.push(url)
+              if (url) urls.push(url)
               keys.push(fileName)
             }
           }
@@ -156,10 +156,8 @@ export function chatSocket(io: ChatSocket) {
             return
           }
 
-          // populate sender picture
-          message.sender.picture = user.picture
-          await User.updateUserPicture([message.sender])
-
+          // Replace attachment keys with URLs before emitting
+          message.attachments = urls
           io.to(conversationId).emit("message", message)
 
           const lastMessage: LastMessageType = {

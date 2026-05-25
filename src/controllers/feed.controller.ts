@@ -4,6 +4,7 @@ import Interaction, { InteractionTypeEnum } from "../models/interaction.model"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 import User from "../models/user.model"
+import { IS_PRODUCTION } from "../utils/constants"
 
 const WEIGHTS: {
   [key in InteractionTypeEnum]: number
@@ -29,8 +30,56 @@ type GeneralPostType = {
   status?: StatusType
 }
 
+async function getColdStartPosts(userId: string, res: Response) {
+  const recentPosts = await Post.find({
+    userId: { $ne: userId },
+    publicPost: true,
+    status: { $nin: ["inactive", "hidden", "draft"] },
+  })
+    .sort({ createdAt: -1 })
+    .limit(20)
+    .select("_id title description images createdAt status")
+    .populate<{
+      userId: {
+        _id: string
+        username: string
+        firstName: string
+        lastName: string
+        picture: string
+      }
+    }>("userId", "_id username firstName lastName picture")
+    .lean()
+
+  await User.updateUserPicture(recentPosts.map(p => p.userId))
+
+  for (const post of recentPosts) {
+    await Post.updatePostImages(post)
+  }
+
+  const results = recentPosts.map(post => ({
+    _id: post._id.toString(),
+    title: post.title,
+    description: post.description,
+    images: post.images,
+    createdAt: post.createdAt,
+    status: post.status,
+    userId: post.userId._id,
+    username: post.userId.username,
+    firstName: post.userId.firstName,
+    lastName: post.userId.lastName,
+    picture: post.userId.picture,
+  }))
+
+  return res.status(200).json(results)
+}
+
 export async function feedGet(req: Request, res: Response) {
   const userId = req.user!.sub
+
+  if (!IS_PRODUCTION) {
+    return await getColdStartPosts(userId, res)
+  }
+
   if (!weaviateClient) {
     return res.status(500).json({ message: "Something went wrong!" })
   }
@@ -40,46 +89,7 @@ export async function feedGet(req: Request, res: Response) {
 
     // Cold start: return trending/recent posts
     if (interactionCount < 5) {
-      const recentPosts = await Post.find({
-        userId: { $ne: userId },
-        publicPost: true,
-        status: { $nin: ["inactive", "hidden", "draft"] },
-      })
-        .sort({ createdAt: -1 })
-        .limit(20)
-        .select("_id title description images createdAt status")
-        .populate<{
-          userId: {
-            _id: string
-            username: string
-            firstName: string
-            lastName: string
-            picture: string
-          }
-        }>("userId", "_id username firstName lastName picture")
-        .lean()
-
-      await User.updateUserPicture(recentPosts.map(p => p.userId))
-
-      for (const post of recentPosts) {
-        await Post.updatePostImages(post)
-      }
-
-      const results = recentPosts.map(post => ({
-        _id: post._id.toString(),
-        title: post.title,
-        description: post.description,
-        images: post.images,
-        createdAt: post.createdAt,
-        status: post.status,
-        userId: post.userId._id,
-        username: post.userId.username,
-        firstName: post.userId.firstName,
-        lastName: post.userId.lastName,
-        picture: post.userId.picture,
-      }))
-
-      return res.status(200).json(results)
+      return await getColdStartPosts(userId, res)
     }
 
     const interestVector = await buildUserInterestVector(userId)

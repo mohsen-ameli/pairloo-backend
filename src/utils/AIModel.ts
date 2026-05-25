@@ -1,6 +1,7 @@
 import { ai } from "../server"
 import { summariesSchema, Question, questionSchema } from "../types/question.types"
 import { AI_ON, EMBEDDING_DIMENSION } from "./constants"
+import { zodToJsonSchema } from "zod-to-json-schema"
 
 const MODEL = "gemini-3.1-flash-lite-preview"
 const AI_OFF_MESSAGE =
@@ -21,6 +22,7 @@ export async function generateQuestion(contents: string): Promise<Question | nul
     contents,
     config: {
       responseMimeType: "application/json",
+      responseJsonSchema: zodToJsonSchema(questionSchema as any),
     },
   })
 
@@ -89,6 +91,7 @@ export async function generateSummaries(contents: string) {
     contents,
     config: {
       responseMimeType: "application/json",
+      responseJsonSchema: zodToJsonSchema(summariesSchema as any),
     },
   })
 

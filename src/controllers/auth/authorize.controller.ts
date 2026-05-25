@@ -1,5 +1,11 @@
 import { Request, Response } from "express"
-import { APP_SCHEME, BASE_URL, GOOGLE_AUTH_URL, GOOGLE_CLIENT_ID } from "../../utils/constants"
+import {
+  APP_SCHEME,
+  BASE_URL,
+  FRONTEND_URL,
+  GOOGLE_AUTH_URL,
+  GOOGLE_CLIENT_ID,
+} from "../../utils/constants"
 
 // This function proxies the authorization request to Google's OAuth 2.0 authorization endpoint
 // For use with expo-auth-session which needs redirect capability
@@ -23,7 +29,7 @@ export async function authorizeGet(req: Request, res: Response) {
 
     if (redirectUri === APP_SCHEME) {
       platform = "mobile"
-    } else if (redirectUri === BASE_URL) {
+    } else if (redirectUri === FRONTEND_URL) {
       platform = "web"
     } else {
       return res.status(400).json({ error: "Invalid redirect_uri" })

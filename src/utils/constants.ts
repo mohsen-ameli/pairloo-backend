@@ -17,14 +17,6 @@ export const AI_ON = IS_PRODUCTION ? true : process.env.AI_ON === "1"
 
 export const MAX_POST_MATCHES_PER_USER = 20
 
-// Authentication Constants
-export const COOKIE_NAME = "auth_token"
-export const REFRESH_COOKIE_NAME = "refresh_token"
-export const COOKIE_MAX_AGE = 5000 // seconds
-export const ACCESS_TOKEN_EXPIRY = "5000s" // seconds
-export const REFRESH_TOKEN_EXPIRY = "30d" // days
-export const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
-
 // Refresh Token Constants
 export const REFRESH_BEFORE_EXPIRY_SEC = 60 // Refresh token 1 minute before expiry
 
@@ -54,19 +46,27 @@ export const EMAIL_HOST = process.env.EMAIL_HOST!
 export const EMAIL_USER = process.env.EMAIL_USER!
 export const EMAIL_PASS = process.env.EMAIL_PASS!
 
+// Authentication Constants
+export const ACCESS_TOKEN_EXPIRY = "5000s" // seconds
+export const REFRESH_TOKEN_EXPIRY = "30d" // days
+export const COOKIE_MAX_AGE = 5000 // seconds
+export const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
+
 // Cookie Settings
 export const COOKIE_OPTIONS = {
+  name: "auth_token",
   httpOnly: true,
   secure: true,
   sameSite: "Lax" as const,
   path: "/",
-  maxAge: COOKIE_MAX_AGE,
+  maxAge: COOKIE_MAX_AGE * 1000, // milliseconds
 }
 
 export const REFRESH_COOKIE_OPTIONS = {
+  name: "refresh_token",
   httpOnly: true,
   secure: true,
   sameSite: "Lax" as const,
-  path: "/api/auth/refresh", // Restrict to refresh endpoint only
-  maxAge: REFRESH_TOKEN_MAX_AGE,
+  path: "/api/auth/refresh-token", // Restrict to refresh endpoint only
+  maxAge: REFRESH_TOKEN_MAX_AGE * 1000, // milliseconds
 }
