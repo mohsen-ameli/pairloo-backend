@@ -10,10 +10,16 @@ import { generateEmbedding } from "../utils/AIModel"
 import { generateUuid5 } from "weaviate-client"
 import mongoose from "mongoose"
 import { CreatePostSocket } from "../types/socket/create-post-socket.types"
+import { Question } from "../types/question.types"
 
 const initialSession: PostSession = {
   context: [],
   maxQuestions: MAX_GENERATED_POST_QUESTIONS + 1, // +1 to count the initial question
+}
+
+const DEFAULT_QUESTION: Question = {
+  type: "short_answer",
+  question: "Start by describing what you are looking for.",
 }
 
 export function createPostSocket(io: CreatePostSocket) {
@@ -53,8 +59,17 @@ export function createPostSocket(io: CreatePostSocket) {
         draftId = lastPost._id.toString()
         session.context = lastPost.qna
         socket.emit("draftRestored", session.context)
+      } else {
+        socket.emit("initialQuestion", DEFAULT_QUESTION)
       }
     }
+
+    socket.on(
+      "getInitialQuestion",
+      handleSocketEvent("getInitialQuestion", async () => {
+        socket.emit("initialQuestion", DEFAULT_QUESTION)
+      })
+    )
 
     socket.on(
       "chat",
