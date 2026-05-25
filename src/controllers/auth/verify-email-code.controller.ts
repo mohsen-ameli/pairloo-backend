@@ -41,41 +41,22 @@ export async function verifyEmailCode(req: Request, res: Response) {
       // Handle web platform with cookies
       if (platform === "web") {
         // Set the access token in an HTTP-only cookie
-        res.setHeader("Set-Cookie", [
-          "Set-Cookie",
-          `${COOKIE_OPTIONS.name}=${accessToken}; Max-Age=${COOKIE_OPTIONS.maxAge}; Path=${
-            COOKIE_OPTIONS.path
-          }; ${COOKIE_OPTIONS.httpOnly ? "HttpOnly;" : ""} ${
-            COOKIE_OPTIONS.secure ? "Secure;" : ""
-          } SameSite=${COOKIE_OPTIONS.sameSite}`,
-        ])
-        // res.cookie(COOKIE_OPTIONS.name, accessToken, {
-        //   maxAge: COOKIE_OPTIONS.maxAge,
-        //   httpOnly: COOKIE_OPTIONS.httpOnly,
-        //   secure: COOKIE_OPTIONS.secure,
-        //   sameSite: "lax",
-        //   path: COOKIE_OPTIONS.path,
-        // })
+        res.cookie(COOKIE_OPTIONS.name, accessToken, {
+          maxAge: COOKIE_OPTIONS.maxAge,
+          httpOnly: COOKIE_OPTIONS.httpOnly,
+          secure: COOKIE_OPTIONS.secure,
+          sameSite: "lax",
+          path: COOKIE_OPTIONS.path,
+        })
 
-        // // Set the refresh token in a separate HTTP-only cookie
-        res.setHeader(
-          "Set-Cookie",
-          `${REFRESH_COOKIE_OPTIONS.name}=${refreshToken}; Max-Age=${
-            REFRESH_COOKIE_OPTIONS.maxAge
-          }; Path=${REFRESH_COOKIE_OPTIONS.path}; ${
-            REFRESH_COOKIE_OPTIONS.httpOnly ? "HttpOnly;" : ""
-          } ${REFRESH_COOKIE_OPTIONS.secure ? "Secure;" : ""} SameSite=${
-            REFRESH_COOKIE_OPTIONS.sameSite
-          }`
-        )
-
-        // res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
-        //   maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
-        //   httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
-        //   secure: REFRESH_COOKIE_OPTIONS.secure,
-        //   sameSite: "lax",
-        //   path: REFRESH_COOKIE_OPTIONS.path,
-        // })
+        // Set the refresh token in a separate HTTP-only cookie
+        res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
+          maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
+          httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
+          secure: REFRESH_COOKIE_OPTIONS.secure,
+          sameSite: "lax",
+          path: REFRESH_COOKIE_OPTIONS.path,
+        })
 
         // Send a response with success and token metadata
         return res.status(200).json({

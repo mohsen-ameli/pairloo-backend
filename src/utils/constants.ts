@@ -59,7 +59,7 @@ export const COOKIE_OPTIONS = {
   secure: true,
   sameSite: "Lax" as const,
   path: "/",
-  maxAge: COOKIE_MAX_AGE,
+  maxAge: COOKIE_MAX_AGE * 1000, // milliseconds
 }
 
 export const REFRESH_COOKIE_OPTIONS = {
@@ -68,5 +68,5 @@ export const REFRESH_COOKIE_OPTIONS = {
   secure: true,
   sameSite: "Lax" as const,
   path: "/api/auth/refresh-token", // Restrict to refresh endpoint only
-  maxAge: REFRESH_TOKEN_MAX_AGE,
+  maxAge: REFRESH_TOKEN_MAX_AGE * 1000, // milliseconds
 }

@@ -75,12 +75,13 @@ async function getColdStartPosts(userId: string, res: Response) {
 
 export async function feedGet(req: Request, res: Response) {
   const userId = req.user!.sub
-  if (!weaviateClient) {
-    return res.status(500).json({ message: "Something went wrong!" })
-  }
 
   if (!IS_PRODUCTION) {
     return await getColdStartPosts(userId, res)
+  }
+
+  if (!weaviateClient) {
+    return res.status(500).json({ message: "Something went wrong!" })
   }
 
   try {

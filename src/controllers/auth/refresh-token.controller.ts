@@ -42,45 +42,29 @@ export async function refreshTokenPost(req: Request, res: Response) {
     const issuedAt = Math.floor(Date.now() / 1000)
 
     if (req.cookies) {
-      const cookieHeader = req.headers["cookie"]
-      // Parse cookies
-      const cookies = cookieHeader?.split(";").reduce(
-        (acc, cookie) => {
-          const [key, value] = cookie.trim().split("=")
-          acc[key.trim()] = value
-          return acc
-        },
-        {} as Record<string, string>
-      )
+      res.cookie(COOKIE_OPTIONS.name, accessToken, {
+        maxAge: COOKIE_OPTIONS.maxAge,
+        httpOnly: COOKIE_OPTIONS.httpOnly,
+        secure: COOKIE_OPTIONS.secure,
+        sameSite: "lax",
+        path: COOKIE_OPTIONS.path,
+      })
 
-      if (cookies) {
-        // Get refresh token from cookie
-        refreshToken = cookies[REFRESH_COOKIE_OPTIONS.name]
+      // Set the refresh token in a separate HTTP-only cookie
+      res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
+        maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
+        httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
+        secure: REFRESH_COOKIE_OPTIONS.secure,
+        sameSite: "lax",
+        path: REFRESH_COOKIE_OPTIONS.path,
+      })
 
-        res.cookie(COOKIE_OPTIONS.name, accessToken, {
-          maxAge: COOKIE_OPTIONS.maxAge,
-          httpOnly: COOKIE_OPTIONS.httpOnly,
-          secure: COOKIE_OPTIONS.secure,
-          sameSite: "lax",
-          path: COOKIE_OPTIONS.path,
-        })
-
-        // Set the refresh token in a separate HTTP-only cookie
-        res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
-          maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
-          httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
-          secure: REFRESH_COOKIE_OPTIONS.secure,
-          sameSite: "lax",
-          path: REFRESH_COOKIE_OPTIONS.path,
-        })
-
-        // Send a response with success and token metadata
-        return res.json({
-          _id: user._id,
-          issuedAt: issuedAt,
-          expiresAt: issuedAt + COOKIE_MAX_AGE,
-        })
-      }
+      // Send a response with success and token metadata
+      return res.json({
+        _id: user._id,
+        issuedAt: issuedAt,
+        expiresAt: issuedAt + COOKIE_MAX_AGE,
+      })
     }
 
     return res.json({
