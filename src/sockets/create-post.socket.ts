@@ -62,6 +62,8 @@ export function createPostSocket(io: CreatePostSocket) {
       } else {
         socket.emit("initialQuestion", DEFAULT_QUESTION)
       }
+    } else {
+      socket.emit("initialQuestion", DEFAULT_QUESTION)
     }
 
     socket.on(
