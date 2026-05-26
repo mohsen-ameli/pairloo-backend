@@ -18,7 +18,7 @@ export async function refreshTokenPost(req: Request, res: Response) {
   }
 
   if (!refreshToken) {
-    return res.status(400).json({ error: "Missing refresh token" })
+    return res.status(401).json({ error: "Missing refresh token" })
   }
 
   try {
@@ -35,7 +35,7 @@ export async function refreshTokenPost(req: Request, res: Response) {
 
     const user = await User.findById(payload.payload.sub)
     if (!user) {
-      return res.status(404).json({ error: "User not found" })
+      return res.status(401).json({ error: "User not found" })
     }
 
     const { accessToken } = await createJWT(user._id.toString())
