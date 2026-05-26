@@ -1,5 +1,6 @@
 import { Router } from "express"
 import { userProfileGet } from "../controllers/users/user-profile.controller"
+import { submitFeedback } from "../controllers/users/feedback.controller"
 import { followUser } from "../controllers/users/follow.controller"
 import { unfollowUser } from "../controllers/users/unfollow.controller"
 import { reviewUser } from "../controllers/users/review.controller"
@@ -31,6 +32,7 @@ userRoutes.get("/profile/:id", userProfileGet)
 
 userRoutes.post("/follow", followUser)
 userRoutes.post("/unfollow", unfollowUser)
+userRoutes.post("/feedback", submitFeedback)
 userRoutes.post("/review", reviewUser)
 
 userRoutes.post("/save-post/:postId", savePost)
