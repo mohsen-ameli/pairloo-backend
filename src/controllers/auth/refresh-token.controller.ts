@@ -41,7 +41,7 @@ export async function refreshTokenPost(req: Request, res: Response) {
     const { accessToken } = await createJWT(user._id.toString())
     const issuedAt = Math.floor(Date.now() / 1000)
 
-    if (req.cookies) {
+    if (req.cookies && Object.keys(req.cookies).length > 0) {
       res.cookie(COOKIE_OPTIONS.name, accessToken, {
         maxAge: COOKIE_OPTIONS.maxAge,
         httpOnly: COOKIE_OPTIONS.httpOnly,
