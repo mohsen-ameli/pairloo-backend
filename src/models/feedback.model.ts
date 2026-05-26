@@ -2,7 +2,7 @@ import mongoose from "mongoose"
 
 export interface FeedbackType extends mongoose.Document {
   _id: mongoose.Types.ObjectId
-  userId: string
+  userId: mongoose.Types.ObjectId
   title: string
   description: string
   createdAt: Date
@@ -10,7 +10,7 @@ export interface FeedbackType extends mongoose.Document {
 
 const feedbackSchema = new mongoose.Schema<FeedbackType>({
   userId: {
-    type: String,
+    type: mongoose.Schema.Types.ObjectId,
     ref: "user",
     required: true,
   },

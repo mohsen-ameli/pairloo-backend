@@ -2,12 +2,8 @@ import { Request, Response } from "express"
 import Feedback from "../../models/feedback.model"
 
 export async function submitFeedback(req: Request, res: Response) {
-  const myId = req.user?.sub
+  const myId = req.user!.sub
   const { title, description } = req.body
-
-  if (!myId) {
-    return res.status(401).json({ message: "Authentication required" })
-  }
 
   if (!title || typeof title !== "string" || !description || typeof description !== "string") {
     return res.status(400).json({ message: "Invalid request body" })
@@ -26,5 +22,3 @@ export async function submitFeedback(req: Request, res: Response) {
     return res.status(500).json({ message: "Internal server error" })
   }
 }
-
-export default submitFeedback
