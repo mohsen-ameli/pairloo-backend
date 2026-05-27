@@ -30,7 +30,7 @@ export function authSocketMiddleware(socket: Socket, next: (err?: Error) => void
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload
-    ;(socket as any).user = decoded
+    socket.user = decoded
     next()
   } catch (err) {
     next(new Error("Authentication error"))
