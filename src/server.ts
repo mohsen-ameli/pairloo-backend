@@ -38,7 +38,7 @@ import Expo from "expo-server-sdk"
 const app = express()
 
 const corsOptions = {
-  origin: IS_PRODUCTION ? false : FRONTEND_URL,
+  origin: IS_PRODUCTION ? false : [FRONTEND_URL, "https://pairloo.expo.app"],
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 }
@@ -89,6 +89,9 @@ export const transporter = nodemailer.createTransport({
 })
 
 // Express - Routes & handlers
+app.use("/", (req, res) => {
+  res.send("This is the backend API.")
+})
 app.use("/api/auth", authRoutes)
 app.use("/api/posts", authMiddleware, postsRoutes)
 app.use("/api/settings", authMiddleware, settingsRoutes)

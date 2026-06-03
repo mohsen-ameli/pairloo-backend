@@ -39,7 +39,7 @@ export const EMBEDDING_DIMENSION = 3072
 
 // Environment Constants
 export const BASE_URL = process.env.PUBLIC_BASE_URL
-export const FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL
+export const FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL!
 export const APP_SCHEME = process.env.PUBLIC_SCHEME
 export const JWT_SECRET = process.env.JWT_SECRET!
 export const EMAIL_HOST = process.env.EMAIL_HOST!
