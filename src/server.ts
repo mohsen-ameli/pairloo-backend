@@ -20,7 +20,6 @@ import locationRoutes from "./routes/location.routes"
 import userRoutes from "./routes/user.routes"
 import mongoose from "mongoose"
 import cookieParser from "cookie-parser"
-import csurf from "csurf"
 import { Server } from "socket.io"
 import http from "http"
 import authMiddleware from "./middleware/auth.middleware"
@@ -75,9 +74,6 @@ export const s3Client = new S3Client({
 app.use(cookieParser())
 app.use(cors(corsOptions))
 app.use(express.json())
-if (IS_PRODUCTION) {
-  app.use(csurf({ cookie: true }))
-}
 
 export const transporter = nodemailer.createTransport({
   host: EMAIL_HOST,
