@@ -85,9 +85,7 @@ export const transporter = nodemailer.createTransport({
 })
 
 // Express - Routes & handlers
-app.use("/", (req, res) => {
-  res.send("This is the backend API.")
-})
+app.get("/", (req, res) => res.send("This is the backend API."))
 app.use("/api/auth", authRoutes)
 app.use("/api/posts", authMiddleware, postsRoutes)
 app.use("/api/settings", authMiddleware, settingsRoutes)
