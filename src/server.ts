@@ -37,7 +37,7 @@ import Expo from "expo-server-sdk"
 const app = express()
 
 const corsOptions = {
-  origin: IS_PRODUCTION ? [FRONTEND_URL, "https://pairloo.expo.app"] : true,
+  origin: IS_PRODUCTION ? FRONTEND_URL : true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   credentials: true,
 }
