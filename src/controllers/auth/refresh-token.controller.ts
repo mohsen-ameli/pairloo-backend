@@ -3,8 +3,10 @@ import * as jose from "jose"
 import User from "../../models/user.model"
 import createJWT from "../../utils/create-jwt"
 import {
+  ACCESS_COOKIE_NAME,
   COOKIE_MAX_AGE,
-  COOKIE_OPTIONS,
+  ACCESS_COOKIE_OPTIONS,
+  REFRESH_COOKIE_NAME,
   JWT_SECRET,
   REFRESH_COOKIE_OPTIONS,
 } from "../../utils/constants"
@@ -14,7 +16,7 @@ export async function refreshTokenPost(req: Request, res: Response) {
   // Accept refresh token from request body (native) or from cookie (web)
   let refreshToken = req.body?.refreshToken as string
   if (!refreshToken && req.cookies) {
-    refreshToken = req.cookies[REFRESH_COOKIE_OPTIONS.name]
+    refreshToken = req.cookies[REFRESH_COOKIE_NAME]
   }
 
   if (!refreshToken) {
@@ -42,22 +44,10 @@ export async function refreshTokenPost(req: Request, res: Response) {
     const issuedAt = Math.floor(Date.now() / 1000)
 
     if (req.cookies && Object.keys(req.cookies).length > 0) {
-      res.cookie(COOKIE_OPTIONS.name, accessToken, {
-        maxAge: COOKIE_OPTIONS.maxAge,
-        httpOnly: COOKIE_OPTIONS.httpOnly,
-        secure: COOKIE_OPTIONS.secure,
-        sameSite: "lax",
-        path: COOKIE_OPTIONS.path,
-      })
+      res.cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
 
       // Set the refresh token in a separate HTTP-only cookie
-      res.cookie(REFRESH_COOKIE_OPTIONS.name, refreshToken, {
-        maxAge: REFRESH_COOKIE_OPTIONS.maxAge,
-        httpOnly: REFRESH_COOKIE_OPTIONS.httpOnly,
-        secure: REFRESH_COOKIE_OPTIONS.secure,
-        sameSite: "lax",
-        path: REFRESH_COOKIE_OPTIONS.path,
-      })
+      res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
 
       // Send a response with success and token metadata
       return res.json({

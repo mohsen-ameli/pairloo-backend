@@ -1,5 +1,5 @@
 import { Socket } from "socket.io"
-import { COOKIE_OPTIONS, JWT_SECRET } from "../utils/constants"
+import { ACCESS_COOKIE_NAME, JWT_SECRET } from "../utils/constants"
 import jwt from "jsonwebtoken"
 import { JwtPayload } from "../types/user.types"
 
@@ -20,7 +20,7 @@ export function authSocketMiddleware(socket: Socket, next: (err?: Error) => void
           {} as Record<string, string>
         )
       : {}
-    token = cookies[COOKIE_OPTIONS.name]
+    token = cookies[ACCESS_COOKIE_NAME]
   } else {
     // Try to get the token (native only)
     token = socket.handshake.auth?.token
