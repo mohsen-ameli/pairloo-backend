@@ -5,6 +5,7 @@
  * Import from this file instead of defining constants in individual files.
  */
 import dotenv from "dotenv"
+import { CookieOptions } from "express"
 dotenv.config()
 
 export const IS_PRODUCTION = process.env.NODE_ENV === "production"
@@ -53,20 +54,20 @@ export const COOKIE_MAX_AGE = 5000 // seconds
 export const REFRESH_TOKEN_MAX_AGE = 30 * 24 * 60 * 60 // 30 days in seconds
 
 // Cookie Settings
-export const COOKIE_OPTIONS = {
-  name: "auth_token",
+export const ACCESS_COOKIE_NAME = "access_token"
+export const ACCESS_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: true,
-  sameSite: "Lax" as const,
+  sameSite: "lax",
   path: "/",
   maxAge: COOKIE_MAX_AGE * 1000, // milliseconds
 }
 
-export const REFRESH_COOKIE_OPTIONS = {
-  name: "refresh_token",
+export const REFRESH_COOKIE_NAME = "refresh_token"
+export const REFRESH_COOKIE_OPTIONS: CookieOptions = {
   httpOnly: true,
   secure: true,
-  sameSite: "Lax" as const,
+  sameSite: "lax",
   path: "/api/auth/refresh-token", // Restrict to refresh endpoint only
   maxAge: REFRESH_TOKEN_MAX_AGE * 1000, // milliseconds
 }

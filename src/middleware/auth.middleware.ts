@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express"
 import jwt from "jsonwebtoken"
-import { COOKIE_OPTIONS, JWT_SECRET } from "../utils/constants"
+import { ACCESS_COOKIE_NAME, JWT_SECRET } from "../utils/constants"
 import { JwtPayload } from "../types/user.types"
 
 // Authentication middleware to make sure user is authenticated
@@ -8,7 +8,7 @@ import { JwtPayload } from "../types/user.types"
 // e.g. app.get("/some-route", authMiddleware, (req, res) => { ... });
 function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization
-  const cookieToken = req.cookies?.[COOKIE_OPTIONS.name]
+  const cookieToken = req.cookies?.[ACCESS_COOKIE_NAME]
 
   const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : cookieToken
 

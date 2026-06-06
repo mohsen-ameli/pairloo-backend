@@ -1,8 +1,9 @@
 import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
+  ACCESS_COOKIE_NAME,
   COOKIE_MAX_AGE,
-  COOKIE_OPTIONS,
+  ACCESS_COOKIE_OPTIONS,
   DB_URI,
   EMAIL_HOST,
   EMAIL_PASS,
@@ -49,12 +50,8 @@ const io = new Server(server, {
   serveClient: false,
   maxHttpBufferSize: 1e8, // 100 MB
   cookie: {
-    name: COOKIE_OPTIONS.name,
-    path: "/",
-    httpOnly: true,
-    secure: true,
-    sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
+    name: ACCESS_COOKIE_NAME,
+    ...ACCESS_COOKIE_OPTIONS,
   },
 })
 
