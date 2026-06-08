@@ -282,6 +282,7 @@ export async function myUserGet(req: Request, res: Response) {
       { $match: { _id: new mongoose.Types.ObjectId(userId) } },
       {
         $project: {
+          _id: 0,
           username: 1,
           firstName: 1,
           lastName: 1,

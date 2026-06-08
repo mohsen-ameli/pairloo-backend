@@ -42,7 +42,6 @@ export async function verifyEmailCode(req: Request, res: Response) {
 
       // Create JWT tokens
       const { accessToken, refreshToken } = await createJWT(user._id.toString())
-      const issuedAt = Math.floor(Date.now() / 1000)
 
       // Handle web platform with cookies
       if (platform === "web") {
@@ -53,20 +52,10 @@ export async function verifyEmailCode(req: Request, res: Response) {
         res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
 
         // Send a response with success and token metadata
-        return res.status(200).json({
-          _id: user._id,
-          issuedAt: issuedAt,
-          expiresAt: issuedAt + COOKIE_MAX_AGE,
-        })
+        return res.status(200).json({ _id: user._id })
       }
 
-      return res.status(200).json({
-        _id: user._id,
-        accessToken,
-        refreshToken,
-        issuedAt: issuedAt,
-        expiresAt: issuedAt + COOKIE_MAX_AGE,
-      })
+      return res.status(200).json({ _id: user._id, accessToken, refreshToken })
     }
 
     return res.status(200).json({ message: "Email verified successfully." })

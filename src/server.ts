@@ -1,8 +1,10 @@
+import multer from "multer"
+export const upload = multer({ storage: multer.memoryStorage() })
+
 import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
   ACCESS_COOKIE_NAME,
-  COOKIE_MAX_AGE,
   ACCESS_COOKIE_OPTIONS,
   DB_URI,
   EMAIL_HOST,

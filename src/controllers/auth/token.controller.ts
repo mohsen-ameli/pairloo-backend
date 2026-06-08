@@ -73,7 +73,6 @@ export async function tokenPost(req: Request, res: Response) {
 
     // Create JWT tokens
     const { accessToken, refreshToken } = await createJWT(user._id.toString())
-    const issuedAt = Math.floor(Date.now() / 1000)
 
     // Handle web platform with cookies
     if (platform === "web") {
@@ -84,21 +83,11 @@ export async function tokenPost(req: Request, res: Response) {
       res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
 
       // Send a response with success and token metadata
-      return res.json({
-        _id: user._id,
-        issuedAt: issuedAt,
-        expiresAt: issuedAt + COOKIE_MAX_AGE,
-      })
+      return res.json({ _id: user._id })
     }
 
     // For native platforms, return both tokens in the response body
-    return res.json({
-      _id: user._id,
-      accessToken,
-      refreshToken,
-      issuedAt: issuedAt,
-      expiresAt: issuedAt + COOKIE_MAX_AGE,
-    })
+    return res.json({ _id: user._id, accessToken, refreshToken })
   } catch (err) {
     console.error("Error exchanging code for tokens:", err)
     return res.status(500).json({ error: "Internal server error" })

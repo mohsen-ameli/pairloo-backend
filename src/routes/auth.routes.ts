@@ -9,10 +9,8 @@ import { verifyEmailCode } from "../controllers/auth/verify-email-code.controlle
 import { usernameAvailableGet } from "../controllers/auth/username.controller"
 import { requestPhoneVerification } from "../controllers/auth/request-phone-verification.controller"
 import { verifyPhoneCode } from "../controllers/auth/verify-phone-code.controller"
-import multer from "multer"
 import { logoutPost } from "../controllers/auth/logout.controller"
-
-const upload = multer({ storage: multer.memoryStorage() })
+import { upload } from "../server"
 
 const router = Router()
 

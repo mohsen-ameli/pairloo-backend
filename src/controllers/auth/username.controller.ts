@@ -3,7 +3,7 @@ import User from "../../models/user.model"
 
 export async function usernameAvailableGet(req: Request, res: Response) {
   if (!req.query.username) {
-    return res.status(400).json({ errors: { username: "Username query parameter is required." } })
+    return res.status(400).json({ errors: { username: "Username is required." } })
   }
 
   const username = req.query.username.toString().trim().toLowerCase()

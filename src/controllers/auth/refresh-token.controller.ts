@@ -41,7 +41,6 @@ export async function refreshTokenPost(req: Request, res: Response) {
     }
 
     const { accessToken } = await createJWT(user._id.toString())
-    const issuedAt = Math.floor(Date.now() / 1000)
 
     if (req.cookies && Object.keys(req.cookies).length > 0) {
       res.cookie(ACCESS_COOKIE_NAME, accessToken, ACCESS_COOKIE_OPTIONS)
@@ -50,19 +49,10 @@ export async function refreshTokenPost(req: Request, res: Response) {
       res.cookie(REFRESH_COOKIE_NAME, refreshToken, REFRESH_COOKIE_OPTIONS)
 
       // Send a response with success and token metadata
-      return res.json({
-        _id: user._id,
-        issuedAt: issuedAt,
-        expiresAt: issuedAt + COOKIE_MAX_AGE,
-      })
+      return res.json({ _id: user._id })
     }
 
-    return res.json({
-      _id: user._id,
-      accessToken,
-      issuedAt: issuedAt,
-      expiresAt: issuedAt + COOKIE_MAX_AGE,
-    })
+    return res.json({ _id: user._id, accessToken })
   } catch (err) {
     console.error("Error refreshing token:", err)
     return res.status(500).json({ error: "Internal server error" })

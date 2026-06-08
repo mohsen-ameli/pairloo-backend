@@ -1,8 +1,6 @@
-import multer from "multer"
 import { updateProfile } from "../controllers/users/update-profile.controller"
 import { Router } from "express"
-
-const upload = multer({ storage: multer.memoryStorage() })
+import { upload } from "../server"
 
 const settingsRoute = Router()
 
