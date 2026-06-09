@@ -73,7 +73,7 @@ export async function getClosestPosts({
   for (const closePost of closePosts.objects) {
     const matchPostId = new mongoose.Types.ObjectId(closePost.properties.postId!.toString())
     const matchUserId = new mongoose.Types.ObjectId(closePost.properties.userId!.toString())
-    const matchScore = -closePost.metadata!.distance! // weaviate returns a negative value, so we negate that
+    const matchScore = 1 - closePost.metadata!.distance!
     const matchingUser = await User.findById(matchUserId).select("expoPushToken")
     const matchingPost = await Post.findById(matchPostId).select("title closestPosts")
     if (!matchingPost || !matchingUser) continue
@@ -87,6 +87,7 @@ export async function getClosestPosts({
 
     // if this post is not already in their closestPosts
     if (!matchingPost.closestPosts?.some(match => match.postId.toString() === postId.toString())) {
+      if (matchScore < 0.5) continue
       // Send a notification to the matching user about the new match.
       await sendPushNotification(
         matchingUser.expoPushToken,

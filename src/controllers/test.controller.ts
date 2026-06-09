@@ -4,7 +4,7 @@ import User, { UserType } from "../models/user.model"
 import { weaviateClient } from "../server"
 import { generateEmbedding, generateText } from "../utils/AIModel"
 import Post, { PostType } from "../models/post.model"
-import { configure, dataType, generateUuid5, vectors } from "weaviate-client"
+import { configure, dataType, generateUuid5, vectors, WeaviateClient } from "weaviate-client"
 import { LocationType } from "../types/location.type"
 import { sendPushNotification } from "../utils/send-push-notification"
 import { callForEmbeddings, callForSummaries, callForTitle } from "../utils/AIQA"
@@ -205,20 +205,20 @@ async function weaviateCreateCollection(name: string) {
     vectorizers: [
       vectors.selfProvided({
         name: "needEmbedding",
-        vectorIndexConfig: configure.vectorIndex.hnsw({
-          distanceMetric: "dot",
+        vectorIndexConfig: configure.vectorIndex.hfresh({
+          distanceMetric: "cosine",
         }),
       }),
       vectors.selfProvided({
         name: "provideEmbedding",
-        vectorIndexConfig: configure.vectorIndex.hnsw({
-          distanceMetric: "dot",
+        vectorIndexConfig: configure.vectorIndex.hfresh({
+          distanceMetric: "cosine",
         }),
       }),
       vectors.selfProvided({
         name: "generalEmbedding",
-        vectorIndexConfig: configure.vectorIndex.hnsw({
-          distanceMetric: "dot",
+        vectorIndexConfig: configure.vectorIndex.hfresh({
+          distanceMetric: "cosine",
         }),
       }),
     ],
@@ -242,14 +242,19 @@ async function weaviateDeleteObject(name: string, id: string) {
   await weaviatePosts.data.deleteById(id)
 }
 
-// Moves all data from one collection to another
-async function weaviateTransfer(collA: string, collB: string) {
-  if (!weaviateClient) {
+// Moves all data from one collection to another (insert A to B)
+async function weaviateTransfer(
+  collA: string,
+  collB: string,
+  clientA: WeaviateClient,
+  clientB: WeaviateClient
+) {
+  if (!clientA || !clientB) {
     throw new Error("Weaviate client not initialized")
   }
 
-  const weaviatePosts = weaviateClient.collections.use(collA)
-  const weaviatePostsTemp = weaviateClient.collections.use(collB)
+  const weaviatePosts = clientA.collections.use(collA)
+  const weaviatePostsTemp = clientB.collections.use(collB)
 
   for await (let item of weaviatePosts.iterator({ includeVector: true })) {
     const { postId, location, distance, userId } = item.properties
@@ -276,6 +281,10 @@ async function weaviateTransfer(collA: string, collB: string) {
         generalEmbedding: item.vectors.generalEmbedding,
       },
     })
+
+    await new Promise(resolve => setTimeout(resolve, 100))
+
+    console.log("Transferred post with id: ", postId)
   }
 }
 
@@ -297,7 +306,9 @@ export async function test(req: Request, res: Response) {
   const postId = req.query.postId as string
   const userId = req.query.userId as string
 
-  return res.json({ message: "Test has worked! Great Job :)" })
+  const close = await updateAllUserPostsClosestPosts()
+
+  return res.json({ message: "Test has worked! Great Job :)", close })
 }
 
 /**
