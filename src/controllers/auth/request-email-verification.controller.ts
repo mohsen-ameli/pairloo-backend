@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
-import { EMAIL_USER } from "../../utils/constants"
+import { EMAIL_FROM } from "../../utils/constants"
 import { transporter } from "../../server"
 import EmailVerification from "../../models/email-verification.model"
 
@@ -29,7 +29,7 @@ export async function requestEmailVerification(req: Request, res: Response) {
     await EmailVerification.create({ email, code: verificationCode })
 
     const mailOptions = {
-      from: EMAIL_USER,
+      from: EMAIL_FROM,
       to: email,
       subject: "Verification Code",
       text: `Your verification code is: ${verificationCode}.\nPlease use this code within 5 minutes or it will expire and you will need to retrieve a new code.\n\nDo not share this code with anyone.`,
