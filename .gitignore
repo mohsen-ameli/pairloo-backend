@@ -19,6 +19,7 @@ debug/
 
 # Environment variables
 .env
+.env.production
 .env.local
 .env.*.local
 
