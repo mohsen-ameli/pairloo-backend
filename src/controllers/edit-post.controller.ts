@@ -79,8 +79,6 @@ export async function postUpdate(req: Request, res: Response) {
       }
     }
 
-    console.log("Updated image keys:", updatedImageKeys)
-
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
       {
