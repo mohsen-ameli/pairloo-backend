@@ -4,7 +4,7 @@ import mongoose from "mongoose"
 import { weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 import Post, { StatusType, VALID_STATUSES } from "../models/post.model"
-import { deleteObject, getS3ObjectKey, sendObject } from "../utils/s3"
+import { deleteObject } from "../utils/s3"
 
 // Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
@@ -163,89 +163,15 @@ export async function postStatusUpdate(req: Request, res: Response) {
     return res.status(400).json({ message: "Invalid status value" })
   }
 
-  const post = await Post.findOneAndUpdate({ _id: postId, userId }, { status }, { new: true })
+  const post = await Post.findOneAndUpdate(
+    { _id: postId, userId },
+    { status },
+    { returnDocument: "after" }
+  )
 
   if (!post) {
     return res.status(404).json({ message: "Post not found" })
   }
 
   return res.status(200).json({ message: "Post status updated successfully", post })
-}
-
-export async function postUpdate(req: Request, res: Response) {
-  const postId = req.params.id as string
-  const userId = req.user!.sub
-  const files = req.files as Express.Multer.File[]
-
-  let metadata: {
-    title: string
-    description: string
-    publicPost: boolean
-    distance: number
-    location: { latitude: number; longitude: number } | null
-    existingImages: string[]
-    removedImages: string[]
-  }
-
-  try {
-    metadata = JSON.parse(req.body.metadata)
-  } catch (e) {
-    return res.status(400).json({ message: "Invalid metadata format" })
-  }
-
-  const { title, description, publicPost, distance, location, existingImages, removedImages } =
-    metadata
-
-  try {
-    const post = await Post.findOne({ _id: postId, userId })
-
-    if (!post) {
-      return res.status(404).json({ message: "Post not found" })
-    }
-
-    // Map s3 image links to object keys so they are in the final images array
-    // Note that the frontend does NOT have the object keys, so sending them from the frontend is not an option
-    const newImageKeys: string[] = existingImages
-      .map(getS3ObjectKey)
-      .filter((img): img is string => !!img && img.length > 0)
-    if (files && files.length > 0) {
-      for (const file of files) {
-        try {
-          const imageKey = await sendObject("posts", file.buffer, file.mimetype)
-          if (imageKey) {
-            newImageKeys.push(imageKey)
-          }
-        } catch (uploadError) {
-          console.error("Error uploading image:", uploadError)
-        }
-      }
-    }
-
-    // Delete removed images from S3
-    for (const removedImage of removedImages.filter(img => img && img.length > 0)) {
-      try {
-        await deleteObject(removedImage)
-      } catch (deleteError) {
-        console.error("Error deleting image:", deleteError)
-      }
-    }
-
-    const updatedPost = await Post.findByIdAndUpdate(
-      postId,
-      {
-        title,
-        description,
-        location,
-        distance,
-        publicPost,
-        images: newImageKeys,
-      },
-      { new: true }
-    )
-
-    return res.status(200).json({ message: "Post updated successfully", post: updatedPost })
-  } catch (error) {
-    console.error("Error updating post:", error)
-    return res.status(500).json({ message: "An error occurred while updating the post" })
-  }
 }
