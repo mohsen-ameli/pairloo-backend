@@ -51,22 +51,25 @@ export async function postUpdate(req: Request, res: Response) {
 
     const updatedImageKeys: string[] = []
 
+    for (const file of files as Express.Multer.File[]) {
+      try {
+        const imageKey = await sendObject("posts", file.buffer, file.mimetype)
+        if (imageKey) {
+          updatedImageKeys.push(imageKey)
+        }
+      } catch (uploadError) {
+        console.error("Error uploading image:", uploadError)
+      }
+    }
+
     for (const img of images) {
       if (img.isExisting && !img.removed) {
         updatedImageKeys.push(img.key)
         continue
       }
       if (!img.isExisting && !img.removed) {
-        for (const file of files as Express.Multer.File[]) {
-          try {
-            const imageKey = await sendObject("posts", file.buffer, file.mimetype)
-            if (imageKey) {
-              updatedImageKeys.push(imageKey)
-            }
-          } catch (uploadError) {
-            console.error("Error uploading image:", uploadError)
-          }
-        }
+        // handled above when processing new files
+        continue
       } else if (img.removed) {
         try {
           await deleteObject(img.key)
@@ -75,6 +78,8 @@ export async function postUpdate(req: Request, res: Response) {
         }
       }
     }
+
+    console.log("Updated image keys:", updatedImageKeys)
 
     const updatedPost = await Post.findByIdAndUpdate(
       postId,

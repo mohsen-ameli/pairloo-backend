@@ -1,6 +1,6 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
-import { getObject, sendObject } from "../../utils/s3"
+import { deleteObject, getObject, sendObject } from "../../utils/s3"
 
 export async function updateProfile(req: Request, res: Response) {
   try {
@@ -43,6 +43,10 @@ export async function updateProfile(req: Request, res: Response) {
         )
         url = await getObject(key)
         updates.picture = key
+
+        if (user.picture) {
+          await deleteObject(user.picture)
+        }
       } catch (err) {
         console.error("Error uploading profile picture:", err)
         return res.status(500).json({ error: "Failed to upload profile picture." })
