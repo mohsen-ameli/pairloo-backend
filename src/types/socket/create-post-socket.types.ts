@@ -1,7 +1,8 @@
 import { DefaultEventsMap, Namespace } from "socket.io"
-import { ImageType, QnaType } from "../session.types"
+import { QnaType } from "../session.types"
 import { LocationType } from "../location.type"
 import { Question } from "../question.types"
+import { Attachment } from "../attachment.type"
 
 // THIS FILE SHOULD BE KEPT IN SYNC WITH THE FRONTEND
 
@@ -24,7 +25,7 @@ interface ClientToServerEvents {
     title: string
     description: string
     publicPost: boolean
-    images: ImageType[] | undefined
+    images: Attachment[] | undefined
     location: LocationType
     distance: number
   }) => void
@@ -32,7 +33,7 @@ interface ClientToServerEvents {
   updateDraftSettings: (
     title: string,
     description: string,
-    images: ImageType[],
+    images: Attachment[],
     publicPost: boolean
   ) => void
   getInitialQuestion: () => void

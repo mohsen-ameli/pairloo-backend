@@ -174,7 +174,9 @@ export function createPostSocket(io: CreatePostSocket) {
           const user = await User.findById(userId)
           const posts = await Post.find({ userId })
           if (user && posts.length > 0 && posts[posts.length - 1].status === "draft") {
-            await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, { new: true })
+            await Post.findByIdAndUpdate(posts[posts.length - 1]._id, post, {
+              returnDocument: "after",
+            })
             postId = posts[posts.length - 1]._id.toString()
           } else {
             const newPost = await Post.create(post)

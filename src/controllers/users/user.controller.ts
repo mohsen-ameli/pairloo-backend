@@ -329,7 +329,7 @@ export async function savePost(req: Request, res: Response) {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $push: { savedPosts: { $each: [postId], $position: 0 } } },
-      { new: true, select: "savedPosts" }
+      { returnDocument: "after", select: "savedPosts" }
     )
 
     await Interaction.create({ userId, postId, type: "save", createdAt: new Date() })
@@ -351,7 +351,7 @@ export async function unsavePost(req: Request, res: Response) {
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $pull: { savedPosts: postId } },
-      { new: true, select: "savedPosts" }
+      { returnDocument: "after", select: "savedPosts" }
     )
 
     if (!updatedUser) {

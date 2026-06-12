@@ -163,7 +163,11 @@ export async function postStatusUpdate(req: Request, res: Response) {
     return res.status(400).json({ message: "Invalid status value" })
   }
 
-  const post = await Post.findOneAndUpdate({ _id: postId, userId }, { status }, { new: true })
+  const post = await Post.findOneAndUpdate(
+    { _id: postId, userId },
+    { status },
+    { returnDocument: "after" }
+  )
 
   if (!post) {
     return res.status(404).json({ message: "Post not found" })

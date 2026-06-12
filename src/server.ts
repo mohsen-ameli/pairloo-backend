@@ -106,9 +106,13 @@ async function getWeaviateClient() {
     const weaviateUrl = process.env.WEAVIATE_URL!
     const weaviateApiKey = process.env.WEAVIATE_API_KEY!
 
-    weaviateClient = await weaviate.connectToWeaviateCloud(weaviateUrl, {
-      authCredentials: new ApiKey(weaviateApiKey),
-    })
+    try {
+      weaviateClient = await weaviate.connectToWeaviateCloud(weaviateUrl, {
+        authCredentials: new ApiKey(weaviateApiKey),
+      })
+    } catch (error) {
+      console.error("Failed to connect to Weaviate:", error)
+    }
   }
 }
 

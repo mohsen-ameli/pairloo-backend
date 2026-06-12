@@ -365,7 +365,7 @@ export function chatSocket(io: ChatSocket) {
         const updatedMessage = await Message.findByIdAndUpdate(
           messageId,
           { content: newContent, isEdited: true, updatedAt: new Date() },
-          { new: true }
+          { returnDocument: "after" }
         )
 
         if (!updatedMessage) {

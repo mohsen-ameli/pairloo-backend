@@ -10,6 +10,19 @@ import { sendPushNotification } from "../utils/send-push-notification"
 import { callForEmbeddings, callForSummaries, callForTitle } from "../utils/AIQA"
 import Interaction from "../models/interaction.model"
 
+async function sendTestNotification(userId: string) {
+  const user = await User.findById(userId).select("expoPushToken")
+  if (!user || !user.expoPushToken) {
+    throw new Error("User not found")
+  }
+
+  await sendPushNotification(
+    user.expoPushToken,
+    "Test Notification",
+    "This is a test push notification from the server!"
+  )
+}
+
 async function storePostsToWeaviate(posts: PostType[]) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
@@ -85,6 +98,12 @@ async function closestPosts(postId: string) {
 
   if (!wPost || !wPost.vectors) {
     throw new Error("Post or user not found #2")
+  }
+
+  const user = await User.findById(post.userId)
+
+  if (!user) {
+    throw new Error("user not found #3")
   }
 
   const results = await getClosestPosts({
@@ -258,9 +277,10 @@ async function weaviateTransfer(
 
   for await (let item of weaviatePosts.iterator({ includeVector: true })) {
     const { postId, location, distance, userId } = item.properties
-    const post = await Post.findById(postId).select("qna")
-    if (!post || !postId) {
-      console.error("Post not found for id: ", postId)
+    const post = await Post.findById(postId).select("_id")
+    const user = await User.findById(userId).select("_id")
+    if (!post || !postId || !userId || !user) {
+      console.error("Post or user not found for post with id: ", postId, userId)
       continue
     }
 
@@ -288,20 +308,61 @@ async function weaviateTransfer(
   }
 }
 
+async function exportWeaviateData() {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+  const weaviatePosts = weaviateClient.collections.use("Post")
+
+  if (!weaviatePosts) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const allData: any[] = []
+  for await (let item of weaviatePosts.iterator({ includeVector: true })) {
+    allData.push(item)
+  }
+
+  console.log("Exported data from Weaviate: ", allData.length, "items")
+
+  const fs = require("fs")
+  fs.writeFileSync("weaviate_export.json", JSON.stringify(allData, null, 2))
+}
+
+async function importWeaviateData() {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client not initialized")
+  }
+  const weaviatePosts = weaviateClient.collections.use("Post")
+
+  if (!weaviatePosts) {
+    throw new Error("Weaviate client not initialized")
+  }
+
+  const fs = require("fs")
+  const data = JSON.parse(fs.readFileSync("weaviate_export.json", "utf-8"))
+
+  for (const item of data) {
+    const id = generateUuid5(item.properties.postId.toString())
+    try {
+      await weaviatePosts.data.insert({
+        id,
+        properties: item.properties,
+        vectors: item.vectors,
+      })
+      console.log("Imported item with id: ", id)
+    } catch (error) {
+      console.error("Error importing item with id: ", id)
+      console.error(error)
+    }
+  }
+}
+
 // Simple route for testing
 export async function test(req: Request, res: Response) {
   if (!weaviateClient) {
     throw new Error("Weaviate client not initialized")
   }
-
-  // if (!user || !user.expoPushToken) {
-  //   return res.status(404).json({ error: "User not found" })
-  // }
-  // await sendPushNotification(
-  //   user.expoPushToken,
-  //   "Test Notification",
-  //   "This is a test push notification from the server!"
-  // )
 
   const postId = req.query.postId as string
   const userId = req.query.userId as string

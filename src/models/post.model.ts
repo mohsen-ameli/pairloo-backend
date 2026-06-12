@@ -28,7 +28,7 @@ export interface PostType extends mongoose.Document {
 type PostImagesTarget = Pick<PostType, "images">
 
 interface PostModel extends mongoose.Model<PostType> {
-  updatePostImages(post: PostImagesTarget): Promise<void>
+  updatePostImages(post: PostImagesTarget, inPlace?: boolean): Promise<string[] | void>
 }
 
 const postSchema = new mongoose.Schema<PostType>({
@@ -119,7 +119,7 @@ const postSchema = new mongoose.Schema<PostType>({
 })
 
 // Update the user's post images with new signed URLs if expired
-postSchema.statics.updatePostImages = async function (post: PostImagesTarget) {
+postSchema.statics.updatePostImages = async function (post: PostImagesTarget, inPlace = true) {
   if (!post || !post.images || post.images.length === 0) return post
 
   const newImages = []
@@ -132,6 +132,9 @@ postSchema.statics.updatePostImages = async function (post: PostImagesTarget) {
     newImages.push(url)
   }
 
+  if (!inPlace) {
+    return newImages
+  }
   post.images = newImages
 }
 
