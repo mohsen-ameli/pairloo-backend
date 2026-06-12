@@ -367,7 +367,9 @@ export async function test(req: Request, res: Response) {
   const postId = req.query.postId as string
   const userId = req.query.userId as string
 
-  return res.json({ message: "Test has worked! Great Job :)" })
+  const close = await updateAllUserPostsClosestPosts()
+
+  return res.json({ message: "Test has worked! Great Job :)", close })
 }
 
 /**
