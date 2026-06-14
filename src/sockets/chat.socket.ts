@@ -201,6 +201,7 @@ export function chatSocket(io: ChatSocket) {
               as: "members",
             },
           },
+          { $sort: { lastMessage: -1, updatedAt: -1 } },
           {
             $project: {
               _id: 1,
