@@ -1,7 +1,7 @@
 import { getClosestPosts } from "../utils/getClosestPosts"
 import { Request, Response } from "express"
 import User, { UserType } from "../models/user.model"
-import { weaviateClient } from "../server"
+import { redisClient, weaviateClient } from "../server"
 import { generateEmbedding, generateText } from "../utils/AIModel"
 import Post, { PostType } from "../models/post.model"
 import { configure, dataType, generateUuid5, vectors, WeaviateClient } from "weaviate-client"
@@ -360,17 +360,22 @@ async function importWeaviateData() {
 
 // Simple route for testing
 export async function test(req: Request, res: Response) {
-  if (!weaviateClient) {
-    throw new Error("Weaviate client not initialized")
+  if (!weaviateClient || !redisClient) {
+    return res.status(500).json({ message: "Weaviate or Redis client not initialized" })
   }
 
   const postId = req.query.postId as string
   const userId = req.query.userId as string
 
-  const user = await User.findById(userId)
+  // const user = await User.findById(userId)
   // const close = await updateAllUserPostsClosestPosts()
 
-  return res.json({ message: "Test has worked! Great Job :)", user })
+  // await exportWeaviateData()
+  // await weaviateDeleteCollection("Post")
+  // await weaviateCreateCollection("Post")
+  // await importWeaviateData()
+
+  return res.json({ message: "Test has worked! Great Job :)" })
 }
 
 /**

@@ -1,10 +1,9 @@
 import { Request, Response } from "express"
 import Post, { StatusType } from "../models/post.model"
 import Interaction, { InteractionTypeEnum } from "../models/interaction.model"
-import { weaviateClient } from "../server"
+import { redisClient, weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 import User from "../models/user.model"
-import { IS_PRODUCTION } from "../utils/constants"
 
 const WEIGHTS: {
   [key in InteractionTypeEnum]: number
@@ -76,11 +75,7 @@ async function getColdStartPosts(userId: string, res: Response) {
 export async function feedGet(req: Request, res: Response) {
   const userId = req.user!.sub
 
-  if (!IS_PRODUCTION) {
-    return await getColdStartPosts(userId, res)
-  }
-
-  if (!weaviateClient) {
+  if (!weaviateClient || !redisClient) {
     return res.status(500).json({ message: "Something went wrong!" })
   }
 
@@ -92,7 +87,22 @@ export async function feedGet(req: Request, res: Response) {
       return await getColdStartPosts(userId, res)
     }
 
-    const interestVector = await buildUserInterestVector(userId)
+    // On feed request
+    const cacheKey = `user_vector:${userId}`
+    let vector = await redisClient.get(cacheKey)
+    let interestVector: number[]
+
+    if (!vector) {
+      console.log("building new interest vector for user", userId)
+      interestVector = await buildUserInterestVector(userId)
+
+      await redisClient.set(cacheKey, JSON.stringify(interestVector), {
+        EX: 60 * 60, // 1 hour expiration
+      })
+    } else {
+      console.log("using cached interest vector for user", userId)
+      interestVector = JSON.parse(vector)
+    }
 
     // Get IDs of posts already seen (to exclude)
     // const seenIds = await Interaction.distinct('postId', { userId, type: 'view' }).then(ids => ids.map(id => id.toString()));
@@ -105,7 +115,6 @@ export async function feedGet(req: Request, res: Response) {
       },
       {
         returnMetadata: ["distance"],
-        // filters: weaviatePosts.filter.byId().notEqual(seenIds)
         filters: weaviatePosts.filter.byProperty("userId").notEqual(userId),
         limit: 20,
         offset: 0,
@@ -166,7 +175,7 @@ export async function feedGet(req: Request, res: Response) {
     return res.status(200).json(results)
   } catch (error) {
     console.error("Error fetching feed:", error)
-    return res.status(500).json({ message: "Internal server error" })
+    return await getColdStartPosts(userId, res)
   }
 }
 

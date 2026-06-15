@@ -51,7 +51,7 @@ set EMAIL_HOST to "smtp.gmail.com" and EMAIL_USER to your email address
 To connect to gemini, go to https://aistudio.google.com/ and create an account.
 Then make an API key and put the value in GEMINI_API_KEY
 
-4. Setup AWS
+5. Setup AWS
 
 Follow the guide here to install AWS CLI
 https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
@@ -68,13 +68,16 @@ Then do the following:
 aws configure set region "ca-central-1"
 ```
 
-5. Start the backend server
+6. Setup Redis
+   Easiest way to spin up a Redis server is to install docker, then run `docker run -p 6379:6379 -d redis:8.0-rc1`
+
+7. Start the backend server
 
 ```bash
 npm run dev
 ```
 
-6. Start your emulator
+8. Start your emulator
    Run the included start-emulator.sh bash script. Make sure it is executable by running the following
 
 ```bash

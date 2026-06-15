@@ -1,6 +1,3 @@
-import multer from "multer"
-export const upload = multer({ storage: multer.memoryStorage() })
-
 import {
   AWS_ACCESS_KEY_ID,
   AWS_SECRET_ACCESS_KEY,
@@ -13,6 +10,7 @@ import {
   FRONTEND_URL,
   IS_PRODUCTION,
   AWS_REGION,
+  REDIS_URL,
 } from "./utils/constants"
 import express from "express"
 import cors from "cors"
@@ -30,13 +28,13 @@ import authMiddleware from "./middleware/auth.middleware"
 import { createPostSocket } from "./sockets/create-post.socket"
 import { GoogleGenAI } from "@google/genai"
 import { authSocketMiddleware } from "./middleware/auth-socket.middle"
-import OpenAI from "openai"
 import { test } from "./controllers/test.controller"
 import { chatSocket } from "./sockets/chat.socket"
 import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
 import weaviate, { WeaviateClient, ApiKey } from "weaviate-client"
 import Expo from "expo-server-sdk"
+import { createClient } from "redis"
 
 const app = express()
 
@@ -61,7 +59,6 @@ const io = new Server(server, {
 export const expo = new Expo()
 
 export const ai = new GoogleGenAI({})
-export const openai = new OpenAI({})
 
 export const snsClient = new SNSClient({})
 export const s3Client = new S3Client({
@@ -71,6 +68,41 @@ export const s3Client = new S3Client({
   },
   region: AWS_REGION,
 })
+
+// Redis
+export let redisClient: ReturnType<typeof createClient> | null = null
+async function getRedisClient() {
+  if (!redisClient) {
+    try {
+      redisClient = await createClient({ url: REDIS_URL })
+        .on("connect", () => console.log("Connected to Redis"))
+        .on("error", err => console.error("Redis Client Error", err))
+        .connect()
+    } catch (error) {
+      console.error("Failed to connect to Weaviate:", error)
+    }
+  }
+}
+getRedisClient()
+
+// Weaviate
+export let weaviateClient: WeaviateClient | null = null
+async function getWeaviateClient() {
+  if (!weaviateClient) {
+    const weaviateUrl = process.env.WEAVIATE_URL!
+    const weaviateApiKey = process.env.WEAVIATE_API_KEY!
+
+    try {
+      weaviateClient = await weaviate.connectToWeaviateCloud(weaviateUrl, {
+        authCredentials: new ApiKey(weaviateApiKey),
+      })
+    } catch (error) {
+      console.error("Failed to connect to Weaviate:", error)
+    }
+  }
+}
+
+getWeaviateClient()
 
 app.use(cookieParser())
 app.use(cors(corsOptions))
@@ -101,24 +133,6 @@ const chatIo = io.of("/chat").use(authSocketMiddleware)
 // Sockets - Handlers
 createPostSocket(createPostIo)
 chatSocket(chatIo)
-
-export let weaviateClient: WeaviateClient | null = null
-async function getWeaviateClient() {
-  if (!weaviateClient) {
-    const weaviateUrl = process.env.WEAVIATE_URL!
-    const weaviateApiKey = process.env.WEAVIATE_API_KEY!
-
-    try {
-      weaviateClient = await weaviate.connectToWeaviateCloud(weaviateUrl, {
-        authCredentials: new ApiKey(weaviateApiKey),
-      })
-    } catch (error) {
-      console.error("Failed to connect to Weaviate:", error)
-    }
-  }
-}
-
-getWeaviateClient()
 
 // Connect to MongoDB and start the server
 mongoose
