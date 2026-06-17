@@ -39,6 +39,7 @@ export const AWS_REGION = process.env.AWS_REGION!
 
 // Redis
 export const REDIS_URL = process.env.REDIS_URL!
+export const REDIS_CACHE_EXPIRATION_SECONDS = 60 * 60 // 1 hour expiration
 
 export const EMBEDDING_DIMENSION = 3072
 

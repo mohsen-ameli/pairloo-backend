@@ -6,10 +6,10 @@ import { deleteObject, getObject, sendObject } from "../utils/s3"
 import { sendPushNotification } from "../utils/send-push-notification"
 import { ChatSocket } from "../types/socket/chat-socket.type"
 import { AllConversationsType, ConversationMessagesType } from "../types/conversation.type"
+import Post from "../models/post.model"
 
 export function chatSocket(io: ChatSocket) {
   io.on("connection", async socket => {
-    let connected = false
     const userId = socket.user!.sub
     const user = await User.findById(userId)
     let otherUserPushToken: string | undefined
@@ -158,6 +158,8 @@ export function chatSocket(io: ChatSocket) {
 
           // Replace attachment keys with URLs before emitting
           message.attachments = urls
+          message.sender.picture = user.picture
+          await User.updateUserPicture([message.sender])
           io.to(conversationId).emit("message", message)
 
           const lastMessage: LastMessageType = {
@@ -223,8 +225,8 @@ export function chatSocket(io: ChatSocket) {
     )
 
     socket.on(
-      "newConversation",
-      handleSocketEvent("newConversation", async (memberIds, post) => {
+      "getConversation",
+      handleSocketEvent("getConversation", async (initiatorId, memberIds, postId) => {
         const existingConversation = await Conversation.findOne({ members: { $all: memberIds } })
           .populate<AllConversationsType>({
             path: "members",
@@ -232,15 +234,25 @@ export function chatSocket(io: ChatSocket) {
           })
           .lean()
 
+        const post = await Post.findById(postId).select("_id title").lean()
+
         if (existingConversation) {
-          if (post) {
+          if (postId) {
             // Check if the post is already in contactedPosts
             const postAlreadyContacted = existingConversation.contactedPosts.some(
-              contactedPost => contactedPost.postId.toString() === post.postId.toString()
+              contactedPost => contactedPost.postId.toString() === postId.toString()
             )
 
             if (!postAlreadyContacted) {
-              existingConversation.contactedPosts.push({ ...post, isDeleted: false })
+              if (!post) {
+                socket.emit("error", "Post not found")
+                return
+              }
+              existingConversation.contactedPosts.push({
+                postId,
+                title: post.title,
+                isDeleted: false,
+              })
               await Conversation.findByIdAndUpdate(existingConversation._id, {
                 contactedPosts: existingConversation.contactedPosts,
               })
@@ -248,7 +260,12 @@ export function chatSocket(io: ChatSocket) {
           }
 
           await User.updateUserPicture(existingConversation.members)
-          io.to(existingConversation._id.toString()).emit("conversation", existingConversation)
+          io.to(existingConversation._id.toString()).emit(
+            "conversation",
+            initiatorId,
+            existingConversation,
+            postId?.toString()
+          )
           return
         }
 
@@ -268,7 +285,7 @@ export function chatSocket(io: ChatSocket) {
 
         const populatedConversation = await Conversation.findOne({
           members: { $all: memberIds },
-          ...(post ? { "contactedPosts.postId": new Types.ObjectId(post.postId) } : {}),
+          ...(post ? { "contactedPosts.postId": postId } : {}),
         })
           .populate<AllConversationsType>({
             path: "members",
@@ -283,7 +300,12 @@ export function chatSocket(io: ChatSocket) {
 
         await User.updateUserPicture(populatedConversation.members)
 
-        io.to(conversation._id.toString()).emit("conversation", populatedConversation)
+        io.to(conversation._id.toString()).emit(
+          "conversation",
+          initiatorId,
+          populatedConversation,
+          postId?.toString()
+        )
       })
     )
 
@@ -324,6 +346,7 @@ export function chatSocket(io: ChatSocket) {
             },
           },
         ])
+        messages.reverse()
 
         for (const msg of messages) {
           if (msg.attachments) {
@@ -399,9 +422,6 @@ export function chatSocket(io: ChatSocket) {
       })
     )
 
-    if (!connected) {
-      socket.emit("connected", "You are connected to chat namespace")
-      connected = true
-    }
+    socket.emit("connected")
   })
 }

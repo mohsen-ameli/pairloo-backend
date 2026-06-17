@@ -1,4 +1,4 @@
-import { DefaultEventsMap, Namespace, Server } from "socket.io"
+import { DefaultEventsMap, Namespace } from "socket.io"
 import { Attachment } from "../attachment.type"
 import { AllConversationsType, ConversationMessagesType } from "../conversation.type"
 import { Types } from "mongoose"
@@ -8,7 +8,7 @@ import { LastMessageType } from "../../models/conversation.model"
 // THIS FILE SHOULD BE KEPT IN SYNC WITH THE FRONTEND
 
 interface ServerToClientEvents {
-  conversation: (data: AllConversationsType) => void
+  conversation: (initiatorId: string, conversation: AllConversationsType, postId?: string) => void
   error: (message: string) => void
   messages: (data: ConversationMessagesType[]) => void
   messageEdited: (data: {
@@ -20,7 +20,7 @@ interface ServerToClientEvents {
   conversations: (data: AllConversationsType[]) => void
   messageDeleted: (data: { messageId: string; newLastMessage: LastMessageType }) => void
   message: (data: MessageType) => void
-  connected: (data: string) => void
+  connected: () => void
 }
 
 interface ClientToServerEvents {
@@ -32,9 +32,10 @@ interface ClientToServerEvents {
     replyTo?: ReplyTo
   }) => void
   getConversations: () => void
-  newConversation: (
+  getConversation: (
+    initiatorId: string,
     memberIds: Types.ObjectId[],
-    post?: { postId: Types.ObjectId; title: string }
+    postId?: Types.ObjectId
   ) => void
   getMessages: (data: {
     conversationId: string

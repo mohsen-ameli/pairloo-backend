@@ -4,6 +4,7 @@ import Interaction, { InteractionTypeEnum } from "../models/interaction.model"
 import { redisClient, weaviateClient } from "../server"
 import { generateUuid5 } from "weaviate-client"
 import User from "../models/user.model"
+import { REDIS_CACHE_EXPIRATION_SECONDS } from "../utils/constants"
 
 const WEIGHTS: {
   [key in InteractionTypeEnum]: number
@@ -93,14 +94,12 @@ export async function feedGet(req: Request, res: Response) {
     let interestVector: number[]
 
     if (!vector) {
-      console.log("building new interest vector for user", userId)
       interestVector = await buildUserInterestVector(userId)
 
       await redisClient.set(cacheKey, JSON.stringify(interestVector), {
-        EX: 60 * 60, // 1 hour expiration
+        EX: REDIS_CACHE_EXPIRATION_SECONDS,
       })
     } else {
-      console.log("using cached interest vector for user", userId)
       interestVector = JSON.parse(vector)
     }
 
