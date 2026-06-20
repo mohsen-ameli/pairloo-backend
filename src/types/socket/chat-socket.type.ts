@@ -20,6 +20,12 @@ interface ServerToClientEvents {
   conversations: (data: AllConversationsType[]) => void
   messageDeleted: (data: { messageId: string; newLastMessage: LastMessageType }) => void
   message: (data: MessageType) => void
+  typing: (data: {
+    userId: string
+    conversationId: string
+    postId?: string | null
+    isTyping: boolean
+  }) => void
   connected: () => void
 }
 
@@ -45,6 +51,7 @@ interface ClientToServerEvents {
   }) => void
   editMessage: (data: { messageId: string; conversationId: string; newContent: string }) => void
   deleteMessage: (data: { messageId: string; conversationId: string }) => void
+  isTyping: (data: { conversationId: string; postId?: string | null; status: boolean }) => void
 }
 
 export type ChatSocket = Namespace<

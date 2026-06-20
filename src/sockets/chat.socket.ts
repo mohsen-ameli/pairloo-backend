@@ -422,6 +422,13 @@ export function chatSocket(io: ChatSocket) {
       })
     )
 
+    socket.on(
+      "isTyping",
+      handleSocketEvent("deleteMessage", async ({ conversationId, postId, status }) => {
+        io.to(conversationId).emit("typing", { userId, conversationId, postId, isTyping: status })
+      })
+    )
+
     socket.emit("connected")
   })
 }
