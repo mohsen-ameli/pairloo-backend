@@ -1,8 +1,8 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
-import { snsClient } from "../../server"
-import { PublishCommand } from "@aws-sdk/client-sns"
+import { twilioClient } from "../../server"
 import PhoneVerification from "../../models/phone-verification.model"
+import { TWILIO_PHONE_NUMBER } from "../../utils/constants"
 
 export async function requestPhoneVerification(req: Request, res: Response) {
   const { callingCode, phoneNumber }: { callingCode: string; phoneNumber: string } = req.body
@@ -32,15 +32,16 @@ export async function requestPhoneVerification(req: Request, res: Response) {
 
     // Send SMS via AWS SNS
     try {
-      const message = `Your verification code is: ${verificationCode}.\nThis code will expire in 5 minutes.\n\nDo not share this code with anyone.`
-      const response = await snsClient.send(
-        new PublishCommand({
-          Message: message,
-          PhoneNumber: fullNumber,
-        })
-      )
-      if (!response.MessageId) {
-        console.error("Failed to send SMS:", response)
+      const body = `Your verification code is: ${verificationCode}.\nThis code will expire in 5 minutes.\n\nDo not share this code with anyone.`
+
+      const message = await twilioClient.messages.create({
+        body,
+        from: TWILIO_PHONE_NUMBER,
+        to: fullNumber,
+      })
+
+      if (message.errorCode) {
+        console.error("Failed to send SMS:", message.errorMessage)
         throw new Error("Failed to send verification code. Please try again.")
       }
     } catch (err) {

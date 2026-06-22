@@ -11,6 +11,8 @@ import {
   IS_PRODUCTION,
   AWS_REGION,
   REDIS_URL,
+  TWILIO_ACCOUNT_SID,
+  TWILIO_AUTH_TOKEN,
 } from "./utils/constants"
 import express from "express"
 import cors from "cors"
@@ -30,11 +32,11 @@ import { GoogleGenAI } from "@google/genai"
 import { authSocketMiddleware } from "./middleware/auth-socket.middle"
 import { test } from "./controllers/test.controller"
 import { chatSocket } from "./sockets/chat.socket"
-import { SNSClient } from "@aws-sdk/client-sns"
 import { S3Client } from "@aws-sdk/client-s3"
 import weaviate, { WeaviateClient, ApiKey } from "weaviate-client"
 import Expo from "expo-server-sdk"
 import { createClient } from "redis"
+import twilio from "twilio"
 
 const app = express()
 
@@ -60,7 +62,6 @@ export const expo = new Expo()
 
 export const ai = new GoogleGenAI({})
 
-export const snsClient = new SNSClient({})
 export const s3Client = new S3Client({
   credentials: {
     accessKeyId: AWS_ACCESS_KEY_ID,
@@ -101,8 +102,11 @@ async function getWeaviateClient() {
     }
   }
 }
-
 getWeaviateClient()
+
+// Twilio
+const twilioClient = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+export { twilioClient }
 
 app.use(cookieParser())
 app.use(cors(corsOptions))
