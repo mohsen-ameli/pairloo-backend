@@ -1,10 +1,8 @@
 import { Request, Response } from "express"
 import User from "../models/user.model"
 import mongoose from "mongoose"
-import { weaviateClient } from "../server"
-import { generateUuid5 } from "weaviate-client"
+
 import Post, { StatusType, VALID_STATUSES } from "../models/post.model"
-import { deleteObject } from "../utils/s3"
 
 // Get a specific post belonging to any user
 export async function myPostGet(req: Request, res: Response) {
@@ -132,24 +130,12 @@ export async function postDelete(req: Request, res: Response) {
   const postId = req.params.id as string
   const userId = req.user!.sub
 
-  if (!weaviateClient) {
-    return res.status(500).json({ message: "Weaviate client not initialized" })
+  try {
+    await Post.findOneAndDelete({ _id: postId, userId })
+  } catch (error) {
+    console.error("Error deleting post:", error)
+    return res.status(500).json({ message: "Internal server error" })
   }
-
-  const post = await Post.findOne({ _id: postId, userId })
-  if (!post) {
-    return res.status(404).json({ message: "Post not found" })
-  }
-
-  for (const img of post.images || []) {
-    await deleteObject(img)
-  }
-
-  await Post.findOneAndDelete({ _id: postId, userId })
-
-  const weaviatePosts = weaviateClient.collections.use("Post")
-
-  await weaviatePosts.data.deleteById(generateUuid5(postId))
 
   return res.status(200).json({ message: "Post deleted successfully" })
 }

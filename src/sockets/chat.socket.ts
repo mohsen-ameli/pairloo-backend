@@ -2,7 +2,7 @@ import User from "../models/user.model"
 import Conversation, { LastMessageType } from "../models/conversation.model"
 import { Types } from "mongoose"
 import Message from "../models/message.model"
-import { deleteObject, getObject, sendObject } from "../utils/s3"
+import { getObject, sendObject } from "../utils/s3"
 import { sendPushNotification } from "../utils/send-push-notification"
 import { ChatSocket } from "../types/socket/chat-socket.type"
 import { AllConversationsType, ConversationMessagesType } from "../types/conversation.type"
@@ -73,10 +73,6 @@ export function chatSocket(io: ChatSocket) {
       }
 
       await Message.findByIdAndDelete(messageId)
-
-      for (const msg of message.attachments || []) {
-        await deleteObject(msg)
-      }
 
       // Update all messages that reply to this deleted message in one query
       await Message.updateMany(

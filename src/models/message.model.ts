@@ -1,4 +1,5 @@
 import mongoose from "mongoose"
+import { deleteObject } from "../utils/s3"
 
 export type SenderType = {
   _id: mongoose.Types.ObjectId
@@ -93,6 +94,30 @@ export const messageSchema = new mongoose.Schema<MessageType>({
 
 messageSchema.pre("save", function () {
   this.updatedAt = new Date()
+})
+
+// delete attachments from S3 when a message is deleted
+messageSchema.pre("deleteOne", { document: false, query: true }, async function () {
+  const docToUpdate = (await this.model.findOne(this.getQuery())) as MessageType
+  for (const attachment of docToUpdate.attachments || []) {
+    await deleteObject(attachment)
+  }
+})
+
+messageSchema.pre("deleteMany", { document: false, query: true }, async function () {
+  const docToUpdate = (await this.model.find(this.getQuery())) as MessageType[]
+  for (const doc of docToUpdate) {
+    for (const attachment of doc.attachments || []) {
+      await deleteObject(attachment)
+    }
+  }
+})
+
+messageSchema.pre("findOneAndDelete", { document: false, query: true }, async function () {
+  const docToUpdate = (await this.model.findOne(this.getQuery())) as MessageType
+  for (const attachment of docToUpdate.attachments || []) {
+    await deleteObject(attachment)
+  }
 })
 
 const Message = mongoose.model<MessageType>("message", messageSchema)

@@ -2,7 +2,9 @@ import mongoose from "mongoose"
 import { ClosePost } from "../types/closePost.types"
 import { QnaType } from "../types/session.types"
 import { LocationType } from "../types/location.type"
-import { getObject } from "../utils/s3"
+import { deleteObject, getObject } from "../utils/s3"
+import { weaviateClient } from "../server"
+import { generateUuid5 } from "weaviate-client"
 
 export type StatusType = "active" | "inactive" | "hidden" | "draft"
 export const VALID_STATUSES: StatusType[] = ["active", "inactive", "hidden", "draft"]
@@ -137,6 +139,54 @@ postSchema.statics.updatePostImages = async function (post: PostImagesTarget, in
   }
   post.images = newImages
 }
+
+// delete attachments from S3 when a message is deleted
+postSchema.pre("deleteOne", { document: false, query: true }, async function () {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client is not initialized")
+  }
+
+  const docToUpdate = (await this.model.findOne(this.getQuery())) as PostType
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+  await weaviatePosts.data.deleteById(generateUuid5(docToUpdate._id.toString()))
+
+  for (const attachment of docToUpdate.images || []) {
+    await deleteObject(attachment)
+  }
+})
+
+postSchema.pre("deleteMany", { document: false, query: true }, async function () {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client is not initialized")
+  }
+
+  const docToUpdate = (await this.model.find(this.getQuery())) as PostType[]
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+
+  for (const doc of docToUpdate) {
+    await weaviatePosts.data.deleteById(generateUuid5(doc._id.toString()))
+    for (const attachment of doc.images || []) {
+      await deleteObject(attachment)
+    }
+  }
+})
+
+postSchema.pre("findOneAndDelete", { document: false, query: true }, async function () {
+  if (!weaviateClient) {
+    throw new Error("Weaviate client is not initialized")
+  }
+
+  const docToUpdate = (await this.model.findOne(this.getQuery())) as PostType
+
+  const weaviatePosts = weaviateClient.collections.use("Post")
+  await weaviatePosts.data.deleteById(generateUuid5(docToUpdate._id.toString()))
+
+  for (const attachment of docToUpdate.images || []) {
+    await deleteObject(attachment)
+  }
+})
 
 const Post = mongoose.model<PostType, PostModel>("post", postSchema)
 export { postSchema }

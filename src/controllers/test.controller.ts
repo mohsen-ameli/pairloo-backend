@@ -9,6 +9,9 @@ import { LocationType } from "../types/location.type"
 import { sendPushNotification } from "../utils/send-push-notification"
 import { callForEmbeddings, callForSummaries, callForTitle } from "../utils/AIQA"
 import Interaction from "../models/interaction.model"
+import Message from "../models/message.model"
+import Conversation from "../models/conversation.model"
+import Feedback from "../models/feedback.model"
 
 async function sendTestNotification(userId: string) {
   const user = await User.findById(userId).select("expoPushToken")
