@@ -11,6 +11,7 @@ export async function callForQuestion(session: PostSession) {
             ask the user to specifically understand the contents of the post.
             The question should help in gathering more information to create a comprehensive post.
             Ask the most important questions first.
+            Do not ask questions about the location of the post.
 
         2.  Every post is consisted of need and provide parts.
             The need part indicates what the user is looking for,

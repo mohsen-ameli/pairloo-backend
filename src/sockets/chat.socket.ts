@@ -267,7 +267,17 @@ export function chatSocket(io: ChatSocket) {
 
         const conversation = await Conversation.create({
           members: memberIds,
-          ...(post ? { contactedPosts: [post] } : {}),
+          ...(post
+            ? {
+                contactedPosts: [
+                  {
+                    postId: post._id,
+                    title: post.title,
+                    isDeleted: false,
+                  },
+                ],
+              }
+            : {}),
           createdBy: userId,
         })
 
@@ -281,7 +291,6 @@ export function chatSocket(io: ChatSocket) {
 
         const populatedConversation = await Conversation.findOne({
           members: { $all: memberIds },
-          ...(post ? { "contactedPosts.postId": postId } : {}),
         })
           .populate<AllConversationsType>({
             path: "members",
