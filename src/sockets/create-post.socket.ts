@@ -196,16 +196,20 @@ export function createPostSocket(io: CreatePostSocket) {
           id: generateUuid5(postId),
         })
 
-        // Get closest posts
-        const closestPosts = await getClosestPosts({
-          userId: new mongoose.Types.ObjectId(userId),
-          postId: new mongoose.Types.ObjectId(postId),
-          location,
-          distance,
-          needEmbedding,
-          provideEmbedding,
-        })
-        await Post.findByIdAndUpdate(postId, { closestPosts })
+        try {
+          const closestPosts = await getClosestPosts({
+            userId: new mongoose.Types.ObjectId(userId),
+            postId: new mongoose.Types.ObjectId(postId),
+            location,
+            distance,
+            needEmbedding,
+            provideEmbedding,
+          })
+          await Post.findByIdAndUpdate(postId, { closestPosts })
+        } catch (error) {
+          console.error("Error finding closest posts:", error)
+          return
+        }
 
         socket.emit("success", postId)
         session = structuredClone(initialSession)

@@ -148,12 +148,15 @@ postSchema.pre("deleteOne", { document: false, query: true }, async function () 
 
   const docToUpdate = (await this.model.findOne(this.getQuery())) as PostType
 
-  const weaviatePosts = weaviateClient.collections.use("Post")
-  await weaviatePosts.data.deleteById(generateUuid5(docToUpdate._id.toString()))
+  // Silent fail if we're deleting a draft
+  try {
+    const weaviatePosts = weaviateClient.collections.use("Post")
+    await weaviatePosts.data.deleteById(generateUuid5(docToUpdate._id.toString()))
 
-  for (const attachment of docToUpdate.images || []) {
-    await deleteObject(attachment)
-  }
+    for (const attachment of docToUpdate.images || []) {
+      await deleteObject(attachment)
+    }
+  } catch (error) {}
 })
 
 postSchema.pre("deleteMany", { document: false, query: true }, async function () {
@@ -163,14 +166,17 @@ postSchema.pre("deleteMany", { document: false, query: true }, async function ()
 
   const docToUpdate = (await this.model.find(this.getQuery())) as PostType[]
 
-  const weaviatePosts = weaviateClient.collections.use("Post")
+  // Silent fail if we're deleting a draft
+  try {
+    const weaviatePosts = weaviateClient.collections.use("Post")
 
-  for (const doc of docToUpdate) {
-    await weaviatePosts.data.deleteById(generateUuid5(doc._id.toString()))
-    for (const attachment of doc.images || []) {
-      await deleteObject(attachment)
+    for (const doc of docToUpdate) {
+      await weaviatePosts.data.deleteById(generateUuid5(doc._id.toString()))
+      for (const attachment of doc.images || []) {
+        await deleteObject(attachment)
+      }
     }
-  }
+  } catch (error) {}
 })
 
 postSchema.pre("findOneAndDelete", { document: false, query: true }, async function () {
@@ -180,12 +186,15 @@ postSchema.pre("findOneAndDelete", { document: false, query: true }, async funct
 
   const docToUpdate = (await this.model.findOne(this.getQuery())) as PostType
 
-  const weaviatePosts = weaviateClient.collections.use("Post")
-  await weaviatePosts.data.deleteById(generateUuid5(docToUpdate._id.toString()))
+  // Silent fail if we're deleting a draft
+  try {
+    const weaviatePosts = weaviateClient.collections.use("Post")
+    await weaviatePosts.data.deleteById(generateUuid5(docToUpdate._id.toString()))
 
-  for (const attachment of docToUpdate.images || []) {
-    await deleteObject(attachment)
-  }
+    for (const attachment of docToUpdate.images || []) {
+      await deleteObject(attachment)
+    }
+  } catch (error) {}
 })
 
 const Post = mongoose.model<PostType, PostModel>("post", postSchema)
