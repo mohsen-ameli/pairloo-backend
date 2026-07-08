@@ -4,19 +4,16 @@ import {
   ACCESS_COOKIE_NAME,
   ACCESS_COOKIE_OPTIONS,
   DB_URI,
-  EMAIL_HOST,
-  EMAIL_PASS,
-  EMAIL_USER,
   FRONTEND_URL,
   IS_PRODUCTION,
   AWS_REGION,
   REDIS_URL,
   TWILIO_ACCOUNT_SID,
   TWILIO_AUTH_TOKEN,
+  RESEND_API_KEY,
 } from "./utils/constants"
 import express from "express"
 import cors from "cors"
-import nodemailer from "nodemailer"
 import authRoutes from "./routes/auth.routes"
 import postsRoutes from "./routes/posts.routes"
 import settingsRoutes from "./routes/settings.routes"
@@ -37,6 +34,7 @@ import weaviate, { WeaviateClient, ApiKey } from "weaviate-client"
 import Expo from "expo-server-sdk"
 import { createClient } from "redis"
 import twilio from "twilio"
+import { Resend } from "resend"
 
 const app = express()
 
@@ -86,6 +84,8 @@ async function getRedisClient() {
 }
 getRedisClient()
 
+export const resend = new Resend(RESEND_API_KEY)
+
 // Weaviate
 export let weaviateClient: WeaviateClient | null = null
 async function getWeaviateClient() {
@@ -111,15 +111,6 @@ export { twilioClient }
 app.use(cookieParser())
 app.use(cors(corsOptions))
 app.use(express.json())
-
-export const transporter = nodemailer.createTransport({
-  host: EMAIL_HOST,
-  port: 587,
-  auth: {
-    user: EMAIL_USER,
-    pass: EMAIL_PASS,
-  },
-})
 
 // Express - Routes & handlers
 app.get("/", (req, res) => res.send("This is the backend API."))

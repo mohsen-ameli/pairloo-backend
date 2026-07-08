@@ -1,7 +1,7 @@
 import { getClosestPosts } from "../utils/getClosestPosts"
 import { Request, Response } from "express"
 import User, { UserType } from "../models/user.model"
-import { redisClient, weaviateClient } from "../server"
+import { redisClient, resend, weaviateClient } from "../server"
 import { generateEmbedding, generateText } from "../utils/AIModel"
 import Post, { PostType } from "../models/post.model"
 import { configure, dataType, generateUuid5, vectors, WeaviateClient } from "weaviate-client"
@@ -12,6 +12,7 @@ import Interaction from "../models/interaction.model"
 import Message from "../models/message.model"
 import Conversation from "../models/conversation.model"
 import Feedback from "../models/feedback.model"
+import { EMAIL_FROM } from "../utils/constants"
 
 async function sendTestNotification(userId: string) {
   const user = await User.findById(userId).select("expoPushToken")

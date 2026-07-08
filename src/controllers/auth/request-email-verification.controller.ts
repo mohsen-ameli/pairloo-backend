@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
 import { EMAIL_FROM } from "../../utils/constants"
-import { transporter } from "../../server"
+import { resend } from "../../server"
 import EmailVerification from "../../models/email-verification.model"
 
 export async function requestEmailVerification(req: Request, res: Response) {
@@ -31,11 +31,11 @@ export async function requestEmailVerification(req: Request, res: Response) {
     const mailOptions = {
       from: EMAIL_FROM,
       to: email,
-      subject: "Verification Code",
+      subject: "Pairloo | Verification Code",
       text: `Your verification code is: ${verificationCode}.\nPlease use this code within 5 minutes or it will expire and you will need to retrieve a new code.\n\nDo not share this code with anyone.`,
     }
 
-    await transporter.sendMail(mailOptions)
+    await resend.emails.send(mailOptions)
 
     return res.status(200).json({
       message: "Verification code sent to email.",

@@ -53,10 +53,13 @@ export const BASE_URL = process.env.PUBLIC_BASE_URL
 export const FRONTEND_URL = process.env.PUBLIC_FRONTEND_URL!
 export const APP_SCHEME = process.env.PUBLIC_SCHEME
 export const JWT_SECRET = process.env.JWT_SECRET!
+
+// Email
 export const EMAIL_HOST = process.env.EMAIL_HOST!
 export const EMAIL_FROM = process.env.EMAIL_FROM!
 export const EMAIL_USER = process.env.EMAIL_USER!
 export const EMAIL_PASS = process.env.EMAIL_PASS!
+export const RESEND_API_KEY = process.env.RESEND_API_KEY!
 
 // Authentication Constants
 export const ACCESS_TOKEN_EXPIRY = "5000s" // seconds
