@@ -133,7 +133,7 @@ export async function feedGet(req: Request, res: Response) {
     const fullPosts = await Post.find({
       _id: { $in: postIds },
       publicPost: true,
-      status: { $ne: "draft" },
+      status: { $nin: ["inactive", "hidden", "draft"] },
     })
       .select("_id title description images createdAt status")
       .populate<{
