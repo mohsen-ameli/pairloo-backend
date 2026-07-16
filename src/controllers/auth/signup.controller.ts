@@ -15,7 +15,7 @@ export async function signupPost(req: Request, res: Response) {
     firstName: req.body.firstName,
     lastName: req.body.lastName,
     picture: req.body.picture,
-    phoneNumber: req.body.phoneNumber,
+    // phoneNumber: req.body.phoneNumber,
     country: req.body.country,
     city: req.body.city,
     state: req.body.state,

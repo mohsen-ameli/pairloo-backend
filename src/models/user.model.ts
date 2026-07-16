@@ -7,7 +7,7 @@ export interface UserType extends mongoose.Document {
   username: string
   firstName: string
   lastName: string
-  phoneNumber: string
+  phoneNumber?: string | null
   country: string
   city: string
   state: string
@@ -59,7 +59,7 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
     },
     phoneNumber: {
       type: String,
-      required: [true, "Please enter your phone number"],
+      required: false,
       unique: [true, "Phone number already exists"],
       trim: true,
     },

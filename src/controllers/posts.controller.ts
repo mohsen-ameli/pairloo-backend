@@ -35,6 +35,14 @@ export async function myPostGet(req: Request, res: Response) {
       continue
     }
 
+    if (
+      closePost.status === "draft" ||
+      closePost.status === "hidden" ||
+      closePost.status === "inactive"
+    ) {
+      continue
+    }
+
     await Post.updatePostImages(closePost)
     await User.updateUserPicture(closeUser)
 

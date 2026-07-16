@@ -50,7 +50,10 @@ export async function callForTitle(session: PostSession): Promise<string> {
   return title
 }
 
-export async function callForSummaries(session: { context: { question: any; answer: any }[] }) {
+export async function callForSummaries(
+  session: { context: { question: any; answer: any }[] },
+  description: string
+) {
   const prompt = `
   Strictly based on the following context,
   generate three summaries, one for the need part, one for the provide part of the post, and one for the entire post where it captures both parts.
@@ -58,7 +61,8 @@ export async function callForSummaries(session: { context: { question: any; answ
   If the post does not have a need or provide part, generate an empty summary for that part.
   Your answer must be in a JSON format: { "needSummary": "summary of the need part", "provideSummary": "summary of the provide part", "generalSummary": "summary of the entire post" }.
   Do not include any other formatting like bullet points or punctuation or **.
-  Context: ${JSON.stringify(session.context)}`
+  Questionnaire: ${JSON.stringify(session.context)}
+  Description of the post given by the user: ${description}`
 
   const summaries = await generateSummaries(prompt)
   if (!summaries) {

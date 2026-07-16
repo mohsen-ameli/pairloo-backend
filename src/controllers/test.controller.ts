@@ -134,7 +134,7 @@ async function generateAllPostSummaries() {
 
   for (const post of posts) {
     try {
-      const summaries = await callForSummaries({ context: post.qna })
+      const summaries = await callForSummaries({ context: post.qna }, post.description)
       await Post.updateOne({ _id: post._id }, { $set: summaries })
       console.log("Updated summaries for post with id: ", post._id.toString())
     } catch (error) {
@@ -263,6 +263,27 @@ async function weaviateDeleteObject(name: string, id: string) {
 
   const weaviatePosts = weaviateClient.collections.use(name)
   await weaviatePosts.data.deleteById(id)
+}
+
+async function removeDeletedUsersFromFollowersAndFollowing() {
+  const users = await User.find()
+
+  for (const user of users) {
+    for (const follower of user.followers) {
+      const followerUser = await User.findById(follower)
+      if (!followerUser) {
+        await User.updateOne({ _id: user._id }, { $pull: { followers: follower } })
+        console.log("Removed follower", follower, "from user", user._id.toString())
+      }
+    }
+    for (const following of user.following) {
+      const followingUser = await User.findById(following)
+      if (!followingUser) {
+        await User.updateOne({ _id: user._id }, { $pull: { following: following } })
+        console.log("Removed following", following, "from user", user._id.toString())
+      }
+    }
+  }
 }
 
 // Moves all data from one collection to another (insert A to B)

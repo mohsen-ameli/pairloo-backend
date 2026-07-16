@@ -147,7 +147,10 @@ export function createPostSocket(io: CreatePostSocket) {
           }
         }
 
-        const { needSummary, provideSummary, generalSummary } = await callForSummaries(session)
+        const { needSummary, provideSummary, generalSummary } = await callForSummaries(
+          session,
+          description
+        )
         const needEmbedding = await generateEmbedding(needSummary)
         const provideEmbedding = await generateEmbedding(provideSummary)
         const generalEmbedding = await generateEmbedding(generalSummary)
