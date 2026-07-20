@@ -4,8 +4,9 @@ import createJWT from "../../utils/create-jwt"
 import EmailVerification from "../../models/email-verification.model"
 import {
   ACCESS_COOKIE_NAME,
-  COOKIE_MAX_AGE,
   ACCESS_COOKIE_OPTIONS,
+  ADMIN_CODE,
+  ADMIN_EMAIL,
   REFRESH_COOKIE_NAME,
   REFRESH_COOKIE_OPTIONS,
 } from "../../utils/constants"
@@ -19,14 +20,22 @@ export async function verifyEmailCode(req: Request, res: Response) {
   }: { email: string; code: string; isSignUp: boolean; platform: string } = req.body
 
   try {
-    const userVerify = await EmailVerification.findOne({
-      email: email.toLowerCase(),
-      code: Number(code),
-    })
-    if (!userVerify) {
-      return res.status(400).json({
-        errors: { general: "Invalid verification code. Please check the code and try again." },
+    if (email === ADMIN_EMAIL) {
+      if (code !== ADMIN_CODE) {
+        return res.status(400).json({
+          errors: { general: "Invalid verification code. Please check the code and try again." },
+        })
+      }
+    } else {
+      const userVerify = await EmailVerification.findOne({
+        email: email.toLowerCase(),
+        code: Number(code),
       })
+      if (!userVerify) {
+        return res.status(400).json({
+          errors: { general: "Invalid verification code. Please check the code and try again." },
+        })
+      }
     }
 
     if (!isSignUp) {

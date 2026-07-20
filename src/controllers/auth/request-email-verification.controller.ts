@@ -1,12 +1,18 @@
 import { Request, Response } from "express"
 import User from "../../models/user.model"
-import { EMAIL_FROM } from "../../utils/constants"
+import { ADMIN_EMAIL, EMAIL_FROM } from "../../utils/constants"
 import { resend } from "../../server"
 import EmailVerification from "../../models/email-verification.model"
 
 export async function requestEmailVerification(req: Request, res: Response) {
   let { email, isSignUp }: { email: string; isSignUp: boolean } = req.body
   email = email.trim().toLowerCase()
+
+  if (email === ADMIN_EMAIL) {
+    return res.status(200).json({
+      message: "Verification code sent to email.",
+    })
+  }
 
   try {
     const existingUser = await User.findOne({ email }, { _id: 1 })

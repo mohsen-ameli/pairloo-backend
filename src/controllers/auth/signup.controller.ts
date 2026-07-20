@@ -69,7 +69,7 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
     username: "",
     firstName: "",
     lastName: "",
-    phoneNumber: "",
+    // phoneNumber: "",
     country: "",
     city: "",
     email: "",
@@ -86,10 +86,14 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
         $or: [
           { username: user.username },
           { email: user.email },
-          { phoneNumber: user.phoneNumber },
+          // { phoneNumber: user.phoneNumber },
         ],
       },
-      { username: 1, email: 1, phoneNumber: 1 }
+      {
+        username: 1,
+        email: 1,
+        // phoneNumber: 1
+      }
     )
 
     if (existingUser) {
@@ -99,9 +103,9 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
       if (existingUser.email === user.email) {
         errors.email = "Email already exists"
       }
-      if (existingUser.phoneNumber === user.phoneNumber) {
-        errors.phoneNumber = "Phone number already exists"
-      }
+      // if (existingUser.phoneNumber === user.phoneNumber) {
+      //   errors.phoneNumber = "Phone number already exists"
+      // }
       return errors
     }
   }

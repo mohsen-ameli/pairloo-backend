@@ -11,11 +11,13 @@ import { requestPhoneVerification } from "../controllers/auth/request-phone-veri
 import { verifyPhoneCode } from "../controllers/auth/verify-phone-code.controller"
 import { logoutPost } from "../controllers/auth/logout.controller"
 import multer from "multer"
+import { deleteAccount } from "../controllers/auth/delete-account.controller"
 
 const router = Router()
 
 router.post("/signup", multer().single("picture"), signupPost)
 router.post("/logout", logoutPost)
+router.delete("/delete-account", deleteAccount)
 router.post("/request-email-verification", requestEmailVerification)
 router.post("/request-phone-verification", requestPhoneVerification)
 router.post("/verify-email-code", verifyEmailCode)
