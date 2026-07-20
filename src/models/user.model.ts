@@ -60,7 +60,8 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
     phoneNumber: {
       type: String,
       required: false,
-      unique: [true, "Phone number already exists"],
+      unique: false,
+      default: "",
       trim: true,
     },
     country: {
