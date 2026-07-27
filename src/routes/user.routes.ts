@@ -15,6 +15,7 @@ import {
 } from "../controllers/users/user.controller"
 import { updateExpoPushToken } from "../controllers/users/update-expo-push-token.controller"
 import { searchUsers } from "../controllers/search.controller"
+import { reportUser } from "../controllers/report.controller"
 
 const userRoutes = Router()
 
@@ -29,6 +30,8 @@ userRoutes.get("/my-saved-posts", getSavedPosts)
 
 // Only for other user profiles
 userRoutes.get("/profile/:id", userProfileGet)
+
+userRoutes.put("/report", reportUser)
 
 userRoutes.post("/follow", followUser)
 userRoutes.post("/unfollow", unfollowUser)
