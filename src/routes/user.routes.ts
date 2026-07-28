@@ -16,8 +16,11 @@ import {
 import { updateExpoPushToken } from "../controllers/users/update-expo-push-token.controller"
 import { searchUsers } from "../controllers/search.controller"
 import { reportUser } from "../controllers/report.controller"
+import { deleteAccount } from "../controllers/auth/delete-account.controller"
 
 const userRoutes = Router()
+
+userRoutes.delete("/delete-account", deleteAccount)
 
 // Shared between user profiles and my profile
 userRoutes.get("/social/:id", socialGet)
