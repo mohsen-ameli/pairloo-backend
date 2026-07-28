@@ -286,6 +286,7 @@ export async function myUserGet(req: Request, res: Response) {
           username: 1,
           firstName: 1,
           lastName: 1,
+          birthdate: 1,
           picture: 1,
           phoneNumber: 1,
           country: 1,

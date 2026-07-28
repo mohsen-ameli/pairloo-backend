@@ -8,6 +8,7 @@ export interface UserType extends mongoose.Document {
   firstName: string
   lastName: string
   phoneNumber?: string | null
+  birthdate: Date
   country: string
   city: string
   state: string
@@ -59,10 +60,12 @@ const userSchema = new mongoose.Schema<UserType, UserModel>(
     },
     phoneNumber: {
       type: String,
-      required: false,
-      unique: false,
-      default: "",
       trim: true,
+    },
+    birthdate: {
+      type: Date,
+      required: [true, "Please enter your birthdate"],
+      unique: false,
     },
     country: {
       type: String,

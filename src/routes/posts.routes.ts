@@ -6,6 +6,7 @@ import { postInteraction } from "../controllers/interaction.controller"
 import { myEditPostGet, postUpdate } from "../controllers/edit-post.controller"
 
 import multer from "multer"
+import { reportPost } from "../controllers/report.controller"
 
 const router = Router()
 
@@ -13,6 +14,8 @@ router.get("/my-feed", feedGet)
 router.get("/my-posts/:id", myPostGet)
 router.get("/:id", postGet)
 router.delete("/:id", postDelete)
+
+router.put("/report", reportPost)
 
 router.post("/interaction", postInteraction)
 

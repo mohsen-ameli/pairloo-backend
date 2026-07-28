@@ -16,6 +16,7 @@ export async function signupPost(req: Request, res: Response) {
     lastName: req.body.lastName,
     picture: req.body.picture,
     // phoneNumber: req.body.phoneNumber,
+    birthdate: req.body.birthdate,
     country: req.body.country,
     city: req.body.city,
     state: req.body.state,
@@ -60,6 +61,7 @@ export async function signupPost(req: Request, res: Response) {
 
     return res.status(200).json({ _id: user._id, accessToken, refreshToken })
   } catch (err: any) {
+    console.error("Error during signup:", err)
     return res.status(500).json({ errors: { general: err.message } })
   }
 }
@@ -70,6 +72,7 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
     firstName: "",
     lastName: "",
     // phoneNumber: "",
+    birthdate: "",
     country: "",
     city: "",
     email: "",
@@ -106,6 +109,19 @@ async function handleSignupErrors(err: any, user: typeof User.prototype) {
       // if (existingUser.phoneNumber === user.phoneNumber) {
       //   errors.phoneNumber = "Phone number already exists"
       // }
+      return errors
+    }
+
+    // User has to be at least 13 years old
+    const today = new Date()
+    const birthdate = new Date(user.birthdate)
+    let age = today.getFullYear() - birthdate.getFullYear()
+    const monthDiff = today.getMonth() - birthdate.getMonth()
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthdate.getDate())) {
+      age--
+    }
+    if (age < 13) {
+      errors.birthdate = "You must be at least 13 years old to sign up"
       return errors
     }
   }
